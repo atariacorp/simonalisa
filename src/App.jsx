@@ -1,11 +1,9 @@
 import React from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-// PERBAIKAN DI SINI: Menambahkan Menu ke dalam import lucide-react
-import { Upload, DollarSign, ArrowDownCircle, Archive, LayoutDashboard, FileText, Calendar, Sparkles, Loader, TrendingUp, BarChartHorizontal, ChevronDown, BookCopy, Search, Sun, Moon, CheckCircle2, AlertCircle, AlertTriangle, Zap, Receipt, Globe, MinusCircle, Droplets, Settings, ArrowRightLeft, LogIn, LogOut, UserCircle, Trash2, UserPlus, ChevronsUpDown, Award, ChevronsLeft, ChevronsRight, PieChart as PieChartIcon, Building, Users, Briefcase, Shuffle, BookMarked, Columns, Edit, X, Tag, ChevronRight, Download, History, ChevronUp, Database, FileSpreadsheet, Target, Scissors, TrendingDown, Menu } from 'lucide-react';
+import { Upload, DollarSign, ArrowDownCircle, Archive, LayoutDashboard, FileText, Calendar, Sparkles, Loader, TrendingUp, BarChartHorizontal, ChevronDown, BookCopy, Search, Sun, Moon, CheckCircle2, AlertCircle, Receipt, Globe, MinusCircle, Droplets, Settings, ArrowRightLeft, LogIn, LogOut, UserCircle, Trash2, UserPlus, ChevronsUpDown, Award, ChevronsLeft, ChevronsRight, PieChart as PieChartIcon, Building, Users, Briefcase, Shuffle, BookMarked, Columns, Edit, X, Tag, ChevronRight, Download, History, ChevronUp } from 'lucide-react';
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, onSnapshot, setDoc, collection, getDocs, addDoc, deleteDoc, query, where, writeBatch, getDoc, updateDoc, orderBy, FieldValue } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import * as XLSX from 'xlsx'; 
 
 
 // --- Firebase Configuration ---
@@ -134,58 +132,52 @@ const TabButton = ({ title, isActive, onClick }) => (
 );
 // --- AKHIR BLOK KODE BARU ---
 
-// --- Gemini Analysis Component (UPDATED: Using props for API Key) ---
-const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData = null, userRole, apiKeyFromSettings }) => {
+// --- Gemini Analysis Component ---
+const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData = null, selectedYear = new Date().getFullYear(), interactivePlaceholder = "Ajukan pertanyaan tentang data...", userRole }) => {
     const [analysis, setAnalysis] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
     const [error, setError] = React.useState('');
     const [customQuery, setCustomQuery] = React.useState('');
 
-    if (userRole === 'viewer' || userRole === 'guest') return null;
+    // --- NEW: Hide component for viewers ---
+    if (userRole === 'viewer') {
+        return null;
+    }
 
-    const handleGetAnalysis = async (queryText) => {
+    const handleGetAnalysis = async (query) => {
         setIsLoading(true);
         setAnalysis('');
         setError('');
-        
-        // --- PRIORITAS API KEY ---
-        // Menggunakan Key dari Database jika ada, jika tidak kosongkan
-        const apiKey = apiKeyFromSettings || ""; 
-        
-        if (!apiKey) {
-            setError("Fitur AI belum aktif. Harap masukkan API Key Google Gemini di menu Pengaturan Aplikasi.");
-            setIsLoading(false);
-            return;
-        }
-
-        const prompt = getAnalysisPrompt(queryText, allData);
+        const prompt = getAnalysisPrompt(query, allData);
 
         try {
-            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-            
-            const response = await fetch(apiUrl, {
+            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { contents: chatHistory };
+
+            // Use serverless proxy to keep API key secret
+            const response = await fetch('/api/gemini', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
-                if (response.status === 400 || response.status === 403) {
-                    throw new Error("Gagal otentikasi API Key. Pastikan API Key yang Anda simpan di Pengaturan sudah valid.");
-                }
-                throw new Error(`Koneksi AI gagal (Status: ${response.status})`);
+                throw new Error(`API call failed with status: ${response.status}`);
             }
 
             const result = await response.json();
-            if (result.candidates?.[0]?.content?.parts?.[0]) {
-                setAnalysis(result.candidates[0].content.parts[0].text);
+
+            // Support both direct generative responses and proxied responses
+            const candidate = result?.candidates?.[0] || result?.output?.[0] || result;
+            const text = candidate?.content?.parts?.[0]?.text || candidate?.text || (typeof candidate === 'string' ? candidate : null);
+            if (text) {
+                setAnalysis(text);
             } else {
-                throw new Error("Format jawaban AI tidak dikenali.");
+                throw new Error("Respons dari API tidak memiliki format yang diharapkan.");
             }
         } catch (err) {
             console.error("Gemini API error:", err);
-            setError(err.message || "Gagal menghubungi AI.");
+            setError("Gagal mendapatkan analisis. Silakan coba lagi nanti.");
         } finally {
             setIsLoading(false);
         }
@@ -211,7 +203,7 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData =
                         type="text"
                         value={customQuery}
                         onChange={(e) => setCustomQuery(e.target.value)}
-                        placeholder="Ajukan pertanyaan spesifik ke AI..."
+                        placeholder={interactivePlaceholder}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                     <button
@@ -230,7 +222,7 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData =
                         className="flex items-center px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Sparkles className="mr-2" size={20} />
-                        Beri Analisa & Rekomendasi Cerdas
+                        Beri Analisa & Rekomendasi
                     </button>
                 </div>
             </div>
@@ -238,7 +230,7 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData =
                 <div className="mt-4 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border-l-4 border-purple-500">
                     <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-4">Hasil Analisis AI</h3>
                     {isLoading && <div className="flex items-center justify-center h-40"><Loader className="animate-spin text-purple-500" size={40}/></div>}
-                    {error && <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">{error}</div>}
+                    {error && <p className="text-red-600">{error}</p>}
                     {analysis && <div className="prose max-w-none text-gray-700 dark:text-gray-300">{renderFormattedText(analysis)}</div>}
                 </div>
             )}
@@ -246,207 +238,12 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData =
     );
 };
 
-// --- NEW: Deteksi Anomali View ---
-const DeteksiAnomaliView = ({ data, theme }) => {
-    const { anggaran, realisasi } = data;
-    const [anomalies, setAnomalies] = React.useState([]);
-    const [filterType, setFilterType] = React.useState('all'); // all, critical, warning
-
-    React.useEffect(() => {
-        if (!anggaran.length) return;
-
-        const results = [];
-        
-        // 1. Group Budget
-        const budgetMap = new Map();
-        anggaran.forEach(item => {
-            const skpd = item.NamaSKPD || 'Unknown';
-            budgetMap.set(skpd, (budgetMap.get(skpd) || 0) + item.nilai);
-        });
-
-        // 2. Group Realization
-        const realizationMap = new Map(); // SKPD -> { total: 0, december: 0 }
-        
-        Object.entries(realisasi).forEach(([month, items]) => {
-            items.forEach(item => {
-                const skpd = item.NamaSKPD || 'Unknown';
-                if (!realizationMap.has(skpd)) {
-                    realizationMap.set(skpd, { total: 0, december: 0 });
-                }
-                const data = realizationMap.get(skpd);
-                data.total += item.nilai;
-                if (month === 'Desember') {
-                    data.december += item.nilai;
-                }
-                realizationMap.set(skpd, data);
-            });
-        });
-
-        // 3. Detect Anomalies
-        budgetMap.forEach((budget, skpd) => {
-            const realData = realizationMap.get(skpd) || { total: 0, december: 0 };
-            const realization = realData.total;
-            const decSpending = realData.december;
-
-            // Rule A: Overspending
-            if (realization > budget) {
-                results.push({
-                    skpd,
-                    type: 'Overspending',
-                    level: 'critical',
-                    desc: `Realisasi belanja (${formatCurrency(realization)}) melebihi pagu anggaran (${formatCurrency(budget)}).`,
-                    value: (realization / budget) * 100
-                });
-            }
-
-            // Rule B: Low Absorption (Warning < 60%, Critical < 40% assuming it's end of year analysis)
-            const absorption = budget > 0 ? (realization / budget) * 100 : 0;
-            if (budget > 0 && absorption < 50) {
-                results.push({
-                    skpd,
-                    type: 'Penyerapan Rendah',
-                    level: absorption < 30 ? 'critical' : 'warning',
-                    desc: `Penyerapan anggaran sangat rendah, hanya ${absorption.toFixed(2)}% dari total pagu.`,
-                    value: absorption
-                });
-            }
-
-            // Rule C: December Spike (> 30% of total spending happened in Dec)
-            if (realization > 0 && (decSpending / realization) > 0.30) {
-                 results.push({
-                    skpd,
-                    type: 'Lonjakan Akhir Tahun',
-                    level: 'warning',
-                    desc: `Belanja bulan Desember sebesar ${formatCurrency(decSpending)} (${((decSpending/realization)*100).toFixed(1)}% dari total), mengindikasikan pola 'kejar tayang'.`,
-                    value: (decSpending / realization) * 100
-                });
-            }
-        });
-
-        setAnomalies(results.sort((a,b) => (a.level === 'critical' ? -1 : 1)));
-
-    }, [anggaran, realisasi]);
-
-    const filteredAnomalies = filterType === 'all' 
-        ? anomalies 
-        : anomalies.filter(a => a.level === filterType);
-
-    const getAnalysisPrompt = (customQuery) => {
-        if (customQuery) return `Jelaskan tentang anomali berikut: "${customQuery}" berdasarkan data: ${JSON.stringify(anomalies.slice(0, 5))}`;
-        
-        const criticalCount = anomalies.filter(a => a.level === 'critical').length;
-        const warningCount = anomalies.filter(a => a.level === 'warning').length;
-        const topAnomalies = anomalies.slice(0, 5).map(a => `- [${a.type}] ${a.skpd}: ${a.desc}`).join('\n');
-
-        return `
-            Lakukan audit otomatis untuk deteksi anomali anggaran.
-            Ditemukan ${criticalCount} isu KRITIS dan ${warningCount} PERINGATAN.
-            
-            Berikut 5 temuan teratas:
-            ${topAnomalies}
-            
-            Berikan analisis mengenai:
-            1. Risiko hukum atau administratif dari temuan "Overspending" dan "Lonjakan Akhir Tahun".
-            2. Rekomendasi perbaikan tata kelola untuk SKPD terkait.
-        `;
-    };
-
-    return (
-        <div className="space-y-6">
-            <SectionTitle>Deteksi Anomali & Ketidakwajaran</SectionTitle>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-red-50 dark:bg-red-900/30 p-4 rounded-xl border border-red-200 dark:border-red-800 flex items-center">
-                    <div className="p-3 bg-red-100 dark:bg-red-800 rounded-full mr-4">
-                        <AlertCircle className="text-red-600 dark:text-red-200" size={24} />
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Total Isu Kritis</p>
-                        <p className="text-2xl font-bold text-red-700 dark:text-red-300">{anomalies.filter(a => a.level === 'critical').length}</p>
-                    </div>
-                </div>
-                <div className="bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded-xl border border-yellow-200 dark:border-yellow-800 flex items-center">
-                     <div className="p-3 bg-yellow-100 dark:bg-yellow-800 rounded-full mr-4">
-                        <AlertTriangle className="text-yellow-600 dark:text-yellow-200" size={24} />
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Total Peringatan</p>
-                        <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{anomalies.filter(a => a.level === 'warning').length}</p>
-                    </div>
-                </div>
-                <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl border border-blue-200 dark:border-blue-800 flex items-center">
-                     <div className="p-3 bg-blue-100 dark:bg-blue-800 rounded-full mr-4">
-                        <Zap className="text-blue-600 dark:text-blue-200" size={24} />
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Total SKPD Terdeteksi</p>
-                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{new Set(anomalies.map(a => a.skpd)).size}</p>
-                    </div>
-                </div>
-            </div>
-
-            <GeminiAnalysis 
-                getAnalysisPrompt={getAnalysisPrompt} 
-                disabledCondition={anomalies.length === 0}
-                theme={theme}
-                allData={anomalies}
-                interactivePlaceholder="Tanya AI tentang temuan anomali..."
-            />
-
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                    <h3 className="font-bold text-gray-700 dark:text-gray-300">Daftar Temuan</h3>
-                    <select 
-                        value={filterType} 
-                        onChange={(e) => setFilterType(e.target.value)}
-                        className="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 dark:text-white"
-                    >
-                        <option value="all">Semua Level</option>
-                        <option value="critical">Kritis</option>
-                        <option value="warning">Peringatan</option>
-                    </select>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead className="bg-gray-50 dark:bg-gray-700">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Level</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Jenis Anomali</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">SKPD</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Keterangan</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                            {filteredAnomalies.length > 0 ? filteredAnomalies.map((item, idx) => (
-                                <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${item.level === 'critical' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                            {item.level.toUpperCase()}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{item.type}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{item.skpd}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{item.desc}</td>
-                                </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Tidak ada anomali ditemukan dengan filter ini.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 // --- Main Application Views ---
 
 // 1. Dashboard View: The main overview screen
-const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, userRole, userCanUseAi }) => {
-  // 1. Destructure realisasiNonRkud dari props data
-  const { anggaran, pendapatan, penerimaanPembiayaan, pengeluaranPembiayaan, realisasi, realisasiPendapatan, realisasiNonRkud } = data;
+const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, userRole, includeNonRKUD, totalRealisasiNonRKUD, userCanUseAi }) => {
+  const { anggaran, pendapatan, penerimaanPembiayaan, pengeluaranPembiayaan, realisasi, realisasiPendapatan } = data;
   
   if (!anggaran || !pendapatan || !realisasi || !realisasiPendapatan) {
     return <div className="flex justify-center items-center h-64"><Loader className="animate-spin text-blue-500" size={40} /></div>;
@@ -462,7 +259,6 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
       totalAnggaran,
       totalPendapatan,
       totalRealisasiBelanja,
-      totalRealisasiNonRKUD, // Variabel baru hasil perhitungan internal
       totalGabunganBelanja,
       totalRealisasiPendapatan,
       totalPenerimaanPembiayaan,
@@ -472,12 +268,7 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
       const totalPendapatan = (pendapatan || []).reduce((sum, item) => sum + (item.nilai || 0), 0);
       
       const totalRealisasiBelanja = Object.values(realisasi || {}).flat().reduce((sum, item) => sum + (item.nilai || 0), 0);
-      
-      // 2. Hitung Total Non RKUD secara internal di sini
-      const calculatedNonRkud = Object.values(realisasiNonRkud || {}).flat().reduce((sum, item) => sum + (item.nilai || 0), 0);
-      
-      // 3. Gabungkan Realisasi Belanja (RKUD + Non RKUD)
-      const totalGabunganBelanja = totalRealisasiBelanja + calculatedNonRkud;
+      const totalGabunganBelanja = includeNonRKUD ? totalRealisasiBelanja + totalRealisasiNonRKUD : totalRealisasiBelanja;
       
       const totalRealisasiPendapatan = Object.values(realisasiPendapatan || {}).flat().reduce((sum, item) => sum + (item.nilai || 0), 0);
       const totalPenerimaanPembiayaan = (penerimaanPembiayaan || []).reduce((sum, item) => sum + (item.nilai || 0), 0);
@@ -485,15 +276,13 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
 
       return {
           totalAnggaran, totalPendapatan, totalRealisasiBelanja,
-          totalRealisasiNonRKUD: calculatedNonRkud, // Masukkan ke return object
           totalGabunganBelanja, totalRealisasiPendapatan, totalPenerimaanPembiayaan, totalPengeluaranPembiayaan
       };
-  }, [anggaran, pendapatan, penerimaanPembiayaan, pengeluaranPembiayaan, realisasi, realisasiPendapatan, realisasiNonRkud]);
+  }, [anggaran, pendapatan, penerimaanPembiayaan, pengeluaranPembiayaan, realisasi, realisasiPendapatan, includeNonRKUD, totalRealisasiNonRKUD]);
 
   const penyerapanAnggaranPercentage = totalAnggaran > 0 ? (totalGabunganBelanja / totalAnggaran) * 100 : 0;
   const pencapaianPendapatanPercentage = totalPendapatan > 0 ? (totalRealisasiPendapatan / totalPendapatan) * 100 : 0;
   const penyerapanRkudPercentage = totalAnggaran > 0 ? (totalRealisasiBelanja / totalAnggaran) * 100 : 0;
-  // 4. Hitung Persentase Non RKUD menggunakan nilai yang sudah dihitung
   const penyerapanNonRkudPercentage = totalAnggaran > 0 ? (totalRealisasiNonRKUD / totalAnggaran) * 100 : 0;
 
   const sumberDanaData = React.useMemo(() => {
@@ -573,6 +362,7 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
         return prompt;
     }
     
+    // --- INI ADALAH PROMPT BARU (AUDITOR AHLI) ---
     return `
     Anda adalah seorang Auditor Ahli dan Penasihat Keuangan Daerah untuk ${namaPemda || 'pemerintah daerah'}.
     Tugas Anda adalah menganalisis data ringkas APBD tahun ${selectedYear} berikut dan memberikan peringatan dini serta rekomendasi kebijakan yang tajam.
@@ -597,6 +387,7 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
     ### 3. REKOMENDASI KEBIJAKAN YANG DAPAT DITINDAKLANJUTI
     (Berikan 3-5 poin rekomendasi yang spesifik, konkret, dan langsung dapat dieksekusi oleh pimpinan daerah untuk mengatasi risiko tersebut.)
     `;
+    // --- AKHIR DARI PROMPT BARU ---
   };
   
   const apbdChartData = [
@@ -608,6 +399,7 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
   
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF4560', '#8884d8', '#82ca9d'];
 
+  // --- KOMPONEN KARTU STATISTIK YANG DIPERBARUI ---
   const StatCard = ({ icon, title, target, realisasi, percentage, colorClass, rkud, nonRkud, rkudPercentage, nonRkudPercentage }) => (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md flex flex-col justify-between min-h-[220px]">
         <div>
@@ -639,134 +431,6 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
                 <div className={`h-2 bg-${colorClass}-500 rounded-full`} style={{ width: `${percentage > 100 ? 100 : percentage}%` }}></div>
             </div>
             <p className={`text-right mt-2 font-bold text-sm text-${colorClass}-600 dark:text-${colorClass}-400`}>{percentage.toFixed(2)}%</p>
-        </div>
-    </div>
-  );
-
-  return (
-    <div className="space-y-8">
-        <div className="flex justify-between items-center">
-            <SectionTitle>Dashboard & Analisis Interaktif</SectionTitle>
-            {lastUpdateString && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Data Realisasi Diperbarui Pada: {lastUpdateString}
-                </p>
-            )}
-        </div>
-        <GeminiAnalysis 
-            getAnalysisPrompt={getDashboardAnalysisPrompt} 
-            disabledCondition={totalAnggaran === 0 && totalPendapatan === 0} 
-            theme={theme}
-            allData={data}
-            selectedYear={selectedYear}
-            interactivePlaceholder="Contoh: Analisis anggaran untuk Dinas Pendidikan"
-            userRole={userRole}
-            userCanUseAi={userCanUseAi} 
-        />
-       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <StatCard 
-                icon={<ArrowDownCircle className="text-blue-500" size={24} />}
-                title="Pendapatan Daerah"
-                target={totalPendapatan}
-                realisasi={totalRealisasiPendapatan}
-                percentage={pencapaianPendapatanPercentage}
-                colorClass="blue"
-            />
-            {/* --- KARTU BELANJA: Menggunakan totalRealisasiNonRKUD yang sudah dihitung --- */}
-            <StatCard 
-                icon={<Receipt className="text-red-500" size={24} />}
-                title="Belanja Daerah"
-                target={totalAnggaran}
-                realisasi={totalGabunganBelanja}
-                percentage={penyerapanAnggaranPercentage}
-                colorClass="red"
-                rkud={totalRealisasiBelanja}
-                nonRkud={totalRealisasiNonRKUD} 
-                rkudPercentage={penyerapanRkudPercentage}
-                nonRkudPercentage={penyerapanNonRkudPercentage}
-            />
-            <StatCard 
-                icon={<Globe className="text-gray-500" size={24} />}
-                title="Penerimaan Pembiayaan"
-                target={totalPenerimaanPembiayaan}
-                realisasi={0}
-                percentage={0}
-                colorClass="gray"
-            />
-            <StatCard 
-                icon={<MinusCircle className="text-green-500" size={24} />}
-                title="Pengeluaran Pembiayaan"
-                target={totalPengeluaranPembiayaan}
-                realisasi={0}
-                percentage={0}
-                colorClass="green"
-            />
-       </div>
-
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Grafik APBD</h3>
-            <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={apbdChartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
-                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis tickFormatter={(val) => `${(val / 1e9).toFixed(1)} M`} tick={{ fontSize: 12 }} />
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                    <Legend />
-                    <Bar dataKey="Target" fill="#435EBE" name="Target/Pagu" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Realisasi" fill="#1E293B" name="Realisasi" radius={[4, 4, 0, 0]} />
-                </BarChart>
-            </ResponsiveContainer>
-        </div>
-
-       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Anggaran Belanja per SKPD (Top 10)</h3>
-                <ResponsiveContainer width="100%" height={450}>
-                    <BarChart data={anggaranPerSkpd.slice(0, 10)} layout="vertical" margin={{ top: 5, right: 30, left: 150, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
-                        <XAxis type="number" tickFormatter={(val) => `${(val / 1e9).toFixed(1)} M`} tick={{ fontSize: 12 }} />
-                        <YAxis type="category" dataKey="NamaSKPD" tick={{ fontSize: 12, width: 140 }} />
-                        <Tooltip formatter={(value) => formatCurrency(value)} />
-                        <Bar dataKey="nilai" name="Anggaran">
-                            {anggaranPerSkpd.slice(0, 10).map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Komposisi Pendapatan per OPD (Top 10)</h3>
-                <ResponsiveContainer width="100%" height={450}>
-                    <BarChart data={pendapatanPerOpd.slice(0, 10)} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
-                        <XAxis type="number" tickFormatter={(val) => `${(val / 1e9).toFixed(1)} M`} tick={{ fontSize: 12 }} />
-                        <YAxis type="category" dataKey="NamaOPD" tick={{ fontSize: 12, width: 90 }}/>
-                        <Tooltip formatter={(value) => formatCurrency(value)} />
-                        <Bar dataKey="nilai" name="Target Pendapatan">
-                            {pendapatanPerOpd.slice(0, 10).map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mt-6">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Komposisi Sumber Dana</h3>
-            <ResponsiveContainer width="100%" height={450}>
-                <BarChart data={sumberDanaData} margin={{ top: 5, right: 30, left: 20, bottom: 120 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} tick={{ fontSize: 12 }} />
-                    <YAxis tickFormatter={(val) => `${(val / 1e9).toFixed(1)} M`} tick={{ fontSize: 12 }} />
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                    <Bar dataKey="value" name="Pagu Anggaran" radius={[4, 4, 0, 0]}>
-                        {sumberDanaData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                    </Bar>
-                </BarChart>
-            </ResponsiveContainer>
         </div>
     </div>
   );
@@ -902,7 +566,7 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
 };
 
 // --- Analisis Kinerja View ---
-const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda, userRole, userCanUseAi }) => {
+const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -919,6 +583,7 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda, userRole, u
     const [sortConfig, setSortConfig] = React.useState({ key: 'kinerjaA', direction: 'descending' });
     const [selectedSkpd, setSelectedSkpd] = React.useState('Semua SKPD');
 
+    // 1. Memperbarui fungsi untuk mengambil data realisasiNonRkud
     const fetchDataForYear = async (year) => {
         if (!user) return null;
         const dataTypes = ['anggaran', 'pendapatan', 'realisasi', 'realisasiPendapatan', 'realisasiNonRkud'];
@@ -928,6 +593,7 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda, userRole, u
             const snapshot = await getDocs(query(collRef));
             let data = [];
             snapshot.forEach(doc => { data = [...data, ...doc.data().data]; });
+            // Menambahkan realisasiNonRkud ke dalam logika data bulanan
             if (dataType === 'realisasi' || dataType === 'realisasiPendapatan' || dataType === 'realisasiNonRkud') {
                 yearData[dataType] = data.reduce((acc, item) => {
                     const month = item.month || 'Lainnya';
@@ -963,74 +629,22 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda, userRole, u
         if (user) { loadComparisonData(); }
     }, [yearA, yearB, user]);
 
-    // --- LOGIKA UTAMA (DATA PROCESSING) ---
-    const { performanceData, skpdList, radarData, summaryData, chartData } = React.useMemo(() => {
-        if (!dataA || !dataB) return { performanceData: [], skpdList: [], radarData: [], summaryData: null, chartData: [] };
+    const { performanceData, skpdList, radarData } = React.useMemo(() => {
+        if (!dataA || !dataB) return { performanceData: [], skpdList: [], radarData: [] };
 
-        // 1. HITUNG RINGKASAN TOTAL PEMDA & DATA GRAFIK
-        const calculateTotalAndChart = (data, year) => {
-            const targetKey = analysisType === 'Belanja' ? 'anggaran' : 'pendapatan';
-            const realisasiKey = analysisType === 'Belanja' ? 'realisasi' : 'realisasiPendapatan';
-            
-            // Total Pagu/Target Tahunan
-            const totalTarget = (data[targetKey] || []).reduce((s, i) => s + (i.nilai || 0), 0);
-            
-            // Total Realisasi (Sesuai Filter Bulan)
-            const startIndex = months.indexOf(startMonth);
-            const endIndex = months.indexOf(endMonth);
-            const selectedMonths = months.slice(startIndex, endIndex + 1);
-            
-            let totalRealisasi = 0;
-            const monthlyData = months.map(m => {
-                let val = (data[realisasiKey]?.[m] || []).reduce((s, i) => s + (i.nilai || 0), 0);
-                if (analysisType === 'Belanja') {
-                    val += (data.realisasiNonRkud?.[m] || []).reduce((s, i) => s + (i.nilai || 0), 0);
-                }
-                return val;
-            });
-
-            // Hitung total hanya untuk bulan yang dipilih
-            for (let i = startIndex; i <= endIndex; i++) {
-                totalRealisasi += monthlyData[i];
-            }
-
-            return { totalTarget, totalRealisasi, monthlyData };
-        };
-
-        const statsA = calculateTotalAndChart(dataA, yearA);
-        const statsB = calculateTotalAndChart(dataB, yearB);
-
-        const summaryData = {
-            yearA: { year: yearA, ...statsA, persentase: statsA.totalTarget > 0 ? (statsA.totalRealisasi / statsA.totalTarget) * 100 : 0 },
-            yearB: { year: yearB, ...statsB, persentase: statsB.totalTarget > 0 ? (statsB.totalRealisasi / statsB.totalTarget) * 100 : 0 }
-        };
-
-        // Siapkan Data Grafik (Kumulatif)
-        let cumA = 0;
-        let cumB = 0;
-        const chartData = months.map((m, i) => {
-            cumA += statsA.monthlyData[i];
-            cumB += statsB.monthlyData[i];
-            return {
-                name: m.substring(0, 3), // Jan, Feb, dst
-                [`${yearA}`]: cumA,
-                [`${yearB}`]: cumB
-            };
-        });
-
-        // 2. HITUNG PERFORMA PER SKPD (Logika Lama)
         let skpdMap = new Map();
-        const processSKPDData = (data, year, type) => {
+        const processData = (data, year, type) => {
             const startIndex = months.indexOf(startMonth);
             const endIndex = months.indexOf(endMonth);
             const selectedMonths = months.slice(startIndex, endIndex + 1);
 
+            // 2. Menggabungkan data realisasi biasa dengan realisasi Non RKUD
             let realisasiData = [];
             if (type === 'Belanja') {
                 const realisasiBiasa = selectedMonths.map(month => data.realisasi?.[month] || []).flat();
                 const realisasiNonRkudData = selectedMonths.map(month => data.realisasiNonRkud?.[month] || []).flat();
                 realisasiData = [...realisasiBiasa, ...realisasiNonRkudData];
-            } else { 
+            } else { // Pendapatan
                 realisasiData = selectedMonths.map(month => data.realisasiPendapatan?.[month] || []).flat();
             }
 
@@ -1048,6 +662,7 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda, userRole, u
             });
 
             realisasiData.forEach(item => {
+                // 3. Menyamakan nama kolom (NamaSKPD vs NAMASKPD)
                 const skpdName = item.NamaSKPD || item.SKPD || item.NAMASKPD || 'Tanpa SKPD/OPD';
                 if (!skpdMap.has(skpdName)) skpdMap.set(skpdName, { skpd: skpdName });
                 const skpd = skpdMap.get(skpdName);
@@ -1055,8 +670,8 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda, userRole, u
             });
         };
 
-        processSKPDData(dataA, 'A', analysisType);
-        processSKPDData(dataB, 'B', analysisType);
+        processData(dataA, 'A', analysisType);
+        processData(dataB, 'B', analysisType);
         
         const skpdList = Array.from(skpdMap.keys()).sort();
 
@@ -1071,7 +686,7 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda, userRole, u
                     kinerjaA: paguA > 0 ? (realisasiA / paguA) * 100 : 0,
                     kinerjaB: paguB > 0 ? (realisasiB / paguB) * 100 : 0,
                 };
-            } else { 
+            } else { // Pendapatan
                 const targetA = skpd.targetA || 0;
                 const realisasiA = skpd.realisasiA || 0;
                 const targetB = skpd.targetB || 0;
@@ -1084,7 +699,6 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda, userRole, u
             }
         });
         
-        // Radar Data (Head-to-Head SKPD)
         let radarData = [];
         if (selectedSkpd !== 'Semua SKPD') {
             const skpdData = performanceData.find(d => d.skpd === selectedSkpd);
@@ -1098,16 +712,16 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda, userRole, u
             }
         }
 
-        return { performanceData, skpdList, radarData, summaryData, chartData };
+        return { performanceData, skpdList, radarData };
 
     }, [dataA, dataB, analysisType, startMonth, endMonth, selectedSkpd]);
 
-    // ... (Logika Sortir & Pagination tetap sama) ...
     const sortedData = React.useMemo(() => {
         let dataToDisplay = performanceData;
         if (selectedSkpd !== 'Semua SKPD') {
             dataToDisplay = performanceData.filter(item => item.skpd === selectedSkpd);
         }
+        
         if (sortConfig.key) {
             return [...dataToDisplay].sort((a, b) => {
                 if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'ascending' ? -1 : 1;
@@ -1126,7 +740,6 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda, userRole, u
         setSortConfig({ key, direction });
     };
     
-    // ... (Prompt AI tetap sama) ...
     const getAnalysisPrompt = (customQuery) => {
         if (customQuery) return `Berdasarkan data kinerja ${analysisType}, berikan analisis untuk: "${customQuery}"`;
         if (sortedData.length === 0) return "Data tidak cukup untuk analisis.";
@@ -1140,16 +753,19 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda, userRole, u
             : `- **${item.skpd}**: Kinerja ${yearA}: ${item.kinerjaA.toFixed(2)}%, Kinerja ${yearB}: ${item.kinerjaB.toFixed(2)}%`;
 
         return `
-            Sebagai analis ${namaPemda}, analisis kinerja **${analysisType}** SKPD tahun **${yearA}** vs **${yearB}** (${period}).
-            ${summaryData ? `Total Pemda ${yearA}: Capaian ${summaryData.yearA.persentase.toFixed(2)}%. Total Pemda ${yearB}: Capaian ${summaryData.yearB.persentase.toFixed(2)}%.` : ''}
-            
-            Top Performance ${yearA}:
+            Anda adalah seorang analis kinerja untuk ${namaPemda || 'pemerintah daerah'}. Lakukan analisis perbandingan kinerja **${analysisType}** SKPD antara tahun **${yearA}** dan **${yearB}** untuk **${period}**.
+            ${selectedSkpd !== 'Semua SKPD' ? `Fokus analisis pada: **${selectedSkpd}**.` : ''}
+
+            ### SKPD Kinerja Tertinggi (${yearA})
             ${top5.map(formatItem).join('\n')}
 
-            Low Performance ${yearA}:
+            ### SKPD Kinerja Terendah (${yearA})
             ${bottom5.map(formatItem).join('\n')}
 
-            Berikan analisis tren, perbandingan *year-on-year*, dan rekomendasi strategis.
+            Berikan analisis mendalam mengenai:
+            1.  Perubahan kinerja yang signifikan antara dua tahun. Identifikasi SKPD yang menunjukkan peningkatan atau penurunan drastis.
+            2.  Kemungkinan faktor penyebab di balik kinerja tinggi atau rendah (misalnya, efektivitas program, perubahan target, dll.).
+            3.  Rekomendasi strategis untuk SKPD berkinerja rendah dan cara mempertahankan atau meningkatkan kinerja bagi SKPD berkinerja tinggi.
         `;
     };
     
@@ -1187,35 +803,10 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda, userRole, u
             { key: 'growth', label: 'Perubahan Kinerja (pp)' },
           ];
 
-    const ComparisonCard = ({ title, yearData, yearLabel, color }) => (
-        <div className={`p-4 rounded-lg bg-gray-50 dark:bg-gray-700/30 border-l-4 border-${color}-500`}>
-            <div className="flex justify-between items-start mb-2">
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">{title}</p>
-                    <p className="text-xs font-bold text-gray-400">{yearLabel}</p>
-                </div>
-            </div>
-            <div className="space-y-1">
-                <div className="flex justify-between text-sm">
-                    <span>{analysisType === 'Belanja' ? 'Pagu' : 'Target'}:</span>
-                    <span className="font-semibold">{formatCurrency(yearData.totalTarget)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                    <span>Realisasi:</span>
-                    <span className="font-bold text-gray-800 dark:text-gray-200">{formatCurrency(yearData.totalRealisasi)}</span>
-                </div>
-                <div className="mt-2 w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                    <div className={`h-2 rounded-full bg-${color}-500`} style={{ width: `${Math.min(yearData.persentase, 100)}%` }}></div>
-                </div>
-                <p className={`text-right text-xs font-bold text-${color}-600 mt-1`}>{yearData.persentase.toFixed(2)}%</p>
-            </div>
-        </div>
-    );
-
     return (
         <div className="space-y-6">
             <SectionTitle>Analisis Kinerja SKPD</SectionTitle>
-            <GeminiAnalysis getAnalysisPrompt={getAnalysisPrompt} disabledCondition={sortedData.length === 0} theme={theme} userRole={userRole} userCanUseAi={userCanUseAi} />
+            <GeminiAnalysis getAnalysisPrompt={getAnalysisPrompt} disabledCondition={sortedData.length === 0} theme={theme} />
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     <select value={yearA} onChange={e => setYearA(parseInt(e.target.value))} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
@@ -1245,43 +836,18 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda, userRole, u
                 {error && <p className="text-center text-red-500 py-10">{error}</p>}
                 {!isLoading && !error && (
                     <>
-                    {/* --- BAGIAN BARU: RINGKASAN & GRAFIK --- */}
-                    {summaryData && (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                            <div className="space-y-4">
-                                <ComparisonCard title={`Total Kinerja ${analysisType}`} yearLabel={`Tahun ${yearA}`} yearData={summaryData.yearA} color="blue" />
-                                <ComparisonCard title={`Total Kinerja ${analysisType}`} yearLabel={`Tahun ${yearB}`} yearData={summaryData.yearB} color="purple" />
-                            </div>
-                            <div className="lg:col-span-2 bg-gray-50 dark:bg-gray-900/30 p-4 rounded-lg">
-                                <h4 className="font-bold text-gray-700 dark:text-gray-300 mb-4 text-center">Tren Realisasi Kumulatif ({analysisType})</h4>
-                                <ResponsiveContainer width="100%" height={250}>
-                                    <LineChart data={chartData}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="name" tick={{fontSize: 12}} />
-                                        <YAxis tickFormatter={(val) => `${(val / 1e9).toFixed(0)}M`} width={40} tick={{fontSize: 12}} />
-                                        <Tooltip formatter={(value) => formatCurrency(value)} />
-                                        <Legend />
-                                        <Line type="monotone" dataKey={String(yearA)} stroke="#3B82F6" strokeWidth={2} dot={false} name={`Tahun ${yearA}`} />
-                                        <Line type="monotone" dataKey={String(yearB)} stroke="#8B5CF6" strokeWidth={2} dot={false} name={`Tahun ${yearB}`} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    )}
-                    {/* --- AKHIR BAGIAN BARU --- */}
-
                     {selectedSkpd !== 'Semua SKPD' && radarData.length > 0 && (
                         <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4 text-center">Detail Kinerja: {selectedSkpd}</h3>
-                            <ResponsiveContainer width="100%" height={300}>
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4 text-center">Perbandingan Kinerja Head-to-Head: {selectedSkpd}</h3>
+                            <ResponsiveContainer width="100%" height={400}>
                                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
                                     <PolarGrid />
                                     <PolarAngleAxis dataKey="subject" />
                                     <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} tickFormatter={(value, index) => index === 2 ? `${value}%` : ''} />
                                     <Tooltip formatter={(value, name, props) => props.payload.subject === 'Kinerja (%)' ? `${value.toFixed(2)}%` : formatCurrency(value)} />
                                     <Legend />
-                                    <Radar name={yearA} dataKey="A" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.4} />
-                                    <Radar name={yearB} dataKey="B" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.4} />
+                                    <Radar name={yearA} dataKey="A" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                                    <Radar name={yearB} dataKey="B" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
                                 </RadarChart>
                             </ResponsiveContainer>
                         </div>
@@ -1756,13 +1322,7 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole }) => {
     };
     
     const getAnalysisPrompt = (customQuery) => {
-        // PERBAIKAN: Sertakan data yang sedang difilter ke dalam prompt kustom
-        if (customQuery) {
-            const contextData = filteredData.slice(0, 20).map(d => 
-                `${d.subKegiatan} (Sumber: ${d.sumberDana}): Anggaran ${formatCurrency(d.anggaran)}, Sisa ${formatCurrency(d.sisaAnggaran)}`
-            ).join('\n');
-            return `Data Tabel (Top 20 Terfilter):\n${contextData}\n\nPertanyaan Pengguna: "${customQuery}"\nJawablah berdasarkan data di atas.`;
-        }
+        if (customQuery) return `Berdasarkan data, analisis: "${customQuery}"`;
         
         const focus = selectedSkpd === 'Semua SKPD' ? 'keseluruhan APBD' : `SKPD ${selectedSkpd}`;
         const subActivityFocus = selectedSubKegiatan !== 'Semua Sub Kegiatan' ? `pada Sub Kegiatan: "${selectedSubKegiatan}"` : '';
@@ -1922,9 +1482,9 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole }) => {
 };
 
 
-// NEW: SkpdBelanjaStatsView Component (Updated with Summary & Chart)
+// NEW: SkpdBelanjaStatsView Component
 const SkpdBelanjaStatsView = ({ data, theme, namaPemda }) => {
-    const { anggaran, realisasi, realisasiNonRkud } = data;
+    const { anggaran, realisasi, realisasiNonRkud } = data; // Ditambahkan realisasiNonRkud
     const [currentPage, setCurrentPage] = React.useState(1);
     const [skpdStats, setSkpdStats] = React.useState([]);
     const [searchTerm, setSearchTerm] = React.useState("");
@@ -1944,6 +1504,7 @@ const SkpdBelanjaStatsView = ({ data, theme, namaPemda }) => {
         const endIndex = months.indexOf(endMonth);
         const selectedMonths = months.slice(startIndex, endIndex + 1);
 
+        // --- LOGIKA BARU: Menggabungkan Realisasi Belanja & Non RKUD ---
         const normalizeRealisasiItem = (item, isNonRkud = false) => {
             if (!item) return null;
             return {
@@ -1961,9 +1522,10 @@ const SkpdBelanjaStatsView = ({ data, theme, namaPemda }) => {
                 combinedRealisasi.push(...realisasiNonRkud[month].map(item => normalizeRealisasiItem(item, true)));
             }
         });
+        // --- AKHIR LOGIKA BARU ---
 
         const realisasiMap = new Map();
-        combinedRealisasi.forEach(item => {
+        combinedRealisasi.forEach(item => { // Menggunakan data realisasi gabungan
             if (!item) return;
             const skpd = item.NamaSKPD || 'Tanpa SKPD';
             realisasiMap.set(skpd, (realisasiMap.get(skpd) || 0) + item.nilai);
@@ -1977,19 +1539,7 @@ const SkpdBelanjaStatsView = ({ data, theme, namaPemda }) => {
         });
 
         setSkpdStats(stats.sort((a,b) => b.persentase - a.persentase));
-    }, [anggaran, realisasi, realisasiNonRkud, startMonth, endMonth]);
-
-    // --- LOGIKA HITUNG SUMMARY PEMDA ---
-    const { totalAnggaranPemda, totalRealisasiPemda, persentasePemda } = React.useMemo(() => {
-        const tAnggaran = skpdStats.reduce((acc, curr) => acc + curr.totalAnggaran, 0);
-        const tRealisasi = skpdStats.reduce((acc, curr) => acc + curr.totalRealisasi, 0);
-        return {
-            totalAnggaranPemda: tAnggaran,
-            totalRealisasiPemda: tRealisasi,
-            persentasePemda: tAnggaran > 0 ? (tRealisasi / tAnggaran) * 100 : 0
-        };
-    }, [skpdStats]);
-    // -----------------------------------
+    }, [anggaran, realisasi, realisasiNonRkud, startMonth, endMonth]); // Ditambahkan realisasiNonRkud
 
     const filteredData = skpdStats.filter(item => item.skpd.toLowerCase().includes(searchTerm.toLowerCase()));
     const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
@@ -2007,71 +1557,26 @@ const SkpdBelanjaStatsView = ({ data, theme, namaPemda }) => {
 
     const getAnalysisPrompt = (customQuery) => {
         if (customQuery) {
-            const contextData = filteredData.slice(0, 20).map(s => 
-                `${s.skpd}: ${s.persentase.toFixed(2)}% (Anggaran: ${formatCurrency(s.totalAnggaran)})`
-            ).join('\n');
-            return `Data Kinerja SKPD (Top 20 Terfilter):\n${contextData}\n\nAnalisis permintaan berikut: "${customQuery}"`;
+            return `Berdasarkan data statistik belanja SKPD, berikan analisis untuk permintaan berikut: "${customQuery}"`;
         }
+        const topPerformers = skpdStats.slice(0, 3).map(s => `- ${s.skpd}: ${s.persentase.toFixed(2)}%`).join('\n');
+        const bottomPerformers = skpdStats.slice(-3).reverse().map(s => `- ${s.skpd}: ${s.persentase.toFixed(2)}%`).join('\n');
+        const period = startMonth === endMonth ? startMonth : `periode ${startMonth} - ${endMonth}`;
         return `
-            Sebagai analis untuk ${namaPemda || 'pemerintah daerah'}, lakukan analisis kinerja penyerapan anggaran belanja per SKPD.
-            Total Anggaran Pemda: ${formatCurrency(totalAnggaranPemda)}
-            Total Realisasi Pemda: ${formatCurrency(totalRealisasiPemda)} (${persenPemda.toFixed(2)}%)
+            Sebagai analis untuk ${namaPemda || 'pemerintah daerah'}, lakukan analisis kinerja penyerapan anggaran belanja per SKPD untuk **${period}**.
+            Data menunjukkan 3 SKPD dengan penyerapan tertinggi adalah:
+            ${topPerformers}
             
-            Berikan analisis singkat mengenai performa keseluruhan dan rekomendasi untuk meningkatkan penyerapan.
+            Dan 3 SKPD dengan penyerapan terendah adalah:
+            ${bottomPerformers}
+            
+            Berikan analisis singkat mengenai kemungkinan penyebab perbedaan kinerja ini dan berikan rekomendasi untuk SKPD dengan penyerapan rendah.
         `;
     };
 
     return (
         <div className="space-y-6">
             <SectionTitle>Statistik Anggaran vs Realisasi Belanja per SKPD</SectionTitle>
-            
-            {/* --- BAGIAN BARU: RINGKASAN & GRAFIK PEMDA --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-2">
-                {/* Kartu Ringkasan Angka */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md lg:col-span-1 flex flex-col justify-center space-y-6">
-                    <div>
-                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Pagu Anggaran Pemda</h3>
-                        <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 mt-1">{formatCurrency(totalAnggaranPemda)}</p>
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Realisasi Pemda</h3>
-                        <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{formatCurrency(totalRealisasiPemda)}</p>
-                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            ({startMonth} - {endMonth})
-                        </div>
-                    </div>
-                    <div>
-                        <div className="flex justify-between items-end mb-2">
-                            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Persentase Serapan</h3>
-                            <span className={`text-lg font-bold ${persentasePemda > 80 ? 'text-green-600' : 'text-yellow-600'}`}>{persentasePemda.toFixed(2)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                            <div className={`h-full ${persentasePemda > 80 ? 'bg-green-500' : 'bg-yellow-500'}`} style={{ width: `${Math.min(persentasePemda, 100)}%` }}></div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Kartu Grafik Batang */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md lg:col-span-2 flex flex-col justify-center">
-                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-4">Visualisasi Realisasi Tingkat Pemda</h3>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <BarChart layout="vertical" data={[{ name: 'Total Pemda', Anggaran: totalAnggaranPemda, Realisasi: totalRealisasiPemda }]} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e7eb" />
-                            <XAxis type="number" tickFormatter={(val) => `${(val / 1e9).toFixed(0)}M`} tick={{fontSize: 12, fill: '#9CA3AF'}} />
-                            <YAxis type="category" dataKey="name" hide />
-                            <Tooltip 
-                                formatter={(value) => formatCurrency(value)}
-                                contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                            />
-                            <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                            <Bar dataKey="Anggaran" fill="#9CA3AF" radius={[0, 4, 4, 0]} barSize={40} name="Pagu Anggaran" />
-                            <Bar dataKey="Realisasi" fill="#2563EB" radius={[0, 4, 4, 0]} barSize={40} name="Realisasi" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
-            {/* --- AKHIR BAGIAN BARU --- */}
-
             <GeminiAnalysis 
                 getAnalysisPrompt={getAnalysisPrompt} 
                 disabledCondition={skpdStats.length === 0} 
@@ -2106,17 +1611,17 @@ const SkpdBelanjaStatsView = ({ data, theme, namaPemda }) => {
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-2">
                                 <div className="flex-1 mb-2 md:mb-0">
                                     <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5">
-                                        <div className={`h-2.5 rounded-full ${item.persentase > 80 ? 'bg-green-600' : (item.persentase < 50 ? 'bg-red-500' : 'bg-blue-600')}`} style={{ width: `${Math.min(item.persentase, 100)}%` }}></div>
+                                        <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${item.persentase > 100 ? 100 : item.persentase}%` }}></div>
                                     </div>
                                 </div>
-                                <div className={`font-semibold w-24 text-center ${item.persentase > 80 ? 'text-green-600' : (item.persentase < 50 ? 'text-red-500' : 'text-blue-600')}`}>{item.persentase.toFixed(2)}%</div>
+                                <div className="font-semibold text-blue-700 dark:text-blue-400 w-24 text-center">{item.persentase.toFixed(2)}%</div>
                                 <div className="w-48 text-right">
                                     <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(item.totalAnggaran)}</p>
-                                    <p className="text-[10px] uppercase text-gray-500 dark:text-gray-400">Anggaran Tahunan</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Anggaran Tahunan</p>
                                 </div>
                                 <div className="w-48 text-right">
-                                    <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{formatCurrency(item.totalRealisasi)}</p>
-                                    <p className="text-[10px] uppercase text-gray-500 dark:text-gray-400">Realisasi ({startMonth} - {endMonth})</p>
+                                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(item.totalRealisasi)}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Realisasi ({startMonth} - {endMonth})</p>
                                 </div>
                             </div>
                         </div>
@@ -2278,12 +1783,8 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole }) => {
     }, [selectedSkpd, startMonth, endMonth, searchTerm]);
 
     const getAnalysisPrompt = (customQuery) => {
-        // PERBAIKAN: Sertakan data Pendapatan yang difilter ke prompt
         if (customQuery) {
-            const contextData = stats.tableData.slice(0, 20).map(s => 
-                `${s.sumberPendapatan}: Target ${formatCurrency(s.totalTarget)}, Realisasi ${formatCurrency(s.totalRealisasi)}`
-            ).join('\n');
-            return `Data Pendapatan (Top 20 Terfilter):\n${contextData}\n\nBerdasarkan data tersebut, analisis: "${customQuery}"`;
+            return `Berdasarkan data statistik pendapatan, berikan analisis untuk permintaan berikut: "${customQuery}"`;
         }
         
         const topSources = stats.tableData.slice(0, 5).map(s => `- **${s.sumberPendapatan}**: Target ${formatCurrency(s.totalTarget)}, Realisasi ${formatCurrency(s.totalRealisasi)} (${s.persentase.toFixed(2)}%)`).join('\n');
@@ -2629,12 +2130,8 @@ const SkpdRekeningStatsView = ({ data, theme, namaPemda, userCanUseAi }) => {
     };
 
     const getAnalysisPrompt = (customQuery) => {
-        // PERBAIKAN: Sertakan data Rekening yang difilter ke prompt
         if (customQuery) {
-            const contextData = sortedAndFilteredData.slice(0, 15).map(s => 
-                `${s.rekening}: Anggaran ${formatCurrency(s.totalAnggaran)}, Sisa ${formatCurrency(s.sisaAnggaran)}`
-            ).join('\n');
-            return `Data Rekening (Top 15 sesuai urutan/filter):\n${contextData}\n\nJawab pertanyaan ini berdasarkan data rekening di atas: "${customQuery}"`;
+            return `Berdasarkan data rekening SKPD, berikan analisis untuk permintaan berikut: "${customQuery}"`;
         }
         
         const focus = selectedSkpd === 'Semua SKPD' ? 'keseluruhan APBD' : `SKPD: **${selectedSkpd}**`;
@@ -2764,29 +2261,19 @@ const SkpdRekeningStatsView = ({ data, theme, namaPemda, userCanUseAi }) => {
     );
 };
 
-// --- HALAMAN STATISTIK SUB KEGIATAN ---
+// --- GANTI SELURUH KOMPONEN DI BAWAH INI DENGAN VERSI YANG SUDAH DISEMPURNAKAN ---
 const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole }) => {
     const { anggaran, realisasi, realisasiNonRkud } = data;
     const [selectedSkpd, setSelectedSkpd] = React.useState('');
     const [selectedSubUnit, setSelectedSubUnit] = React.useState('Semua Sub Unit');
     
     const [subKegiatanStats, setSubKegiatanStats] = React.useState([]);
-    const [skpdSummary, setSkpdSummary] = React.useState({
-        totalAnggaran: 0,
-        totalRealisasi: 0,
-        persentase: 0,
-        sumberDana: []
-    });
-
     const [currentPage, setCurrentPage] = React.useState(1);
     const [expandedRows, setExpandedRows] = React.useState(new Set());
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     const [startMonth, setStartMonth] = React.useState(months[0]);
     const [endMonth, setEndMonth] = React.useState(months[months.length - 1]);
     const ITEMS_PER_PAGE = 10;
-
-    // Helper: Normalisasi Teks (Hapus spasi berlebih, lowercase)
-    const normalizeText = (text) => String(text || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
     const skpdList = React.useMemo(() => {
         const skpds = new Set((anggaran || []).map(item => item.NamaSKPD).filter(Boolean));
@@ -2803,7 +2290,6 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole }) => {
     React.useEffect(() => {
         if (!selectedSkpd) {
             setSubKegiatanStats([]);
-            setSkpdSummary({ totalAnggaran: 0, totalRealisasi: 0, persentase: 0, sumberDana: [] });
             return;
         }
 
@@ -2811,78 +2297,47 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole }) => {
             if (!item) return null;
             return {
                 NamaSKPD: isNonRkud ? item.NAMASKPD : item.NamaSKPD,
-                // PERBAIKAN: Tangkap semua variasi penamaan Sub Unit / Sub SKPD
-                NamaSubUnit: isNonRkud 
-                    ? (item.NamaSubUnit || item.NAMASUBSKPD || item.namaunitskpd) 
-                    : (item.NamaSubUnit || item.NamaSubSKPD || item.namaunitskpd),
+                NamaSubUnit: isNonRkud ? item.NAMASUBSKPD : item.NamaSubUnit,
                 KodeSubKegiatan: isNonRkud ? item.KODESUBKEGIATAN : item.KodeSubKegiatan,
                 NamaSubKegiatan: isNonRkud ? item.NAMASUBKEGIATAN : item.NamaSubKegiatan,
                 NamaRekening: isNonRkud ? item.NAMAREKENING : item.NamaRekening,
-                NomorSP2D: isNonRkud ? (item.NomorSP2D || item.nomorbukti) : item.NomorSP2D,
                 nilai: item.nilai || 0
             };
         };
         
+        const combinedRealisasi = {};
+        for (const month in realisasi) {
+            combinedRealisasi[month] = (realisasi[month] || []).map(item => normalizeRealisasiItem(item, false));
+        }
+        for (const month in realisasiNonRkud) {
+            if (!combinedRealisasi[month]) combinedRealisasi[month] = [];
+            combinedRealisasi[month].push(...(realisasiNonRkud[month] || []).map(item => normalizeRealisasiItem(item, true)));
+        }
+
+        const statsMap = new Map();
         const startIndex = months.indexOf(startMonth);
         const endIndex = months.indexOf(endMonth);
-        const selectedMonthsList = months.slice(startIndex, endIndex + 1);
-        
-        // --- STEP 1: KUMPULKAN & DEDUPLIKASI REALISASI ---
-        const uniqueRealisasiMap = new Map();
+        const selectedMonths = months.slice(startIndex, endIndex + 1);
+        const realisasiBulanIni = selectedMonths.map(month => combinedRealisasi[month] || []).flat();
 
-        selectedMonthsList.forEach(month => {
-            const processItems = (items, isNonRkud) => {
-                items.forEach(rawItem => {
-                    const item = normalizeRealisasiItem(rawItem, isNonRkud);
-                    if(!item || !item.NamaSKPD) return;
-
-                    // Kunci Unik Transaksi: DIPERKETAT
-                    // Menambahkan NamaSubUnit ke dalam kunci deduplikasi sesuai permintaan.
-                    // Juga menormalisasi kode dan nomor bukti untuk mencegah duplikat karena case-sensitive.
-                    const uniqueTransKey = [
-                        normalizeText(item.NamaSKPD),
-                        normalizeText(item.NamaSubUnit), // Kunci Sub Unit / Sub SKPD
-                        normalizeText(item.KodeSubKegiatan),
-                        normalizeText(item.NamaRekening),
-                        normalizeText(item.NomorSP2D || 'no-id'), // Normalisasi SP2D
-                        item.nilai
-                    ].join('|');
-
-                    if (!uniqueRealisasiMap.has(uniqueTransKey)) {
-                        uniqueRealisasiMap.set(uniqueTransKey, item);
-                    }
-                });
-            };
-
-            if (realisasi && realisasi[month]) processItems(realisasi[month], false);
-            if (realisasiNonRkud && realisasiNonRkud[month]) processItems(realisasiNonRkud[month], true);
-        });
-
-        const distinctRealisasi = Array.from(uniqueRealisasiMap.values());
-
-        // --- STEP 2: SIAPKAN WADAH DARI ANGGARAN ---
         let filteredAnggaran = (anggaran || []).filter(item => item.NamaSKPD === selectedSkpd);
         if (selectedSubUnit !== 'Semua Sub Unit') {
             filteredAnggaran = filteredAnggaran.filter(item => item.NamaSubUnit === selectedSubUnit);
         }
-
-        const statsMap = new Map();
-        let totalAnggaranSKPD = 0;
-        let totalRealisasiSKPD = 0;
-        const allSumberDanaSet = new Set();
-
+        
+        let filteredRealisasi = realisasiBulanIni.filter(item => item.NamaSKPD === selectedSkpd);
+        if (selectedSubUnit !== 'Semua Sub Unit') {
+            filteredRealisasi = filteredRealisasi.filter(item => item.NamaSubUnit === selectedSubUnit);
+        }
+        
         filteredAnggaran.forEach(item => {
-            totalAnggaranSKPD += item.nilai || 0;
-            if (item.NamaSumberDana) allSumberDanaSet.add(item.NamaSumberDana);
-
-            const key = `${normalizeText(item.NamaSKPD)}|${normalizeText(item.NamaSubUnit)}|${item.KodeSubKegiatan}`; 
-            const rekeningKey = (item.NamaRekening || 'Tanpa Nama Rekening').trim();
+            const key = `${item.NamaSKPD}|${item.KodeSubKegiatan}`; 
+            const rekeningKey = item.NamaRekening || 'Tanpa Nama Rekening';
 
             if (!statsMap.has(key)) {
                 statsMap.set(key, {
                     kodeSubKegiatan: item.KodeSubKegiatan,
                     subKegiatan: item.NamaSubKegiatan || 'Tanpa Sub Kegiatan',
-                    namaSubUnit: item.NamaSubUnit,
                     totalAnggaran: 0,
                     totalRealisasi: 0,
                     rekenings: new Map(),
@@ -2890,43 +2345,30 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole }) => {
                 });
             }
 
-            const data = statsMap.get(key);
-            data.totalAnggaran += item.nilai || 0;
-            if (item.NamaSumberDana) data.sumberDanaSet.add(item.NamaSumberDana);
-
-            if (!data.rekenings.has(rekeningKey)) {
-                data.rekenings.set(rekeningKey, { anggaran: 0, realisasi: 0 });
+            const subKegiatanData = statsMap.get(key);
+            subKegiatanData.totalAnggaran += item.nilai || 0;
+            if (item.NamaSumberDana) {
+                subKegiatanData.sumberDanaSet.add(item.NamaSumberDana);
             }
-            data.rekenings.get(rekeningKey).anggaran += item.nilai || 0;
+
+            if (!subKegiatanData.rekenings.has(rekeningKey)) {
+                subKegiatanData.rekenings.set(rekeningKey, { anggaran: 0, realisasi: 0 });
+            }
+            subKegiatanData.rekenings.get(rekeningKey).anggaran += item.nilai || 0;
         });
 
-        // --- STEP 3: ISIKAN REALISASI KE WADAH ---
-        const skpdRealisasi = distinctRealisasi.filter(item => item.NamaSKPD === selectedSkpd);
-
-        skpdRealisasi.forEach(item => {
-            // Pencocokan ketat termasuk Sub Unit
-            const key = `${normalizeText(item.NamaSKPD)}|${normalizeText(item.NamaSubUnit)}|${item.KodeSubKegiatan}`;
-            const rekeningKey = (item.NamaRekening || 'Tanpa Nama Rekening').trim();
+        filteredRealisasi.forEach(item => {
+            const key = `${item.NamaSKPD}|${item.KodeSubKegiatan}`;
+            const rekeningKey = item.NamaRekening || 'Tanpa Nama Rekening';
 
             if (statsMap.has(key)) {
-                const data = statsMap.get(key);
-                const nilai = item.nilai || 0;
+                const subKegiatanData = statsMap.get(key);
+                subKegiatanData.totalRealisasi += item.nilai || 0;
 
-                data.totalRealisasi += nilai;
-                totalRealisasiSKPD += nilai; 
-
-                if (data.rekenings.has(rekeningKey)) {
-                    data.rekenings.get(rekeningKey).realisasi += nilai;
+                if (subKegiatanData.rekenings.has(rekeningKey)) {
+                    subKegiatanData.rekenings.get(rekeningKey).realisasi += item.nilai || 0;
                 }
             }
-        });
-
-        // --- STEP 4: FINALISASI ---
-        setSkpdSummary({
-            totalAnggaran: totalAnggaranSKPD,
-            totalRealisasi: totalRealisasiSKPD,
-            persentase: totalAnggaranSKPD > 0 ? (totalRealisasiSKPD / totalAnggaranSKPD) * 100 : 0,
-            sumberDana: Array.from(allSumberDanaSet).sort()
         });
 
         const finalStats = Array.from(statsMap.values()).map(data => {
@@ -2978,10 +2420,7 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole }) => {
 
     const getAnalysisPrompt = (customQuery) => {
         if (customQuery) {
-            const contextData = subKegiatanStats.slice(0, 10).map(s => 
-                `${s.subKegiatan}: Realisasi ${formatCurrency(s.totalRealisasi)} dari Pagu ${formatCurrency(s.totalAnggaran)}`
-            ).join('\n');
-            return `Data Sub Kegiatan (Top 10): \n${contextData}\n\nAnalisis pertanyaan pengguna: "${customQuery}"`;
+            return `Berdasarkan data sub kegiatan SKPD, berikan analisis untuk permintaan berikut: "${customQuery}"`;
         }
         if (!selectedSkpd) return "Pilih SKPD untuk dianalisis.";
         const top5 = subKegiatanStats.slice(0, 5).map(s => `- **${s.subKegiatan}**: Anggaran ${formatCurrency(s.totalAnggaran)}, Realisasi ${formatCurrency(s.totalRealisasi)} (${s.persentase.toFixed(2)}%)`).join('\n');
@@ -3006,7 +2445,6 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole }) => {
                 userRole={userRole}
             />
              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-                {/* --- FILTER SECTION --- */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <select
                         value={selectedSkpd}
@@ -3036,140 +2474,63 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole }) => {
                         </select>
                     </div>
                 </div>
-
                 {selectedSkpd ? (
-                    <>
-                    {/* --- INFO SUMMARY & CHART SKPD TERPILIH (BARU) --- */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 border-b border-gray-200 dark:border-gray-700 pb-8">
-                        <div className="flex flex-col justify-between space-y-4">
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-4">{selectedSkpd}</h3>
-                                <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg">
-                                    <div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Total Pagu Anggaran</p>
-                                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{formatCurrency(skpdSummary.totalAnggaran)}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Total Realisasi</p>
-                                        <p className="text-lg font-bold text-green-600 dark:text-green-400">{formatCurrency(skpdSummary.totalRealisasi)}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Persentase Serapan</span>
-                                    <span className={`text-sm font-bold ${skpdSummary.persentase > 80 ? 'text-green-600' : 'text-yellow-600'}`}>{skpdSummary.persentase.toFixed(2)}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
-                                    <div className={`h-3 rounded-full ${skpdSummary.persentase > 80 ? 'bg-green-500' : 'bg-yellow-500'}`} style={{ width: `${Math.min(skpdSummary.persentase, 100)}%` }}></div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Sumber Dana:</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {skpdSummary.sumberDana.length > 0 ? (
-                                        skpdSummary.sumberDana.map(sd => (
-                                            <span key={sd} className="px-3 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full dark:bg-purple-900/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                                                {sd}
-                                            </span>
-                                        ))
-                                    ) : (
-                                        <span className="text-xs text-gray-400 italic">Tidak ada informasi sumber dana</span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-gray-50 dark:bg-gray-900/30 p-4 rounded-lg">
-                            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 text-center">Perbandingan Anggaran vs Realisasi</h4>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <BarChart data={[{ name: 'Total', Anggaran: skpdSummary.totalAnggaran, Realisasi: skpdSummary.totalRealisasi }]}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false}/>
-                                    <XAxis dataKey="name" hide />
-                                    <YAxis tickFormatter={(val) => `${(val / 1e9).toFixed(0)}M`} width={40} tick={{fontSize: 12}} />
-                                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                                    <Legend />
-                                    <Bar dataKey="Anggaran" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={60} name="Pagu Anggaran" />
-                                    <Bar dataKey="Realisasi" fill="#10B981" radius={[4, 4, 0, 0]} barSize={60} name="Realisasi" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
                     <div className="space-y-2">
-                        {paginatedData.map((item, idx) => {
-                            const subKegiatanKey = `${item.kodeSubKegiatan}-${item.namaSubUnit || ''}-${idx}`;
+                        {paginatedData.map(item => {
+                            const subKegiatanKey = `${item.subKegiatan}-${item.kodeSubKegiatan}`; // --- KUNCI BARU YANG LEBIH UNIK ---
                             return (
                             <div key={subKegiatanKey} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                                <div onClick={() => toggleRow(subKegiatanKey)} className="flex items-center p-4 cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                                    <div className="flex-1 min-w-0 pr-4">
-                                        <h4 className="font-bold text-gray-800 dark:text-gray-200 text-sm md:text-base break-words">{item.subKegiatan}</h4>
-                                        <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 mt-1">
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded w-fit">{item.kodeSubKegiatan}</p>
-                                            <p className="text-xs text-gray-600 dark:text-gray-300 font-medium">Unit: {item.namaSubUnit || '-'}</p>
-                                        </div>
+                                <div onClick={() => toggleRow(subKegiatanKey)} className="flex items-center p-4 cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <div className="flex-1">
+                                        <h4 className="font-bold text-gray-800 dark:text-gray-200">{item.subKegiatan}</h4>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">{item.kodeSubKegiatan}</p>
                                         <div className="flex items-center mt-2">
-                                            <div className="w-full max-w-[150px] bg-gray-200 dark:bg-gray-600 rounded-full h-2 mr-3">
-                                                <div className="bg-green-600 h-2 rounded-full" style={{ width: `${item.persentase > 100 ? 100 : item.persentase}%` }}></div>
+                                            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 mr-4">
+                                                <div className="bg-green-600 h-2.5 rounded-full" style={{ width: `${item.persentase > 100 ? 100 : item.persentase}%` }}></div>
                                             </div>
-                                            <div className="font-semibold text-xs text-green-700 dark:text-green-400">{item.persentase.toFixed(2)}%</div>
+                                            <div className="font-semibold text-green-700 dark:text-green-400 w-20 text-center">{item.persentase.toFixed(2)}%</div>
                                         </div>
                                     </div>
-                                    <div className="hidden md:block w-32 text-right mx-2">
+                                    <div className="w-40 text-right mx-4">
                                         <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(item.totalAnggaran)}</p>
-                                        <p className="text-[10px] uppercase text-gray-500 dark:text-gray-400">Pagu</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">Total Anggaran</p>
                                     </div>
-                                    <div className="hidden md:block w-32 text-right mx-2">
-                                        <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{formatCurrency(item.totalRealisasi)}</p>
-                                        <p className="text-[10px] uppercase text-gray-500 dark:text-gray-400">Realisasi</p>
+                                    <div className="w-40 text-right mx-4">
+                                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(item.totalRealisasi)}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">Total Realisasi</p>
                                     </div>
-                                    <button className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 ml-2">
-                                        {expandedRows.has(subKegiatanKey) ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                    <button className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
+                                        {expandedRows.has(subKegiatanKey) ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                     </button>
                                 </div>
                                 {expandedRows.has(subKegiatanKey) && (
                                     <div className="bg-white dark:bg-gray-800/50 p-4 border-t border-gray-200 dark:border-gray-700">
-                                        {/* Mobile view details */}
-                                        <div className="md:hidden grid grid-cols-2 gap-4 mb-4 text-sm border-b pb-2 dark:border-gray-700">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
-                                                <span className="block text-xs text-gray-500">Pagu Anggaran</span>
-                                                <span className="font-semibold">{formatCurrency(item.totalAnggaran)}</span>
+                                                <h5 className="font-semibold mb-2 text-gray-700 dark:text-gray-300">Sumber Dana:</h5>
+                                                <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                                                    {item.sumberDanaList.length > 0 ? item.sumberDanaList.map(sd => <li key={sd}>{sd}</li>) : <li>Tidak Teridentifikasi</li>}
+                                                </ul>
                                             </div>
                                             <div>
-                                                <span className="block text-xs text-gray-500">Realisasi</span>
-                                                <span className="font-semibold text-blue-600">{formatCurrency(item.totalRealisasi)}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 gap-4">
-                                            <div>
-                                                <h5 className="font-semibold mb-2 text-gray-700 dark:text-gray-300 text-sm">Sumber Dana Sub Kegiatan:</h5>
-                                                <div className="flex flex-wrap gap-2 mb-4">
-                                                    {item.sumberDanaList.length > 0 ? item.sumberDanaList.map(sd => (
-                                                        <span key={sd} className="px-2 py-1 text-[10px] bg-gray-100 text-gray-600 rounded border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{sd}</span>
-                                                    )) : <span className="text-xs text-gray-400">-</span>}
-                                                </div>
-                                            
-                                                <h5 className="font-semibold mb-2 text-gray-700 dark:text-gray-300 text-sm">Rincian Rekening:</h5>
-                                                <div className="overflow-x-auto border rounded-lg dark:border-gray-600">
-                                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                                                <h5 className="font-semibold mb-2 text-gray-700 dark:text-gray-300">Rincian Rekening:</h5>
+                                                <div className="overflow-x-auto max-h-48">
+                                                    <table className="min-w-full">
                                                         <thead className="bg-gray-100 dark:bg-gray-700">
                                                             <tr>
-                                                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nama Rekening</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Anggaran</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Realisasi</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">%</th>
+                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nama Rekening</th>
+                                                                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Anggaran</th>
+                                                                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Realisasi</th>
+                                                                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Persentase</th>
                                                             </tr>
                                                         </thead>
-                                                        <tbody className="divide-y divide-gray-200 dark:divide-gray-600 bg-white dark:bg-gray-800">
+                                                        <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                                                         {item.rekenings.map(rek => (
-                                                            <tr key={rek.rekening} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                                                <td className="px-3 py-2 text-xs text-gray-700 dark:text-gray-300">{rek.rekening}</td>
-                                                                <td className="px-3 py-2 text-right text-xs text-gray-600 dark:text-gray-400 font-mono">{formatCurrency(rek.anggaran)}</td>
-                                                                <td className="px-3 py-2 text-right text-xs text-blue-600 dark:text-blue-400 font-mono">{formatCurrency(rek.realisasi)}</td>
-                                                                <td className="px-3 py-2 text-right text-xs font-bold text-gray-700 dark:text-gray-300">{rek.persentase.toFixed(1)}%</td>
+                                                            <tr key={rek.rekening}>
+                                                                <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">{rek.rekening}</td>
+                                                                <td className="px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400">{formatCurrency(rek.anggaran)}</td>
+                                                                <td className="px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400">{formatCurrency(rek.realisasi)}</td>
+                                                                <td className="px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">{rek.persentase.toFixed(2)}%</td>
                                                             </tr>
                                                         ))}
                                                         </tbody>
@@ -3186,12 +2547,8 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole }) => {
                             <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} theme={theme} />
                         )}
                     </div>
-                    </>
                 ) : (
-                    <div className="text-center py-16 bg-gray-50 dark:bg-gray-700/30 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-                        <Building className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-                        <p className="text-gray-500 dark:text-gray-400 font-medium">Silakan pilih SKPD di atas untuk melihat statistik.</p>
-                    </div>
+                    <p className="text-center text-gray-500 dark:text-gray-400 py-10">Silakan pilih SKPD untuk melihat statistik sub kegiatan.</p>
                 )}
             </div>
         </div>
@@ -3232,9 +2589,10 @@ const ProgressCircle = ({ percentage, threshold, type }) => {
 };
 
 // UPDATED: MandatorySpendingView Component
-const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear, userRole, userCanUseAi }) => {
-    const { anggaran, realisasi, realisasiNonRkud } = data;
+const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear }) => {
+    const { anggaran, realisasi, realisasiNonRkud } = data; 
     const [activeTab, setActiveTab] = React.useState('pegawai');
+    
     const [refPendidikan, setRefPendidikan] = React.useState([]);
     const [refInfrastruktur, setRefInfrastruktur] = React.useState([]);
 
@@ -3244,357 +2602,265 @@ const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear, userRole,
             const ref = collection(db, "publicData", String(selectedYear), `referensi-${type}`);
             const unsubscribe = onSnapshot(ref, (snapshot) => {
                 let fetchedData = [];
-                snapshot.forEach(doc => { if (Array.isArray(doc.data().rows)) fetchedData.push(...doc.data().rows); });
+                snapshot.forEach(doc => {
+                    if (Array.isArray(doc.data().rows)) {
+                        fetchedData.push(...doc.data().rows);
+                    }
+                });
                 setter(fetchedData);
-            }, () => setter([]));
+            }, (err) => {
+                console.error(`Error fetching ${type} reference:`, err);
+                setter([]);
+            });
             unsubFunctions.push(unsubscribe);
         };
+
         fetchData('pendidikan', setRefPendidikan);
         fetchData('infrastruktur', setRefInfrastruktur);
+
         return () => unsubFunctions.forEach(unsub => unsub());
     }, [selectedYear]);
 
-    const analysisData = React.useMemo(() => {
-        if (!anggaran || anggaran.length === 0) return { pegawai: {}, infrastruktur: {}, pendidikan: {}, simulasi: {} };
 
-        // 1. Helper Logic
-        const normalizeRealisasiItem = (item, isNonRkud) => {
+    const analysisData = React.useMemo(() => {
+        if (!anggaran || anggaran.length === 0) {
+            return { pegawai: {}, infrastruktur: {}, pendidikan: {} };
+        }
+
+        const normalizeRealisasiItem = (item, isNonRkud = false) => {
              if (!item) return null;
+             const kodeSubKegiatan = isNonRkud ? item.KODESUBKEGIATAN : item.KodeSubKegiatan;
+             const kodeRekening = isNonRkud ? item.KODEREKENING : item.KodeRekening;
+             const namaSkpd = isNonRkud ? item.NAMASKPD : item.NamaSKPD;
+             // --- PERBAIKAN DI SINI ---
+             // Data RKUD (isNonRkud=false) menggunakan 'NamaSubSKPD' (dari mapping)
+             // Data Non-RKUD (isNonRkud=true) menggunakan 'NAMASUBSKPD'
+             const namaSubUnit = isNonRkud ? item.NAMASUBSKPD : item.NamaSubSKPD; 
+             // --- AKHIR PERBAIKAN ---
+             const namaSubKegiatan = isNonRkud ? item.NAMASUBKEGIATAN : item.NamaSubKegiatan; 
+
+             if (!namaSkpd) return null; 
+
              return { 
-                 KodeSubKegiatan: isNonRkud ? item.KODESUBKEGIATAN : item.KodeSubKegiatan, 
-                 KodeRekening: isNonRkud ? item.KODEREKENING : item.KodeRekening, 
-                 NamaSKPD: isNonRkud ? item.NAMASKPD : item.NamaSKPD, 
-                 NamaSubUnit: isNonRkud ? (item.NAMASUBSKPD || item.NamaSubUnit) : (item.NamaSubSKPD || item.NamaSubUnit), 
-                 NamaSubKegiatan: isNonRkud ? item.NAMASUBKEGIATAN : item.NamaSubKegiatan, 
+                 KodeSubKegiatan: kodeSubKegiatan || 'Tidak Ada Kode', 
+                 KodeRekening: kodeRekening || 'Tidak Ada Kode', 
+                 NamaSKPD: namaSkpd, 
+                 NamaSubUnit: namaSubUnit || 'Tidak Ada Sub Unit', 
+                 NamaSubKegiatan: namaSubKegiatan || 'Tidak Ada Nama Sub Kegiatan', 
                  nilai: item.nilai || 0 
              };
         };
-        const allRealisasi = [...Object.values(realisasi || {}).flat().map(i=>normalizeRealisasiItem(i,false)), ...Object.values(realisasiNonRkud || {}).flat().map(i=>normalizeRealisasiItem(i,true))].filter(Boolean);
         
-        // 2. Logic Identifikasi (UPDATED: HANDLING X.XX PATTERNS & EXCEPTIONS)
-        const prepareReferenceMatcher = (refs) => {
-            const codes = new Set();
-            const names = new Set();
-            const patterns = []; // Store suffixes for pattern matching
-            
-            refs.forEach(item => {
-                const code = String(item['KODE SUB KEGIATAN'] || '').trim();
-                // Normalisasi nama (lowercase & trim) agar pencocokan nama lebih akurat
-                const name = String(item['NAMA SUB KEGIATAN'] || '').trim().toLowerCase();
-                const lowerCode = code.toLowerCase();
-                
-                // Kasus 1: Kode Generik Murni 'x.xx' -> Simpan Nama
-                if (lowerCode === 'x.xx' || lowerCode === 'x.x.xx') {
-                    if (name) names.add(name);
-                } 
-                // Kasus 2: Kode dengan Pola Wildcard (Contoh: X.XX.01.2.07.0005) -> Simpan Suffix
-                else if (lowerCode.startsWith('x.xx') || lowerCode.startsWith('x.x.xx')) {
-                    // Ambil bagian belakang kode setelah prefix X.XX
-                    // Asumsi: 'x.xx' (4 karakter) atau 'x.x.xx' (6 karakter)
-                    const suffix = lowerCode.startsWith('x.x.xx') ? lowerCode.substring(6) : lowerCode.substring(4);
-                    if (suffix) patterns.push(suffix);
-                }
-                // Kasus 3: Kode Standar Spesifik
-                else {
-                    if (code) codes.add(code);
-                }
-            });
-            return { codes, names, patterns };
-        };
+        const allRealisasi = [
+            ...Object.values(realisasi || {}).flat().map(item => normalizeRealisasiItem(item, false)),
+            ...Object.values(realisasiNonRkud || {}).flat().map(item => normalizeRealisasiItem(item, true))
+        ].filter(Boolean);
 
-        const pendidikanMatcher = prepareReferenceMatcher(refPendidikan);
-        const infrastrukturMatcher = prepareReferenceMatcher(refInfrastruktur);
-        
+        const pendidikanCodes = new Set(refPendidikan.map(item => String(item['KODE SUB KEGIATAN']).trim()));
+        const infrastrukturNormalCodes = new Set();
+        const infrastrukturXxxNames = new Set();
+        refInfrastruktur.forEach(item => {
+            const code = String(item['KODE SUB KEGIATAN']).trim();
+            const name = String(item['NAMA SUB KEGIATAN']).toLowerCase().trim();
+            if (code.toUpperCase().startsWith('X.XX')) {
+                infrastrukturXxxNames.add(name);
+            } else {
+                infrastrukturNormalCodes.add(code);
+            }
+        });
+
         const isPendidikan = (item) => {
-            const code = String(item.KodeSubKegiatan || '').trim();
-            const name = String(item.NamaSubKegiatan || '').trim().toLowerCase();
-            const skpdName = String(item.NamaSKPD || '').toLowerCase();
-            
-            // Prioritas 1: Pencocokan Kode Presisi
-            if (pendidikanMatcher.codes.has(code)) return true;
-
-            // Prioritas 2: Pencocokan Nama (Khusus Exception X.XX)
-            // REVISI: Hanya hitung jika Nama cocok DAN SKPD mengandung kata 'Pendidikan'
-            if (pendidikanMatcher.names.has(name) && skpdName.includes('pendidikan')) return true;
-            
-            // Prioritas 3: Fallback Regulasi (Gaji & Tunjangan Disdik wajib masuk)
-            return (skpdName.includes('pendidikan') && ['gaji','tunjangan'].some(k => name.includes(k)));
+             if (!item) return false;
+             const kodeSubKegiatan = String(item.KodeSubKegiatan || '').trim();
+             const namaSkpd = String(item.NamaSKPD || '').trim();
+             const specialEducationActivities = [
+                'Penyediaan Gaji dan Tunjangan ASN',
+                'Penyuluhan dan Penyebarluasan Kebijakan Retribusi Daerah',
+                'Sosialisasi Peraturan Perundang-Undangan'
+             ];
+             // Pastikan NamaSubKegiatan ada sebelum memanggil includes
+             const namaSubKegiatan = String(item.NamaSubKegiatan || ''); 
+             return pendidikanCodes.has(kodeSubKegiatan) || (namaSkpd === 'Dinas Pendidikan dan Kebudayaan' && specialEducationActivities.includes(namaSubKegiatan));
         };
-        
         const isInfrastruktur = (item) => {
-             const code = String(item.KodeSubKegiatan || '').trim();
-             const name = String(item.NamaSubKegiatan || '').trim().toLowerCase();
-             const lowerCode = code.toLowerCase();
-
-             // Prioritas 1: Pencocokan Kode Presisi
-             if (infrastrukturMatcher.codes.has(code)) return true;
-
-             // Prioritas 2: Pencocokan Pola (Suffix) - Tetap dipertahankan untuk Infrastruktur
-             if (infrastrukturMatcher.patterns.some(pattern => lowerCode.endsWith(pattern))) return true;
-
-             // Prioritas 3: Pencocokan Nama
-             if (infrastrukturMatcher.names.has(name)) return true;
-             
-             return false;
+             if (!item) return false;
+             const kodeSubKegiatan = String(item.KodeSubKegiatan || '').trim();
+             const namaSubKegiatan = String(item.NamaSubKegiatan || '').toLowerCase().trim();
+             return infrastrukturNormalCodes.has(kodeSubKegiatan) || infrastrukturXxxNames.has(namaSubKegiatan);
         };
-        
-        // 3. Logic Detail Aggregation
-        const aggregateDetails = (items, rels) => {
-            const map = new Map();
-            items.forEach(i => {
-                const key = `${i.NamaSKPD}|${i.NamaSubUnit}|${i.KodeSubKegiatan}`;
-                if(!map.has(key)) {
-                    map.set(key, { 
-                        NamaSKPD: i.NamaSKPD, 
-                        NamaSubUnit: i.NamaSubUnit || '-', 
-                        KodeSubKegiatan: i.KodeSubKegiatan || '-', 
-                        NamaSubKegiatan: i.NamaSubKegiatan, 
-                        pagu: 0, 
-                        realisasi: 0 
+       
+        // --- PERBAIKAN UTAMA: Fungsi Agregasi Detail ---
+        const aggregateDetails = (anggaranItems, relevantRealisasi) => {
+            const aggregatedMap = new Map();
+
+            // 1. Agregasi Pagu Anggaran
+            anggaranItems.forEach(item => {
+                if (!item) return; 
+                
+                let aggregationKey;
+                const kodeSubKegiatanStr = String(item.KodeSubKegiatan || '').trim();
+                 if (kodeSubKegiatanStr.toUpperCase().startsWith('X.XX')) {
+                    aggregationKey = `${item.NamaSKPD}|${item.NamaSubUnit || ' '}|${item.NamaSubKegiatan}`;
+                } else {
+                    aggregationKey = `${item.NamaSKPD}|${item.NamaSubUnit || ' '}|${kodeSubKegiatanStr}`;
+                }
+
+                if (!aggregatedMap.has(aggregationKey)) {
+                    aggregatedMap.set(aggregationKey, {
+                        NamaSKPD: item.NamaSKPD,
+                        NamaSubUnit: item.NamaSubUnit,
+                        KodeSubKegiatan: item.KodeSubKegiatan, 
+                        NamaSubKegiatan: item.NamaSubKegiatan,
+                        pagu: 0,
+                        realisasi: 0, // Inisialisasi realisasi
+                        sisa: 0      
                     });
                 }
-                map.get(key).pagu += i.pagu;
+                const entry = aggregatedMap.get(aggregationKey);
+                entry.pagu += item.pagu; // Gunakan item.pagu (nilai asli dari anggaran)
             });
 
-            rels.forEach(r => {
-                const key = `${r.NamaSKPD}|${r.NamaSubUnit}|${r.KodeSubKegiatan}`;
-                if(map.has(key)) {
-                    map.get(key).realisasi += r.nilai;
-                } else {
-                     const altKey = Array.from(map.keys()).find(k => k.startsWith(`${r.NamaSKPD}|`) && k.endsWith(`|${r.KodeSubKegiatan}`));
-                     if (altKey) map.get(altKey).realisasi += r.nilai;
-                }
+            // 2. Agregasi Realisasi HANYA untuk item yang relevan
+            relevantRealisasi.forEach(item => {
+                 let aggregationKey;
+                 const kodeSubKegiatanStr = String(item.KodeSubKegiatan || '').trim();
+                 if (kodeSubKegiatanStr.toUpperCase().startsWith('X.XX')) {
+                     aggregationKey = `${item.NamaSKPD}|${item.NamaSubUnit || ' '}|${item.NamaSubKegiatan}`;
+                 } else {
+                     aggregationKey = `${item.NamaSKPD}|${item.NamaSubUnit || ' '}|${kodeSubKegiatanStr}`;
+                 }
+
+                 if (aggregatedMap.has(aggregationKey)) {
+                     const entry = aggregatedMap.get(aggregationKey);
+                     entry.realisasi += item.nilai; // Tambahkan nilai realisasi ke entri yang cocok
+                 }
             });
-            return Array.from(map.values()).map(v => ({...v, sisa: v.pagu-v.realisasi, persentase: v.pagu? (v.realisasi/v.pagu)*100 : 0}));
+
+            // 3. Hitung Sisa dan Persentase
+            aggregatedMap.forEach((entry) => {
+                entry.sisa = entry.pagu - entry.realisasi;
+            });
+
+            return Array.from(aggregatedMap.values()).map(item => ({
+                ...item,
+                persentase: item.pagu > 0 ? (item.realisasi / item.pagu) * 100 : 0
+            }));
         };
+        // --- AKHIR PERBAIKAN UTAMA ---
 
-        const totalAPBD = anggaran.reduce((s,i) => s + (i.nilai||0), 0);
+        const totalAPBD = anggaran.reduce((sum, item) => sum + (item?.nilai || 0), 0);
         
-        let totalBelanjaPegawai = 0, belanjaPegawaiDikecualikan = 0;
-        let rawDetailPendidikan = [], rawDetailInfrastruktur = [];
-        let efficiencyCandidates = []; 
-        let nonPriorityProjects = [];
+        const excludedPegawaiCodes = [ '5.1.01.02.06.0064', '5.1.01.02.06.0066', '5.1.01.02.06.0070', '5.1.01.02.06.0072', '5.1.01.03.03.0001', '5.1.01.03.09.0001', '5.1.01.03.05.0001', '5.1.01.03.11.0001', '5.1.01.02.006.00064', '5.1.01.02.006.00070', '5.1.01.02.006.00066', '5.1.01.02.006.00072'];
 
+        let totalBelanjaPegawai = 0;
+        let belanjaPegawaiDikecualikan = 0;
+        let belanjaPendidikan = 0;
+        let belanjaInfrastruktur = 0;
+        let rawDetailPendidikan = []; 
+        let rawDetailInfrastruktur = []; 
+        
         anggaran.forEach(item => {
-            const val = item.nilai || 0;
-            const itemObj = {...item, pagu: val};
-            let isMandatory = false;
+            if (!item) return; 
+            const kodeRekening = String(item.KodeRekening || '').trim();
+            const nilai = item.nilai || 0;
+            const processedItem = { ...item, pagu: nilai }; 
 
             // Pegawai
-            if (String(item.KodeRekening).startsWith('5.1.01')) {
-                totalBelanjaPegawai += val;
-                
-                // --- UPDATE: Logika Pengecualian Point C (Belanja Pegawai Dikecualikan) ---
-                // Cek 1: Kode Rekening Spesifik (Lama)
-                const isExcludedCode = ['5.1.01.02.06.0064'].includes(item.KodeRekening);
-                
-                // Cek 2: Kata Kunci Nama Rekening/Kegiatan (Baru - untuk fleksibilitas 2026 dst)
-                const namaRekening = String(item.NamaRekening).toLowerCase();
-                const namaKegiatan = String(item.NamaSubKegiatan).toLowerCase();
-                const keywords = ['tunjangan profesi guru', 'tunjangan khusus guru', 'tamsil', 'tambahan penghasilan guru'];
-                
-                const isExcludedName = keywords.some(kw => namaRekening.includes(kw) || namaKegiatan.includes(kw));
-
-                if (isExcludedCode || isExcludedName) {
-                    belanjaPegawaiDikecualikan += val;
+            if (kodeRekening.startsWith('5.1.01')) {
+                totalBelanjaPegawai += nilai;
+                if (excludedPegawaiCodes.includes(kodeRekening)) {
+                    belanjaPegawaiDikecualikan += nilai;
                 }
-                
-                isMandatory = true;
             }
+            
             // Pendidikan
-            if (isPendidikan(item)) { rawDetailPendidikan.push(itemObj); isMandatory = true; }
-            // Infrastruktur
-            if (isInfrastruktur(item)) { rawDetailInfrastruktur.push(itemObj); isMandatory = true; }
+            if (isPendidikan(item)) { 
+                belanjaPendidikan += nilai;
+                if(processedItem) rawDetailPendidikan.push(processedItem); 
+            }
 
-            // --- FILTER SIMULASI (Non-Mandatory) ---
-            if (!isMandatory) {
-                const namaRek = String(item.NamaRekening).toLowerCase();
-                const namaKeg = String(item.NamaSubKegiatan).toLowerCase();
-                
-                if (namaRek.includes('perjalanan dinas') || namaRek.includes('makan') || namaRek.includes('minum') || namaRek.includes('jasa kantor') || namaRek.includes('atk')) {
-                    efficiencyCandidates.push({ ...itemObj, type: 'Operasional' });
-                }
-                else if (String(item.KodeRekening).startsWith('5.2') && val > 200000000) { 
-                    nonPriorityProjects.push({ ...itemObj, type: 'Modal Non-Prioritas' });
-                }
+            // Infrastruktur
+            if (isInfrastruktur(item)) { 
+                belanjaInfrastruktur += nilai;
+                 if(processedItem) rawDetailInfrastruktur.push(processedItem);
             }
         });
         
         const belanjaPegawaiUntukPerhitungan = totalBelanjaPegawai - belanjaPegawaiDikecualikan;
         
-        const pegawaiPct = totalAPBD ? (belanjaPegawaiUntukPerhitungan/totalAPBD)*100 : 0;
-        const infraPct = totalAPBD ? (rawDetailInfrastruktur.reduce((s,i)=>s+i.pagu,0)/totalAPBD)*100 : 0;
-        const pendPct = totalAPBD ? (rawDetailPendidikan.reduce((s,i)=>s+i.pagu,0)/totalAPBD)*100 : 0;
+        // Filter realisasi yang relevan untuk setiap kategori SEBELUM memanggil aggregateDetails
+        const realisasiPendidikan = allRealisasi.filter(isPendidikan);
+        const realisasiInfrastruktur = allRealisasi.filter(isInfrastruktur);
 
-        const simulasiData = {
-            totalAPBD,
-            gaps: {
-                pegawai: { current: pegawaiPct, target: 30, isMet: pegawaiPct <= 30, diff: (pegawaiPct - 30) / 100 * totalAPBD },
-                infrastruktur: { current: infraPct, target: 40, isMet: infraPct >= 40, diff: (40 - infraPct) / 100 * totalAPBD },
-                pendidikan: { current: pendPct, target: 20, isMet: pendPct >= 20, diff: (20 - pendPct) / 100 * totalAPBD },
-            },
-            candidates: {
-                moderate: efficiencyCandidates.sort((a,b)=>b.pagu-a.pagu).slice(0, 30),
-                extreme: nonPriorityProjects.sort((a,b)=>b.pagu-a.pagu).slice(0, 30)
-            }
+        const pegawai = {
+            totalAPBD, totalBelanjaPegawai, belanjaPegawaiDikecualikan, belanjaPegawaiUntukPerhitungan,
+            percentage: totalAPBD > 0 ? (belanjaPegawaiUntukPerhitungan / totalAPBD) * 100 : 0,
+            detailItems: [] 
         };
 
-        return { 
-            pegawai: { totalAPBD, totalBelanjaPegawai, belanjaPegawaiDikecualikan, belanjaPegawaiUntukPerhitungan, percentage: pegawaiPct, detailItems: [] },
-            infrastruktur: { totalAPBD, belanjaInfrastruktur: rawDetailInfrastruktur.reduce((s,i)=>s+i.pagu,0), percentage: infraPct, detailItems: aggregateDetails(rawDetailInfrastruktur, allRealisasi.filter(isInfrastruktur)) },
-            pendidikan: { totalAPBD, belanjaPendidikan: rawDetailPendidikan.reduce((s,i)=>s+i.pagu,0), percentage: pendPct, detailItems: aggregateDetails(rawDetailPendidikan, allRealisasi.filter(isPendidikan)) },
-            simulasi: simulasiData 
+        const infrastruktur = {
+            totalAPBD, belanjaInfrastruktur,
+            percentage: totalAPBD > 0 ? (belanjaInfrastruktur / totalAPBD) * 100 : 0,
+            detailItems: aggregateDetails(rawDetailInfrastruktur, realisasiInfrastruktur) 
         };
+        
+        const pendidikan = {
+            totalAPBD, belanjaPendidikan,
+            percentage: totalAPBD > 0 ? (belanjaPendidikan / totalAPBD) * 100 : 0,
+            detailItems: aggregateDetails(rawDetailPendidikan, realisasiPendidikan) 
+        };
+
+        return { pegawai, infrastruktur, pendidikan };
     }, [anggaran, realisasi, realisasiNonRkud, refPendidikan, refInfrastruktur]);
 
-    // Prompts
-    const getAnalysisPrompt = (type, data) => `Analisis Mandatory Spending ${type}. Capaian: ${data.percentage.toFixed(2)}%. Berikan rekomendasi.`;
-    const getSimulasiPrompt = (custom, allData) => {
-        const sim = allData.simulasi;
-        const gaps = sim.gaps;
-        const formatItem = (i) => `- ${i.NamaSubKegiatan} (${i.NamaSKPD}): ${formatCurrency(i.pagu)}`;
-        
-        return `
-            Anda adalah Konsultan Anggaran Strategis. Lakukan analisis **Postur Anggaran**.
-            Total APBD: ${formatCurrency(sim.totalAPBD)}.
-            Status:
-            1. Pegawai: ${gaps.pegawai.current.toFixed(2)}% (Target Max 30%).
-            2. Infrastruktur: ${gaps.infrastruktur.current.toFixed(2)}% (Target Min 40%).
-            3. Pendidikan: ${gaps.pendidikan.current.toFixed(2)}% (Target Min 20%).
-
-            Berikan rekomendasi **Moderat** (Potong Belanja Operasional) dan **Ekstrim** (Tunda Belanja Modal Non-Prioritas) untuk menutup gap.
-            
-            Kandidat Moderat:
-            ${sim.candidates.moderate.slice(0, 10).map(formatItem).join('\n')}
-            Kandidat Ekstrim:
-            ${sim.candidates.extreme.slice(0, 10).map(formatItem).join('\n')}
-        `;
-    };
-
-    return (
-        <div className="space-y-6">
-            <SectionTitle>ANALISA MANDATORY SPENDING</SectionTitle>
-            <div className="flex border-b dark:border-gray-700 overflow-x-auto">
-                <TabButton title="Belanja Pegawai" isActive={activeTab === 'pegawai'} onClick={() => setActiveTab('pegawai')} icon={Users} />
-                <TabButton title="Belanja Infrastruktur" isActive={activeTab === 'infrastruktur'} onClick={() => setActiveTab('infrastruktur')} icon={Building} />
-                <TabButton title="Fungsi Pendidikan" isActive={activeTab === 'pendidikan'} onClick={() => setActiveTab('pendidikan')} icon={BookCopy} />
-                <TabButton title="Simulasi & Strategi" isActive={activeTab === 'simulasi'} onClick={() => setActiveTab('simulasi')} icon={Target} />
-            </div>
-
-            {activeTab === 'simulasi' ? (
-                <SimulasiPosturView data={analysisData.simulasi} getPrompt={getSimulasiPrompt} userRole={userRole} userCanUseAi={userCanUseAi} />
-            ) : (
-                <AnalysisCard 
-                    title={`Belanja ${activeTab}`} 
-                    data={analysisData[activeTab]} 
-                    threshold={activeTab === 'pegawai' ? 30 : (activeTab === 'infrastruktur' ? 40 : 20)} 
-                    type={activeTab} 
-                    userRole={userRole} 
-                    userCanUseAi={userCanUseAi}
-                    getAnalysisPrompt={(q) => getAnalysisPrompt(activeTab, analysisData[activeTab])} 
+    const renderAnalysisContent = () => {
+        switch (activeTab) {
+            case 'infrastruktur':
+                return <AnalysisCard
+                    title="Belanja Infrastruktur Pelayanan Publik"
+                    data={analysisData.infrastruktur}
+                    threshold={40}
+                    type="infrastruktur"
+                    getAnalysisPrompt={getAnalysisPrompt}
                     namaPemda={namaPemda}
                     selectedYear={selectedYear}
                     theme={theme}
-                />
-            )}
-        </div>
-    );
-};
-
-// --- NEW COMPONENT: Tampilan Tab Simulasi ---
-const SimulasiPosturView = ({ data, getPrompt, userRole, userCanUseAi }) => {
-    const { gaps, candidates, totalAPBD } = data;
-    if (!totalAPBD) return <div className="p-8 text-center text-gray-500">Data Anggaran belum tersedia.</div>;
-
-    const StatusBadge = ({ isMet, diff, type }) => {
-        const isPegawai = type === 'pegawai';
-        const color = isMet ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-        const label = isMet ? 'Aman' : 'Perlu Perhatian';
-        const targetLabel = type === 'pegawai' ? 'Max 30%' : (type === 'infrastruktur' ? 'Min 40%' : 'Min 20%');
-        const actionLabel = type === 'pegawai' ? 'Kurangi' : 'Tambah';
-        
-        return (
-            <div className={`p-4 rounded-lg border ${isMet ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-                <div className="flex justify-between items-center mb-2"><h4 className="font-bold capitalize">{type}</h4><span className={`text-xs px-2 py-1 rounded-full font-bold ${color}`}>{label}</span></div>
-                <div className="text-sm mb-1">Target: <b>{targetLabel}</b></div>
-                <div className="text-sm">Saat ini: <b>{gaps[type].current.toFixed(2)}%</b></div>
-                {!isMet && <div className="text-xs font-mono text-red-600 bg-white p-2 rounded mt-2 border border-red-100">Gap: {actionLabel} {formatCurrency(Math.abs(diff))}</div>}
-            </div>
-        );
+                />;
+            case 'pendidikan':
+                return <AnalysisCard
+                    title="Fungsi Pendidikan"
+                    data={analysisData.pendidikan}
+                    threshold={20}
+                    type="pendidikan"
+                    getAnalysisPrompt={getAnalysisPrompt}
+                    namaPemda={namaPemda}
+                    selectedYear={selectedYear}
+                    theme={theme}
+                />;
+            case 'pegawai':
+            default:
+                return <AnalysisCard
+                    title="Belanja Pegawai"
+                    data={analysisData.pegawai}
+                    threshold={30}
+                    type="pegawai"
+                    getAnalysisPrompt={getAnalysisPrompt}
+                    namaPemda={namaPemda}
+                    selectedYear={selectedYear}
+                    theme={theme}
+                />;
+        }
     };
-
+    
     return (
         <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Target className="text-blue-600"/> Diagnosis Postur Anggaran</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <StatusBadge isMet={gaps.pegawai.isMet} diff={gaps.pegawai.diff} type="pegawai" />
-                    <StatusBadge isMet={gaps.infrastruktur.isMet} diff={gaps.infrastruktur.diff} type="infrastruktur" />
-                    <StatusBadge isMet={gaps.pendidikan.isMet} diff={gaps.pendidikan.diff} type="pendidikan" />
-                </div>
-                
-                <GeminiAnalysis 
-                    getAnalysisPrompt={getPrompt} 
-                    allData={{ simulasi: data }} 
-                    userRole={userRole} 
-                    userCanUseAi={userCanUseAi} 
-                    customButtonText="Buat Skenario Efisiensi (Moderat vs Ekstrim)"
-                />
+            <SectionTitle>ANALISA MANDATORY SPENDING</SectionTitle>
+            <div className="flex border-b dark:border-gray-700">
+                <TabButton title="Belanja Pegawai" isActive={activeTab === 'pegawai'} onClick={() => setActiveTab('pegawai')} />
+                <TabButton title="Belanja Infrastruktur" isActive={activeTab === 'infrastruktur'} onClick={() => setActiveTab('infrastruktur')} />
+                <TabButton title="Fungsi Pendidikan" isActive={activeTab === 'pendidikan'} onClick={() => setActiveTab('pendidikan')} />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow border-t-4 border-yellow-400">
-                    <h3 className="font-bold mb-2 flex items-center gap-2 text-yellow-700">
-                        <Scissors size={20}/> Skenario Moderat: Efisiensi Operasional
-                    </h3>
-                    <p className="text-xs text-gray-500 mb-4">Potensi efisiensi dari Makan Minum, Perjalanan Dinas, ATK.</p>
-                    <div className="overflow-y-auto max-h-80 border rounded">
-                        <table className="w-full text-xs">
-                            <thead className="bg-gray-100 sticky top-0">
-                                <tr><th className="p-2 text-left">SKPD & Kegiatan</th><th className="p-2 text-right">Pagu</th></tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {candidates.moderate.map((item, i) => (
-                                    <tr key={i}>
-                                        <td className="p-2">
-                                            <div className="font-bold truncate w-48">{item.NamaSKPD}</div>
-                                            <div className="text-gray-500 truncate w-48">{item.NamaSubKegiatan}</div>
-                                            <div className="text-gray-400 italic">{item.NamaRekening}</div>
-                                        </td>
-                                        <td className="p-2 text-right align-top">{formatCurrency(item.pagu)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow border-t-4 border-red-500">
-                    <h3 className="font-bold mb-2 flex items-center gap-2 text-red-700">
-                        <AlertTriangle size={20}/> Skenario Ekstrim: Penundaan Proyek
-                    </h3>
-                    <p className="text-xs text-gray-500 mb-4">Kandidat penundaan belanja modal non-prioritas (Gedung, Kendaraan).</p>
-                    <div className="overflow-y-auto max-h-80 border rounded">
-                        <table className="w-full text-xs">
-                            <thead className="bg-gray-100 sticky top-0">
-                                <tr><th className="p-2 text-left">SKPD & Kegiatan</th><th className="p-2 text-right">Pagu</th></tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {candidates.extreme.map((item, i) => (
-                                    <tr key={i}>
-                                        <td className="p-2">
-                                            <div className="font-bold truncate w-48">{item.NamaSKPD}</div>
-                                            <div className="text-gray-500 truncate w-48">{item.NamaSubKegiatan}</div>
-                                            <div className="text-gray-400 italic">{item.NamaRekening}</div>
-                                        </td>
-                                        <td className="p-2 text-right font-bold text-red-600 align-top">{formatCurrency(item.pagu)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            {renderAnalysisContent()}
         </div>
     );
 };
@@ -4548,13 +3814,6 @@ const PengaturanView = ({ selectedYear, onYearChange, theme, userRole, saveSetti
     const [namaPemda, setNamaPemda] = React.useState(initialNamaPemda || '');
     const [isSaving, setIsSaving] = React.useState(false);
     
-    // --- NEW: States for Appearance & AI Integration ---
-    const [appName, setAppName] = React.useState('Sistem Informasi Analisa APBD');
-    const [appLogo, setAppLogo] = React.useState('');
-    const [buttonColor, setButtonColor] = React.useState('#2563eb'); // Default blue-600
-    const [geminiApiKey, setGeminiApiKey] = React.useState('');
-    const [isSavingAppProps, setIsSavingAppProps] = React.useState(false);
-
     const [isBackingUp, setIsBackingUp] = React.useState(false);
     const [backupStatus, setBackupStatus] = React.useState('');
 
@@ -4565,23 +3824,6 @@ const PengaturanView = ({ selectedYear, onYearChange, theme, userRole, saveSetti
     React.useEffect(() => {
         setNamaPemda(initialNamaPemda || '');
     }, [initialNamaPemda]);
-
-    // --- NEW: Fetch Appearance & AI Settings ---
-    React.useEffect(() => {
-        if (userRole === 'admin') {
-            const settingsDocRef = doc(db, "publicSettings", "settings");
-            const unsubSettings = onSnapshot(settingsDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    if (data.appName) setAppName(data.appName);
-                    if (data.appLogo) setAppLogo(data.appLogo);
-                    if (data.buttonColor) setButtonColor(data.buttonColor);
-                    if (data.geminiApiKey) setGeminiApiKey(data.geminiApiKey);
-                }
-            });
-            return () => unsubSettings();
-        }
-    }, [userRole]);
 
     const handleBackupData = async () => {
         if (!window.confirm(`Anda akan mengunduh semua data untuk tahun ${selectedYear}. Proses ini mungkin memerlukan beberapa waktu. Lanjutkan?`)) {
@@ -4744,34 +3986,6 @@ const PengaturanView = ({ selectedYear, onYearChange, theme, userRole, saveSetti
         }
     };
 
-    // --- NEW: Handlers for Appearance & AI ---
-    const handleLogoUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            if (file.size > 500 * 1024) { // Max 500KB
-                alert("Ukuran logo maksimal 500KB. Silakan kompres gambar Anda terlebih dahulu.");
-                return;
-            }
-            const reader = new FileReader();
-            reader.onloadend = () => setAppLogo(reader.result);
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleSaveAppProps = async (e) => {
-        e.preventDefault();
-        setIsSavingAppProps(true);
-        try {
-            await saveSettings({ appName, appLogo, buttonColor, geminiApiKey });
-            await logActivity('Simpan Pengaturan Tampilan & AI', { status: 'Berhasil' });
-            alert('Pengaturan tampilan dan integrasi AI berhasil disimpan!');
-        } catch (err) {
-            setError('Gagal menyimpan pengaturan tampilan & AI.');
-        } finally {
-            setIsSavingAppProps(false);
-        }
-    };
-
     return (
         <div className="space-y-6">
             <SectionTitle>Pengaturan Aplikasi</SectionTitle>
@@ -4794,102 +4008,6 @@ const PengaturanView = ({ selectedYear, onYearChange, theme, userRole, saveSetti
                         <button type="submit" disabled={isSaving} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors disabled:opacity-50">
                             {isSaving ? 'Menyimpan...' : 'Simpan'}
                         </button>
-                    </form>
-                </div>
-            )}
-
-            {/* --- NEW: Bagian Pengaturan Tampilan & Integrasi AI --- */}
-            {userRole === 'admin' && (
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border-t-4 border-purple-500">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
-                        <Sparkles className="text-purple-500" size={20} />
-                        Tampilan Aplikasi & Integrasi AI
-                    </h3>
-                    <form onSubmit={handleSaveAppProps} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Nama Aplikasi */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama Aplikasi</label>
-                                <input
-                                    type="text"
-                                    value={appName}
-                                    onChange={(e) => setAppName(e.target.value)}
-                                    placeholder="Contoh: Sistem Analisis APBD"
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                />
-                            </div>
-
-                            {/* Warna Tombol */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Warna Tombol Utama</label>
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="color"
-                                        value={buttonColor}
-                                        onChange={(e) => setButtonColor(e.target.value)}
-                                        className="h-10 w-20 cursor-pointer rounded border border-gray-300 dark:border-gray-600 bg-transparent"
-                                    />
-                                    <span className="text-sm text-gray-500 font-mono">{buttonColor}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Logo Aplikasi */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Logo Aplikasi (Maks 500KB)</label>
-                            <div className="flex items-center gap-4">
-                                {appLogo ? (
-                                    <div className="relative w-16 h-16 rounded overflow-hidden border border-gray-200 bg-gray-50">
-                                        <img src={appLogo} alt="Logo Preview" className="w-full h-full object-contain" />
-                                    </div>
-                                ) : (
-                                    <div className="w-16 h-16 rounded border border-dashed border-gray-300 flex items-center justify-center bg-gray-50 text-xs text-gray-400">
-                                        No Logo
-                                    </div>
-                                )}
-                                <div className="flex-grow">
-                                    <input
-                                        type="file"
-                                        accept="image/png, image/jpeg, image/svg+xml"
-                                        onChange={handleLogoUpload}
-                                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 dark:file:bg-purple-900/30 dark:file:text-purple-300"
-                                    />
-                                </div>
-                                {appLogo && (
-                                    <button type="button" onClick={() => setAppLogo('')} className="text-red-500 hover:text-red-700 text-sm font-medium">
-                                        Hapus Logo
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* API Key Gemini */}
-                        <div className="pt-2 border-t border-gray-100 dark:border-gray-700 mt-2">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                API Key Google Gemini
-                            </label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                                Masukkan API Key untuk mengaktifkan fitur AI. Dapatkan kunci gratis dari <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">Google AI Studio</a>.
-                            </p>
-                            <input
-                                type="password"
-                                value={geminiApiKey}
-                                onChange={(e) => setGeminiApiKey(e.target.value)}
-                                placeholder="AIzaSy..."
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            />
-                        </div>
-
-                        <div className="flex justify-end pt-2">
-                            <button
-                                type="submit"
-                                disabled={isSavingAppProps}
-                                style={{ backgroundColor: buttonColor }}
-                                className="px-6 py-2 text-white font-semibold rounded-lg shadow-md hover:opacity-90 transition-opacity disabled:opacity-50"
-                            >
-                                {isSavingAppProps ? 'Menyimpan...' : 'Simpan Pengaturan'}
-                            </button>
-                        </div>
                     </form>
                 </div>
             )}
@@ -7180,8 +6298,6 @@ const App = () => {
   const [user, setUser] = React.useState(null);
   const [userRole, setUserRole] = React.useState('guest');
   const [isSidebarMinimized, setIsSidebarMinimized] = React.useState(false);
-  // NEW STATE: Untuk mengatur status buka/tutup menu di mobile
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [namaPemda, setNamaPemda] = React.useState('');
   const [lastUpdate, setLastUpdate] = React.useState(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
@@ -7258,17 +6374,14 @@ const App = () => {
           return;
       }
       
-      // [PERUBAHAN] Menambahkan 'anggaran-non-rkud' ke daftar fetch
-      const dataTypes = ['anggaran', 'pendapatan', 'penerimaanPembiayaan', 'pengeluaranPembiayaan', 'realisasi', 'realisasiPendapatan', 'realisasiNonRkud', 'anggaran-non-rkud'];
+      const dataTypes = ['anggaran', 'pendapatan', 'penerimaanPembiayaan', 'pengeluaranPembiayaan', 'realisasi', 'realisasiPendapatan', 'realisasiNonRkud'];
       
       const unsubscribes = dataTypes.map(dataType => {
           const collRef = collection(db, "publicData", String(selectedYear), dataType);
           return onSnapshot(query(collRef), (snapshot) => {
               let data = [];
               snapshot.forEach(doc => {
-                  // Handle struktur data yang berbeda (data vs rows)
-                  if (doc.data().data) data = [...data, ...doc.data().data];
-                  if (doc.data().rows) data = [...data, ...doc.data().rows];
+                  data = [...data, ...doc.data().data];
               });
               
               if (dataType === 'realisasi' || dataType === 'realisasiPendapatan' || dataType === 'realisasiNonRkud') {
@@ -7282,9 +6395,7 @@ const App = () => {
                   }, {});
                   setAppData(prev => ({...prev, [dataType]: monthlyData }));
               } else {
-                  // Mapping nama koleksi ke state key jika perlu
-                  const stateKey = dataType === 'anggaran-non-rkud' ? 'anggaranNonRkud' : dataType;
-                  setAppData(prev => ({...prev, [stateKey]: data }));
+                  setAppData(prev => ({...prev, [dataType]: data }));
               }
           }, (error) => {
               console.error(`Error fetching ${dataType}:`, error);
@@ -7356,12 +6467,11 @@ const App = () => {
 
   const [activeView, setActiveView] = React.useState('dashboard');
 
-  const { anggaran, pendapatan, penerimaanPembiayaan, pengeluaranPembiayaan, realisasi, realisasiPendapatan, realisasiNonRkud, anggaranNonRkud } = appData;
-  const allData = { anggaran, pendapatan, penerimaanPembiayaan, pengeluaranPembiayaan, realisasi, realisasiPendapatan, realisasiNonRkud, anggaranNonRkud };
+  const { anggaran, pendapatan, penerimaanPembiayaan, pengeluaranPembiayaan, realisasi, realisasiPendapatan, realisasiNonRkud } = appData;
+  const allData = { anggaran, pendapatan, penerimaanPembiayaan, pengeluaranPembiayaan, realisasi, realisasiPendapatan, realisasiNonRkud };
   
   const dataStatus = {
       anggaran: appData.anggaran && appData.anggaran.length > 0,
-      anggaranNonRkud: appData.anggaranNonRkud && appData.anggaranNonRkud.length > 0, // <-- Status untuk ikon ceklis
       pendapatan: appData.pendapatan && appData.pendapatan.length > 0,
       penerimaanPembiayaan: appData.penerimaanPembiayaan && appData.penerimaanPembiayaan.length > 0,
       pengeluaranPembiayaan: appData.pengeluaranPembiayaan && appData.pengeluaranPembiayaan.length > 0,
@@ -7397,7 +6507,6 @@ const menuItems = [
           { id: 'analisis-potensi-silpa', label: 'Analisis Potensi SiLPA', icon: Shuffle },
           { id: 'analisis-lintas-tahun', label: 'Analisis Lintas Tahun', icon: ArrowRightLeft },
           { id: 'analisis-kinerja', label: 'Analisis Kinerja', icon: Award },
-          { id: 'anomaly-detection', label: 'Deteksi Anomali', icon: AlertCircle }, // <-- ITEM MENU DITAMBAHKAN
           { id: 'skpd-stats', label: 'Statistik Belanja', icon: BarChartHorizontal },
           { id: 'skpd-pendapatan-stats', label: 'Statistik Pendapatan', icon: TrendingUp },
           { id: 'sumber-dana-stats', label: 'Statistik Sumber Dana', icon: Droplets },
@@ -7425,8 +6534,6 @@ const menuItems = [
         requiredRole: ['admin', 'editor'],
         subMenus: [
             { id: 'anggaran', label: 'Anggaran', icon: Archive, statusKey: 'anggaran' },
-            // [PERUBAHAN] Menambahkan Menu Anggaran Non RKUD di sini
-            { id: 'anggaranNonRkud', label: 'Anggaran Non RKUD', icon: Archive, statusKey: 'anggaranNonRkud' },
             { id: 'pendapatan', label: 'Target Pendapatan', icon: DollarSign, statusKey: 'pendapatan' },
             { id: 'penerimaanPembiayaan', label: 'Penerimaan Pembiayaan', icon: Globe, statusKey: 'penerimaanPembiayaan' },
             { id: 'pengeluaranPembiayaan', label: 'Pengeluaran Pembiayaan', icon: MinusCircle, statusKey: 'pengeluaranPembiayaan' },
@@ -7473,27 +6580,6 @@ const menuItems = [
   const ANGGARAN_PREVIEW_HEADERS = ['Nama SKPD', 'Nama Sub Unit', 'Kode Bidang Urusan', 'Kode Kegiatan', 'Nama Kegiatan', 'Kode Sub Kegiatan', 'Nama Sub Kegiatan', 'Nama Sumber Dana', 'Kode Rekening', 'Nama Rekening', 'Nama Paket Kelompok', 'Pagu'];
   const ANGGARAN_GROUPED_COLUMNS = ['Nama SKPD', 'Nama Sub Unit', 'Kode Bidang Urusan', 'Kode Kegiatan', 'Nama Kegiatan', 'Kode Sub Kegiatan', 'Nama Sub Kegiatan'];
   const ANGGARAN_INSTRUCTION = "Aplikasi akan mencari kolom: 'Nama SKPD', 'Nama Sub Unit', 'Kode Bidang Urusan', 'Kode Kegiatan', 'Nama Kegiatan', 'Kode Sub Kegiatan', 'Nama Sub Kegiatan', 'Nama Sumber Dana', 'Kode Rekening', 'Nama Rekening', 'Nama Paket Kelompok', dan 'Pagu'.";
-  
-  // [PERUBAHAN] Menambahkan Konstanta untuk Anggaran Non RKUD
-  const ANGGARAN_NON_RKUD_MAPPING = {
-      NamaSKPD: ['Nama SKPD'],
-      NamaSubUnit: ['Nama Sub Unit'],
-      KodeBidangUrusan: ['Kode Bidang Urusan'], // <-- DITAMBAHKAN
-      KodeKegiatan: ['Kode Kegiatan'],
-      NamaKegiatan: ['Nama Kegiatan'],
-      KodeSubKegiatan: ['Kode Sub Kegiatan'],
-      NamaSubKegiatan: ['Nama Sub Kegiatan'],
-      NamaSumberDana: ['Nama Sumber Dana'],
-      KodeRekening: ['Kode Rekening'],
-      NamaRekening: ['Nama Rekening'],
-      NamaPaketKelompok: ['Nama Paket Kelompok'],
-      Pagu: ['Pagu']
-  };
-  const ANGGARAN_NON_RKUD_PREVIEW_HEADERS = ['Nama SKPD', 'Nama Sub Unit', 'Kode Bidang Urusan', 'Kode Kegiatan', 'Nama Kegiatan', 'Kode Sub Kegiatan', 'Nama Sub Kegiatan', 'Nama Sumber Dana', 'Kode Rekening', 'Nama Rekening', 'Nama Paket Kelompok', 'Pagu'];
-  const ANGGARAN_NON_RKUD_GROUPED_COLUMNS = ['Nama SKPD', 'Nama Sub Unit', 'Kode Bidang Urusan', 'Kode Kegiatan', 'Nama Kegiatan', 'Kode Sub Kegiatan', 'Nama Sub Kegiatan'];
-  const ANGGARAN_NON_RKUD_INSTRUCTION = "Unggah data anggaran khusus untuk kegiatan Non RKUD (BOK, BOS, BOSP, BLUD, dll). Data ini akan digunakan sebagai dasar validasi saat upload Realisasi Non RKUD.";
-
-  // ... (Mapping lainnya tetap sama) ...
   const PENDAPATAN_MAPPING = {
       NamaOPD: ['Nama OPD'],
       NamaAkun: ['nama akun'],
@@ -7540,29 +6626,24 @@ const menuItems = [
   const REALISASI_PENDAPATAN_INSTRUCTION = "Ambil Data Dari SIPD AKLAP (Data Jurnal). Pastikan Kolom Excel Debet Kredit Di Cleansing. Realisasi Pendapatan diambil dari Kolom Kredit.";
   const REALISASI_PENDAPATAN_FILTER = { column: 'namaakunutama', value: 'PENDAPATAN DAERAH' };
   
-  // --- UPDATE PADA BAGIAN INI (REALISASI NON RKUD) ---
+  // --- UPDATE BLOK KODE NON RKUD BERIKUT ---
     const REALISASI_NON_RKUD_MAPPING = {
     NAMASKPD: ['namaskpd', 'nama skpd', 'NAMA SKPD'],
-    NAMASUBSKPD: ['namaunitskpd', 'nama sub skpd', 'NAMA SUB SKPD', 'nama unit skpd'], // Sesuai "namaunitskpd"
+    NAMASUBSKPD: ['namaunitskpd', 'nama sub skpd', 'NAMA SUB SKPD'],
     NAMAKEGIATAN: ['namakegiatan', 'nama kegiatan', 'NAMA KEGIATAN'],
     NAMASUBKEGIATAN: ['namasubkegiatan', 'nama sub kegiatan', 'NAMA SUB KEGIATAN'],
-    NAMAREKENING: ['namaakunsubrinci', 'nama rekening', 'NAMA REKENING', 'nama akun sub rinci'], // Sesuai "namaakunsubrinci"
-    NILAIREALISASI: ['nilaidebet', 'nilai realisasi', 'NILAI REALISASI', 'nilai debet'], // Sesuai "nilaidebet"
-    // Pastikan kode juga ada untuk validasi teknis jika tersedia di file, jika tidak sistem akan bergantung pada nama (yang kurang akurat tapi bisa diusahakan)
-    // Namun untuk validasi kuat, 'KODE' biasanya diperlukan. Jika file CSV tidak punya kode, validasi akan gagal semua.
-    // Asumsi: File Excel juga memiliki kolom kode tersembunyi atau pengguna akan memastikan ada. 
-    // Jika STRICTLY hanya nama yang ada, validasi perlu diubah untuk mencocokkan Nama.
-    // Tapi di DataUploadView kita menggunakan KODE untuk validasi (kodeSubKegiatan & kodeRekening).
+    NAMAREKENING: ['namaakunsubrinci', 'nama rekening', 'NAMA REKENING'],
+    NILAIREALISASI: ['nilaidebet', 'nilai realisasi', 'NILAI REALISASI'],
     KETERANGANDOKUMEN: ['keterangan', 'keterangan dokumen', 'KETERANGAN DOKUMEN'],
-    KODEREKENING: ['koderekening', 'kode rekening', 'KODE REKENING', 'kodeakunsubrinci', 'kode akun sub rinci'],
+    KODEREKENING: ['koderekening', 'kode rekening', 'KODE REKENING', 'kodeakunsubrinci'],
     KODESUBKEGIATAN: ['kodesubkegiatan', 'kode sub kegiatan', 'KODE SUB KEGIATAN'],
   };
   const REALISASI_NON_RKUD_PREVIEW_HEADERS = ['NAMA SKPD', 'NAMA SUB SKPD', 'NAMA KEGIATAN', 'NAMA SUB KEGIATAN', 'NAMA REKENING', 'NILAI REALISASI'];
   const REALISASI_NON_RKUD_GROUPED_COLUMNS = ['NAMA SKPD', 'NAMA SUB SKPD', 'NAMA KEGIATAN', 'NAMA SUB KEGIATAN'];
-  const REALISASI_NON_RKUD_INSTRUCTION = "Ambil Data Dari SIPD AKLAP (Data Jurnal). Sistem akan otomatis memfilter 'kodeakunutama' = 5 (BELANJA). Pastikan kolom tersebut ada di file Excel Anda.";
+  const REALISASI_NON_RKUD_INSTRUCTION = "Ambil Data Dari SIPD AKLAP (Data Jurnal). Sesuaikan isi data sesuai format. Pastikan semua pencairan melalui Non RKUD. (BOK, BOS, BOSP, TPG, Tamsil, BLUD).";
   
-  // Mengaktifkan Filter Kode Akun Utama = 5 (Belanja)
-  const REALISASI_NON_RKUD_FILTER = { column: 'kodeakunutama', value: 5 };
+  // Baris ini hilang dan perlu ditambahkan
+  const REALISASI_NON_RKUD_FILTER = null;
   
   if (loadError) {
     return <div className="h-screen w-screen flex items-center justify-center bg-red-100 text-red-700 p-4">Error: {loadError}</div>;
@@ -7582,9 +6663,7 @@ const menuItems = [
       }
       
       const CHUNK_SIZE = 400;
-      let collectionName = activeView;
-      if (activeView === 'anggaranNonRkud') collectionName = 'anggaran-non-rkud';
-
+      const collectionName = activeView;
       const collectionRef = collection(db, "publicData", String(selectedYear), collectionName);
 
       setProgress('Menghapus data lama...');
@@ -7735,306 +6814,6 @@ const menuItems = [
       `;
   };
 
-// 3. Realisasi Non RKUD View
-const RealisasiNonRKUDView = ({ data, userRole, includeNonRKUD, setIncludeNonRKUD, onUploadRealisasi, onUploadAnggaran, onDeleteMonth, isDeleting }) => {
-    const { realisasiNonRkud, anggaranNonRkud } = data;
-    const [activeTab, setActiveTab] = React.useState('anggaran');
-    const [selectedMonth, setSelectedMonth] = React.useState('Semua Bulan');
-    const [uploading, setUploading] = React.useState(false);
-    const [statusMessage, setStatusMessage] = React.useState('');
-    const [useSafetyFilter, setUseSafetyFilter] = React.useState(true);
-    
-    const months = ['Semua Bulan', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-
-    // Helper: Normalize key string
-    const clean = (str) => {
-        if (!str) return '';
-        return String(str).trim().toLowerCase().replace(/\s+/g, '');
-    };
-
-    // Helper: Smart Column Finder
-    const findVal = (row, possibleHeaders) => {
-        const rowKeys = Object.keys(row);
-        for (const target of possibleHeaders) {
-            const foundKey = rowKeys.find(k => clean(k) === clean(target));
-            if (foundKey !== undefined) return row[foundKey];
-        }
-        return '';
-    };
-
-    // --- HANDLE UPLOAD ANGGARAN (REFERENSI) ---
-    const handleUploadAnggaran = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        setUploading(true);
-        setStatusMessage('Memproses Anggaran...');
-
-        if (!window.XLSX) {
-            alert("Library Excel belum siap. Tunggu sejenak dan coba lagi.");
-            setUploading(false);
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            try {
-                const bstr = evt.target.result;
-                const wb = window.XLSX.read(bstr, { type: 'binary' });
-                const jsonData = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
-                // Map & Filter
-                const parsedData = jsonData.map(row => ({
-                    NamaSKPD: findVal(row, ['NAMA SKPD', 'namaskpd', 'skpd']),
-                    NamaSubUnit: findVal(row, ['NAMA SUB UNIT', 'namaunitskpd', 'subunit']),
-                    KodeKegiatan: findVal(row, ['KODE KEGIATAN', 'kodekegiatan']),
-                    NamaKegiatan: findVal(row, ['NAMA KEGIATAN', 'namakegiatan']),
-                    KodeSubKegiatan: findVal(row, ['KODE SUB KEGIATAN', 'kodesubkegiatan']),
-                    NamaSubKegiatan: findVal(row, ['NAMA SUB KEGIATAN', 'namasubkegiatan']),
-                    KodeRekening: findVal(row, ['KODE REKENING', 'koderekening', 'kodeakun']),
-                    NamaRekening: findVal(row, ['NAMA REKENING', 'namarekening', 'namaakun']),
-                    NamaSumberDana: findVal(row, ['NAMA SUMBER DANA', 'namasumberdana', 'sumberdana']),
-                    Pagu: parseFloat(findVal(row, ['PAGU', 'pagu', 'anggaran', 'nilai'])) || 0
-                })).filter(r => r.KodeRekening && r.NamaSKPD && r.Pagu > 0);
-
-                onUploadAnggaran(parsedData);
-                setStatusMessage(`Berhasil menyimpan ${parsedData.length} data Anggaran Referensi.`);
-                alert(`Berhasil menyimpan ${parsedData.length} data Anggaran Referensi.`);
-            } catch (err) {
-                setStatusMessage('Error: ' + err.message);
-                console.error(err);
-            } finally { setUploading(false); }
-        };
-        reader.readAsBinaryString(file);
-    };
-
-    // --- HANDLE UPLOAD REALISASI (TRANSAKSI) ---
-    const handleUploadRealisasi = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        if (!anggaranNonRkud || anggaranNonRkud.length === 0) {
-            alert("STOP! Anda belum mengunggah 'Data Anggaran Non RKUD'.\nSilakan pindah ke tab 'Data Anggaran (Referensi)' dan unggah file DATA NON RKUD 2025.xlsx terlebih dahulu.");
-            return;
-        }
-
-        setUploading(true);
-        setStatusMessage('Memvalidasi Realisasi...');
-
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            try {
-                const bstr = evt.target.result;
-                const wb = window.XLSX.read(bstr, { type: 'binary' });
-                const jsonData = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
-                const budgetMap = new Map();
-                anggaranNonRkud.forEach(item => {
-                    const keyParts = [
-                        item.NamaSKPD, item.NamaSubUnit, item.KodeKegiatan, item.NamaKegiatan,
-                        item.KodeSubKegiatan, item.NamaSubKegiatan, item.KodeRekening, item.NamaRekening
-                    ];
-                    if (keyParts.some(p => !p || String(p).trim() === '')) return;
-                    const key = keyParts.map(clean).join('|');
-                    budgetMap.set(key, item.NamaSumberDana);
-                });
-
-                const validData = [];
-                let rejectedByBudget = 0;
-                let rejectedBySafety = 0;
-                let rejectedByEmpty = 0;
-
-                jsonData.forEach(row => {
-                    const item = {
-                        NamaSKPD: findVal(row, ['namaskpd', 'NAMA SKPD']),
-                        NamaSubUnit: findVal(row, ['namaunitskpd', 'NAMA SUB UNIT']),
-                        KodeKegiatan: findVal(row, ['kodekegiatan', 'KODE KEGIATAN']),
-                        NamaKegiatan: findVal(row, ['namakegiatan', 'NAMA KEGIATAN']),
-                        KodeSubKegiatan: findVal(row, ['kodesubkegiatan', 'KODE SUB KEGIATAN']),
-                        NamaSubKegiatan: findVal(row, ['namasubkegiatan', 'NAMA SUB KEGIATAN']),
-                        KodeRekening: findVal(row, ['kodeakunsubrinci', 'koderekening', 'KODE REKENING']),
-                        NamaRekening: findVal(row, ['namaakunsubrinci', 'namarekening', 'NAMA REKENING']),
-                        nilai: parseFloat(findVal(row, ['nilaidebet', 'realisasi', 'nilai'])) || 0,
-                        KeteranganDokumen: findVal(row, ['keterangan', 'uraian']),
-                        NomorSP2D: findVal(row, ['nomorbukti', 'nosp2d']),
-                        month: selectedMonth === 'Semua Bulan' ? 'Desember' : selectedMonth,
-                        NamaSumberDana: ''
-                    };
-
-                    if (item.nilai <= 0) return;
-
-                    if (!item.NamaSKPD || !item.KodeRekening || !item.KodeSubKegiatan) {
-                        rejectedByEmpty++;
-                        return;
-                    }
-
-                    const itemKey = [
-                        item.NamaSKPD, item.NamaSubUnit, item.KodeKegiatan, item.NamaKegiatan,
-                        item.KodeSubKegiatan, item.NamaSubKegiatan, item.KodeRekening, item.NamaRekening
-                    ].map(clean).join('|');
-
-                    const existsInBudget = budgetMap.has(itemKey);
-                    const isGaji = String(item.KodeRekening).startsWith('5.1.01'); 
-
-                    if (useSafetyFilter && isGaji) {
-                        rejectedBySafety++;
-                    } else if (existsInBudget) {
-                        item.NamaSumberDana = budgetMap.get(itemKey) || 'Non-RKUD';
-                        validData.push(item);
-                    } else {
-                        rejectedByBudget++;
-                    }
-                });
-
-                if (validData.length === 0) {
-                    alert(`VALIDASI GAGAL.\nTotal ditolak: ${rejectedByBudget + rejectedBySafety + rejectedByEmpty}\n(Cek: Tidak di Anggaran, Gaji, atau Data Tidak Lengkap)`);
-                    setStatusMessage('');
-                } else {
-                    const msg = `Sukses: ${validData.length} data valid.\nDitolak (Tidak di Anggaran): ${rejectedByBudget}\nDitolak (Gaji): ${rejectedBySafety}`;
-                    setStatusMessage(msg);
-                    alert(msg);
-                    onUploadRealisasi(validData, selectedMonth === 'Semua Bulan' ? 'Desember' : selectedMonth);
-                }
-
-            } catch (err) {
-                setStatusMessage('Error: ' + err.message);
-                console.error(err);
-            } finally { setUploading(false); }
-        };
-        reader.readAsBinaryString(file);
-    };
-
-    const tableData = activeTab === 'realisasi' 
-        ? (selectedMonth === 'Semua Bulan' ? Object.values(realisasiNonRkud || {}).flat() : (realisasiNonRkud?.[selectedMonth] || []))
-        : (anggaranNonRkud || []);
-
-    return (
-        <div className="space-y-6">
-            <SectionTitle>Manajemen Data Non RKUD</SectionTitle>
-            
-            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
-                <button onClick={() => setActiveTab('anggaran')} className={`px-6 py-3 font-medium flex items-center ${activeTab === 'anggaran' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'}`}>
-                    <Database className="mr-2" size={18}/> 1. Data Anggaran (Referensi)
-                </button>
-                <button onClick={() => setActiveTab('realisasi')} className={`px-6 py-3 font-medium flex items-center ${activeTab === 'realisasi' ? 'border-b-2 border-green-600 text-green-600' : 'text-gray-500'}`}>
-                    <FileSpreadsheet className="mr-2" size={18}/> 2. Input Realisasi (Jurnal)
-                </button>
-            </div>
-
-            {/* TAB 1: ANGGARAN */}
-            {activeTab === 'anggaran' && (
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow space-y-4">
-                    <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 p-4 rounded border border-blue-200 dark:border-blue-800">
-                        <div>
-                            <h4 className="font-bold text-blue-800 dark:text-blue-200">Referensi Anggaran Non-RKUD</h4>
-                            <p className="text-sm text-blue-600 dark:text-blue-300">Unggah file "DATA NON RKUD 2025.xlsx".</p>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-xs text-gray-500">Total Anggaran</div>
-                            <div className="font-bold text-lg text-blue-700">{formatCurrency(anggaranNonRkud?.reduce((s,i)=>s+i.Pagu,0) || 0)}</div>
-                        </div>
-                    </div>
-                    {userRole === 'admin' && (
-                        <div className="flex gap-4 items-center">
-                            <input type="file" onChange={handleUploadAnggaran} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                            {uploading && <Loader className="animate-spin text-blue-500"/>}
-                        </div>
-                    )}
-                    {statusMessage && <p className="text-sm text-green-600 font-medium">{statusMessage}</p>}
-                </div>
-            )}
-
-            {/* TAB 2: REALISASI (DENGAN TOMBOL HAPUS YANG DIPERBAIKI) */}
-            {activeTab === 'realisasi' && (
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow space-y-4">
-                    <div className="flex justify-between items-center bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded border border-yellow-200 dark:border-yellow-800">
-                        <div>
-                            <h4 className="font-bold text-yellow-800 dark:text-yellow-200">Integrasi ke Dashboard</h4>
-                            <p className="text-sm text-yellow-700 dark:text-yellow-300">Gabungkan data ini ke total belanja daerah?</p>
-                        </div>
-                        <button onClick={() => setIncludeNonRKUD(!includeNonRKUD)} disabled={userRole !== 'admin'} className={`w-12 h-6 rounded-full flex items-center p-1 transition-colors ${includeNonRKUD ? 'bg-green-500' : 'bg-gray-300'}`}>
-                            <div className={`bg-white w-4 h-4 rounded-full shadow transform transition-transform ${includeNonRKUD ? 'translate-x-6' : ''}`} />
-                        </button>
-                    </div>
-
-                    <div className="flex flex-wrap gap-4 items-center border-t pt-4">
-                        <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="border rounded px-3 py-2">
-                            {months.map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
-                        
-                        {userRole === 'admin' && (
-                            <>
-                                <div className="flex items-center gap-2 px-2">
-                                    <input type="checkbox" checked={useSafetyFilter} onChange={e=>setUseSafetyFilter(e.target.checked)} className="w-4 h-4"/>
-                                    <label className="text-sm">Filter Gaji (5.1.01)</label>
-                                </div>
-                                <div className="relative">
-                                    <input type="file" onChange={handleUploadRealisasi} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                    <button className="px-4 py-2 bg-green-600 text-white rounded flex items-center hover:bg-green-700">
-                                        {uploading ? <Loader className="animate-spin mr-2"/> : <Upload className="mr-2" size={18}/>} Unggah Jurnal
-                                    </button>
-                                </div>
-                                
-                                {/* --- TOMBOL HAPUS (FIXED) --- */}
-                                {selectedMonth !== 'Semua Bulan' && tableData.length > 0 && (
-                                    <button 
-                                        onClick={() => onDeleteMonth('realisasiNonRkud', selectedMonth, setStatusMessage)} 
-                                        disabled={isDeleting} // Disabled saat menghapus
-                                        className="px-4 py-2 bg-red-600 text-white rounded flex items-center hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                    >
-                                        {isDeleting ? (
-                                            <>
-                                                <Loader className="animate-spin mr-2" size={18} />
-                                                Menghapus...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Trash2 className="mr-2" size={18}/> 
-                                                Hapus Data {selectedMonth}
-                                            </>
-                                        )}
-                                    </button>
-                                )}
-                                {/* --- END TOMBOL HAPUS --- */}
-                            </>
-                        )}
-                        <div className="ml-auto font-bold text-lg">{formatCurrency(tableData.reduce((s,i)=>s+(i.nilai||0),0))}</div>
-                    </div>
-                    {statusMessage && <p className="text-sm text-blue-600 animate-pulse">{statusMessage}</p>}
-                </div>
-            )}
-
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow overflow-x-auto">
-                <h3 className="font-bold mb-4">{activeTab === 'anggaran' ? 'Data Referensi Anggaran (Filter)' : 'Data Realisasi Tersimpan'}</h3>
-                <table className="min-w-full text-sm divide-y dark:divide-gray-700">
-                    <thead className="bg-gray-100 dark:bg-gray-700">
-                        <tr>
-                            {['SKPD', 'Kegiatan', 'Rekening', 'Sumber Dana', activeTab === 'anggaran' ? 'Pagu' : 'Nilai Realisasi'].map(h => <th key={h} className="px-4 py-2 text-left">{h}</th>)}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y dark:divide-gray-600">
-                        {tableData.slice(0, 100).map((row, i) => (
-                            <tr key={i} className="hover:bg-gray-50">
-                                <td className="px-4 py-2">{row.NamaSKPD}</td>
-                                <td className="px-4 py-2">
-                                    <div className="truncate max-w-xs">{row.NamaSubKegiatan}</div>
-                                    <div className="text-xs text-gray-400 font-mono">{row.KodeSubKegiatan}</div>
-                                </td>
-                                <td className="px-4 py-2">
-                                    <div className="truncate max-w-xs">{row.NamaRekening}</div>
-                                    <div className="text-xs text-gray-400 font-mono">{row.KodeRekening}</div>
-                                </td>
-                                <td className="px-4 py-2"><span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">{row.NamaSumberDana || '-'}</span></td>
-                                <td className="px-4 py-2 text-right font-mono">{formatCurrency(row.nilai || row.Pagu)}</td>
-                            </tr>
-                        ))}
-                        {tableData.length === 0 && <tr><td colSpan={5} className="text-center py-8 text-gray-500">Data Kosong. Silakan unggah file.</td></tr>}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-};
-
   const getPendapatanAnalysisPrompt = (period, data, customQuery) => {
       if (customQuery) {
           return `Berdasarkan data target pendapatan yang tersedia, berikan analisis untuk permintaan berikut: "${customQuery}"`;
@@ -8129,7 +6908,6 @@ const RealisasiNonRKUDView = ({ data, userRole, includeNonRKUD, setIncludeNonRKU
       case 'mandatory-spending': return <MandatorySpendingView data={allData} theme={theme} namaPemda={namaPemda} selectedYear={selectedYear} userRole={userRole} />;
       case 'laporan-tematik': return <LaporanTematikView data={allData} theme={theme} namaPemda={namaPemda} selectedYear={selectedYear} userRole={userRole} />;
       case 'analisis-kinerja': return <AnalisisKinerjaView data={allData} theme={theme} user={user} selectedYear={selectedYear} namaPemda={namaPemda} userRole={userRole} />;
-      case 'anomaly-detection': return <DeteksiAnomaliView data={allData} theme={theme} />;
       case 'sumber-dana-stats': return <SumberDanaStatsView data={allData} theme={theme} namaPemda={namaPemda} userRole={userRole} />;
       case 'analisis-potensi-silpa': return <AnalisisPotensiSiLPAView data={allData} theme={theme} selectedYear={selectedYear} userRole={userRole} />;
       case 'skpd-stats': return <SkpdBelanjaStatsView data={allData} theme={theme} namaPemda={namaPemda} userRole={userRole} />;
@@ -8143,7 +6921,6 @@ const RealisasiNonRKUDView = ({ data, userRole, includeNonRKUD, setIncludeNonRKU
       case 'referensi-penandaan': return <ReferensiPenandaanView userRole={userRole} selectedYear={selectedYear} />;
       case 'pengaturan': return <PengaturanView selectedYear={selectedYear} onYearChange={handleYearChange} theme={theme} userRole={userRole} saveSettings={saveSettings} namaPemda={namaPemda} />;
       case 'anggaran': return <DataUploadView title="Unggah Data Anggaran" data={anggaran} onUpload={handleUpload} instruction={ANGGARAN_INSTRUCTION} columnMapping={ANGGARAN_MAPPING} previewHeaders={ANGGARAN_PREVIEW_HEADERS} groupedColumns={ANGGARAN_GROUPED_COLUMNS} theme={theme} selectedYear={selectedYear} userRole={userRole} getAnalysisPrompt={getAnggaranAnalysisPrompt} namaPemda={namaPemda} />;
-      case 'anggaranNonRkud': return <DataUploadView title="Unggah Anggaran Non RKUD" data={anggaranNonRkud} onUpload={handleUpload} instruction={ANGGARAN_NON_RKUD_INSTRUCTION} columnMapping={ANGGARAN_NON_RKUD_MAPPING} previewHeaders={ANGGARAN_NON_RKUD_PREVIEW_HEADERS} groupedColumns={ANGGARAN_NON_RKUD_GROUPED_COLUMNS} theme={theme} selectedYear={selectedYear} userRole={userRole} namaPemda={namaPemda} />;
       case 'pendapatan': return <DataUploadView title="Unggah Data Target Pendapatan" data={pendapatan} onUpload={handleUpload} instruction={PENDAPATAN_INSTRUCTION} columnMapping={PENDAPATAN_MAPPING} previewHeaders={PENDAPATAN_PREVIEW_HEADERS} groupedColumns={PENDAPATAN_GROUPED_COLUMNS} theme={theme} selectedYear={selectedYear} userRole={userRole} getAnalysisPrompt={getPendapatanAnalysisPrompt} namaPemda={namaPemda} />;
       case 'penerimaanPembiayaan': return <DataUploadView title="Unggah Data Penerimaan Pembiayaan" data={penerimaanPembiayaan} onUpload={handleUpload} instruction={PEMBIAYAAN_INSTRUCTION} columnMapping={PEMBIAYAAN_MAPPING} previewHeaders={PEMBIAYAAN_PREVIEW_HEADERS} groupedColumns={PEMBIAYAAN_GROUPED_COLUMNS} theme={theme} selectedYear={selectedYear} userRole={userRole} getAnalysisPrompt={(period, data, customQuery) => getPembiayaanAnalysisPrompt('Penerimaan Pembiayaan', period, data, customQuery)} namaPemda={namaPemda} />;
       case 'pengeluaranPembiayaan': return <DataUploadView title="Unggah Data Pengeluaran Pembiayaan" data={pengeluaranPembiayaan} onUpload={handleUpload} instruction={PEMBIAYAAN_INSTRUCTION} columnMapping={PEMBIAYAAN_MAPPING} previewHeaders={PEMBIAYAAN_PREVIEW_HEADERS} groupedColumns={PEMBIAYAAN_GROUPED_COLUMNS} theme={theme} selectedYear={selectedYear} userRole={userRole} getAnalysisPrompt={(period, data, customQuery) => getPembiayaanAnalysisPrompt('Pengeluaran Pembiayaan', period, data, customQuery)} namaPemda={namaPemda} />;
@@ -8157,17 +6934,8 @@ const RealisasiNonRKUDView = ({ data, userRole, includeNonRKUD, setIncludeNonRKU
   };
 
   return (
-    <div className={`${theme} min-h-screen bg-gray-100 dark:bg-gray-900 font-sans flex overflow-hidden`}>
-      {/* Overlay Background Hitam Transparan untuk Mobile */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden" 
-          onClick={() => setIsMobileMenuOpen(false)} 
-        />
-      )}
-
-      {/* Sidebar Nav (Diperbarui dengan kelas fixed, transform, dan z-index untuk responsive) */}
-      <nav className={`fixed md:static inset-y-0 left-0 z-50 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-all duration-300 ${isSidebarMinimized ? 'w-20' : 'w-64'} bg-white dark:bg-gray-800 shadow-lg flex-shrink-0 flex flex-col justify-between`}>
+    <div className={`${theme} min-h-screen bg-gray-100 dark:bg-gray-900 font-sans flex`}>
+      <nav className={`transition-all duration-300 ${isSidebarMinimized ? 'w-20' : 'w-64'} bg-white dark:bg-gray-800 shadow-lg flex-shrink-0 flex flex-col justify-between`}>
         <div>
             <div className="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
                 <div className={`flex items-center gap-2 ${isSidebarMinimized ? 'justify-center w-full' : ''}`}>
@@ -8232,8 +7000,7 @@ const RealisasiNonRKUDView = ({ data, userRole, includeNonRKUD, setIncludeNonRKU
                         <ul className="pl-4 mt-1">
                             {item.subMenus.map(subItem => (
                             <li key={subItem.id}>
-                                {/* Diperbarui: Menutup sidebar saat menu dipilih */}
-                                <button onClick={() => { setActiveView(subItem.id); setIsMobileMenuOpen(false); }} title={menuDescriptions[subItem.id] || subItem.label} className={`w-full flex items-center justify-between px-4 py-2 my-1 text-sm font-medium rounded-lg transition-colors duration-200 ${activeView === subItem.id ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                                <button onClick={() => setActiveView(subItem.id)} title={menuDescriptions[subItem.id] || subItem.label} className={`w-full flex items-center justify-between px-4 py-2 my-1 text-sm font-medium rounded-lg transition-colors duration-200 ${activeView === subItem.id ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
                                 <div className="flex items-center">
                                     <subItem.icon size={18} className="mr-3"/>
                                     {subItem.label}
@@ -8250,8 +7017,7 @@ const RealisasiNonRKUDView = ({ data, userRole, includeNonRKUD, setIncludeNonRKU
                         )}
                     </>
                     ) : (
-                    // Diperbarui: Menutup sidebar saat menu dipilih
-                    <button onClick={() => { setActiveView(item.id); setIsMobileMenuOpen(false); }} title={item.label} className={`w-full flex items-center px-4 py-3 my-1 text-sm font-medium rounded-lg transition-colors duration-200 ${isSidebarMinimized ? 'justify-center' : ''} ${activeView === item.id ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                    <button onClick={() => setActiveView(item.id)} title={item.label} className={`w-full flex items-center px-4 py-3 my-1 text-sm font-medium rounded-lg transition-colors duration-200 ${isSidebarMinimized ? 'justify-center' : ''} ${activeView === item.id ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
                         <div className="flex items-center">
                             <item.icon size={20} className={!isSidebarMinimized ? "mr-3" : ""} />
                             {!isSidebarMinimized && item.label}
@@ -8263,30 +7029,13 @@ const RealisasiNonRKUDView = ({ data, userRole, includeNonRKUD, setIncludeNonRKU
             })}
             </ul>
         </div>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 hidden md:block">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
              <button onClick={() => setIsSidebarMinimized(!isSidebarMinimized)} className="w-full flex items-center justify-center p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg">
                 {isSidebarMinimized ? <ChevronsRight size={20} /> : <ChevronsLeft size={20} />}
              </button>
         </div>
       </nav>
-
-      {/* Kontainer Utama yang diperbarui untuk mengakomodasi Header Mobile */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        {/* Header Mobile (Hanya Tampil di Layar Kecil) */}
-        <header className="md:hidden bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center z-30">
-            <div className="flex items-center gap-3">
-                <button onClick={() => setIsMobileMenuOpen(true)} className="text-gray-600 dark:text-gray-300 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <Menu size={24} />
-                </button>
-                <h1 className="font-bold text-blue-600 dark:text-blue-400 text-lg">Analisis APBD</h1>
-            </div>
-            <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
-                {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-            </button>
-        </header>
-
-        <main className="flex-1 p-4 md:p-8 overflow-y-auto">{renderView()}</main>
-      </div>
+      <main className="flex-1 p-8 overflow-y-auto">{renderView()}</main>
     </div>
   );
 };
