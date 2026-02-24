@@ -33,4 +33,4 @@ const handler = async (req, res) => {
   }
 };
 
-module.exports = handler;
+export default handler;
