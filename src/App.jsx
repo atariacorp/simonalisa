@@ -134,36 +134,35 @@ const TabButton = ({ title, isActive, onClick }) => (
 );
 // --- AKHIR BLOK KODE BARU ---
 
-// --- Gemini Analysis Component ---
-const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData = null, selectedYear = new Date().getFullYear(), interactivePlaceholder = "Ajukan pertanyaan tentang data...", userRole }) => {
+// --- Gemini Analysis Component (UPDATED: Using props for API Key) ---
+const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData = null, userRole, apiKeyFromSettings }) => {
     const [analysis, setAnalysis] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
     const [error, setError] = React.useState('');
     const [customQuery, setCustomQuery] = React.useState('');
 
-    // --- NEW: Hide component for viewers ---
-    if (userRole === 'viewer') {
-        return null;
-    }
+    if (userRole === 'viewer' || userRole === 'guest') return null;
 
-    const handleGetAnalysis = async (query) => {
+    const handleGetAnalysis = async (queryText) => {
         setIsLoading(true);
         setAnalysis('');
         setError('');
-        const prompt = getAnalysisPrompt(query, allData);
+        
+        // --- PRIORITAS API KEY ---
+        // Menggunakan Key dari Database jika ada, jika tidak kosongkan
+        const apiKey = apiKeyFromSettings || ""; 
+        
+        if (!apiKey) {
+            setError("Fitur AI belum aktif. Harap masukkan API Key Google Gemini di menu Pengaturan Aplikasi.");
+            setIsLoading(false);
+            return;
+        }
+
+        const prompt = getAnalysisPrompt(queryText, allData);
 
         try {
-            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-            const payload = { contents: chatHistory };
-            
-            // --- KONFIGURASI API KEY ---
-            // Agar fitur AI berjalan saat aplikasi di-online-kan (deploy), 
-            // Anda HARUS mengisi variabel ini dengan API Key dari https://aistudio.google.com/app/apikey
-            // Biarkan kosong "" HANYA jika Anda sedang menggunakan editor Canvas ini.
-            const apiKey = ""; 
-            
-            // Menggunakan model terbaru yang didukung
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
             
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -172,23 +171,21 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData =
             });
 
             if (!response.ok) {
-                // Memberikan pesan error yang lebih spesifik jika 400/403 (biasanya masalah Key)
                 if (response.status === 400 || response.status === 403) {
-                    throw new Error("Gagal otentikasi API Key. Pastikan Anda telah memasukkan API Key Google Gemini yang valid di kode (GeminiAnalysis component).");
+                    throw new Error("Gagal otentikasi API Key. Pastikan API Key yang Anda simpan di Pengaturan sudah valid.");
                 }
-                throw new Error(`API call failed with status: ${response.status}`);
+                throw new Error(`Koneksi AI gagal (Status: ${response.status})`);
             }
 
             const result = await response.json();
-
             if (result.candidates?.[0]?.content?.parts?.[0]) {
                 setAnalysis(result.candidates[0].content.parts[0].text);
             } else {
-                throw new Error("Respons dari API tidak memiliki format yang diharapkan.");
+                throw new Error("Format jawaban AI tidak dikenali.");
             }
         } catch (err) {
             console.error("Gemini API error:", err);
-            setError(err.message || "Gagal mendapatkan analisis. Silakan coba lagi nanti.");
+            setError(err.message || "Gagal menghubungi AI.");
         } finally {
             setIsLoading(false);
         }
@@ -214,7 +211,7 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData =
                         type="text"
                         value={customQuery}
                         onChange={(e) => setCustomQuery(e.target.value)}
-                        placeholder={interactivePlaceholder}
+                        placeholder="Ajukan pertanyaan spesifik ke AI..."
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                     <button
@@ -233,7 +230,7 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData =
                         className="flex items-center px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Sparkles className="mr-2" size={20} />
-                        Beri Analisa & Rekomendasi
+                        Beri Analisa & Rekomendasi Cerdas
                     </button>
                 </div>
             </div>
@@ -241,7 +238,7 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData =
                 <div className="mt-4 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border-l-4 border-purple-500">
                     <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-4">Hasil Analisis AI</h3>
                     {isLoading && <div className="flex items-center justify-center h-40"><Loader className="animate-spin text-purple-500" size={40}/></div>}
-                    {error && <p className="text-red-600">{error}</p>}
+                    {error && <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">{error}</div>}
                     {analysis && <div className="prose max-w-none text-gray-700 dark:text-gray-300">{renderFormattedText(analysis)}</div>}
                 </div>
             )}
