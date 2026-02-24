@@ -167,9 +167,34 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData =
 
             const result = await response.json();
 
-            // Support both direct generative responses and proxied responses
-            const candidate = result?.candidates?.[0] || result?.output?.[0] || result;
-            const text = candidate?.content?.parts?.[0]?.text || candidate?.text || (typeof candidate === 'string' ? candidate : null);
+            // Parse result into a plain text string
+            const parseGeminiResult = (res) => {
+                if (!res) return null;
+                if (typeof res === 'string') return res;
+                if (res.raw && typeof res.raw === 'string') return res.raw;
+
+                // Common candidate-based shape
+                const candidate = res.candidates?.[0] || res.output?.[0] || res;
+
+                // content.parts (Gemini generateContent)
+                const parts = candidate?.content?.parts || candidate?.content?.parts?.[0];
+                if (Array.isArray(parts) && parts.length > 0) {
+                    return parts.map(p => (p && (p.text || p)) || '').join('\n');
+                }
+
+                // simple text fields
+                if (candidate?.text) return candidate.text;
+                if (candidate?.outputText) return candidate.outputText;
+
+                // fallback: try JSON -> string
+                try {
+                    return JSON.stringify(res);
+                } catch (e) {
+                    return String(res);
+                }
+            };
+
+            const text = parseGeminiResult(result);
             if (text) {
                 setAnalysis(text);
             } else {
