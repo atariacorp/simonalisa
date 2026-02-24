@@ -13,7 +13,7 @@ const handler = async (req, res) => {
 
   try {
     const body = req.body || {};
-    console.log('api/gemini invoked with body:', JSON.stringify(body));
+    console.info('api/gemini invoked');
 
     const resp = await fetch(`${apiUrl}${apiUrl.includes('?') ? '&' : '?'}key=${encodeURIComponent(apiKey)}`, {
       method: 'POST',
@@ -31,9 +31,6 @@ const handler = async (req, res) => {
     } catch (e) {
       data = null;
     }
-
-    console.log('api/gemini response status:', status);
-    console.log('api/gemini response text:', text);
 
     if (data) {
       return res.status(status).json(data);
