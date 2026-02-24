@@ -13,6 +13,7 @@ const handler = async (req, res) => {
 
   try {
     const body = req.body || {};
+    console.log('api/gemini invoked with body:', JSON.stringify(body));
 
     const resp = await fetch(`${apiUrl}${apiUrl.includes('?') ? '&' : '?'}key=${encodeURIComponent(apiKey)}`, {
       method: 'POST',
@@ -26,7 +27,9 @@ const handler = async (req, res) => {
     const status = resp.status || 200;
     return res.status(status).json(data);
   } catch (err) {
-    return res.status(500).json({ error: err.message || String(err) });
+    console.error('api/gemini error:', err);
+    // Return error details temporarily for debugging. Remove stack before production.
+    return res.status(500).json({ error: err.message || String(err), stack: err.stack || null });
   }
 };
 
