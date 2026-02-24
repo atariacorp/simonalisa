@@ -23,9 +23,22 @@ const handler = async (req, res) => {
       body: JSON.stringify(body)
     });
 
-    const data = await resp.json().catch(() => null);
     const status = resp.status || 200;
-    return res.status(status).json(data);
+    const text = await resp.text().catch(() => null);
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch (e) {
+      data = null;
+    }
+
+    console.log('api/gemini response status:', status);
+    console.log('api/gemini response text:', text);
+
+    if (data) {
+      return res.status(status).json(data);
+    }
+    return res.status(status).json({ raw: text, status });
   } catch (err) {
     console.error('api/gemini error:', err);
     // Return error details temporarily for debugging. Remove stack before production.
