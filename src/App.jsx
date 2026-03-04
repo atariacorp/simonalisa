@@ -37,6 +37,27 @@ import LoginView from './LoginView';
 import DashboardView from './DashboardView';
 import GuideView from './GuideView';
 
+// ==================== IMPORT SEMUA VIEW ====================
+import AnalisisKinerjaView from './AnalisisKinerjaView';
+import AnalisisKualitasBelanjaView from './AnalisisKualitasBelanjaView';
+import AnalisisLintasTahunView from './AnalisisLintasTahunView';
+import AnalisisPotensiSiLPAView from './AnalisisPotensiSiLPAView';
+import MandatorySpendingView from './MandatorySpendingView';
+import LaporanTematikView from './LaporanTematikView';
+import SumberDanaStatsView from './SumberDanaStatsView';
+import SkpdBelanjaStatsView from './SkpdBelanjaStatsView';
+import SkpdPendapatanStatsView from './SkpdPendapatanStatsView';
+import SkpdRekeningStatsView from './SkpdRekeningStatsView';
+import SkpdSubKegiatanStatsView from './SkpdSubKegiatanStatsView';
+import PenandaanTematikView from './PenandaanTematikView';
+import PengaturanView from './PengaturanView';
+import DataUploadView from './DataUploadView';
+import ReferensiAkunView from './ReferensiAkunView';
+import PenandaanMandatoryView from './PenandaanMandatoryView';
+import ReferensiPenandaanView from './ReferensiPenandaanView';
+import ProsesPenandaanView from './ProsesPenandaanView';
+import ActivityLogView from './ActivityLogView';
+
 // --- Activity Logging Function ---
 const logActivity = async (action, details = {}) => {
     try {
