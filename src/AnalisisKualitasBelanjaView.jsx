@@ -1,3 +1,5 @@
+import React from 'react';
+
 // --- UPDATED AnalisisKualitasBelanjaView Component ---
 const AnalisisKualitasBelanjaView = ({ data, theme, selectedYear }) => {
     // 1. Mengambil data realisasiNonRkud

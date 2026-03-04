@@ -1,3 +1,5 @@
+import React from 'react';
+
 // --- REFACTORED ReferensiAkunView Component ---
 const ReferensiAkunView = ({ theme, userRole, selectedYear, onUpload }) => {
     const [selectedRef, setSelectedRef] = React.useState('pendapatan');

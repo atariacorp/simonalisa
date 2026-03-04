@@ -1,3 +1,5 @@
+import React from 'react';
+
 // NEW: SkpdBelanjaStatsView Component
 const SkpdBelanjaStatsView = ({ data, theme, namaPemda }) => {
     const { anggaran, realisasi, realisasiNonRkud } = data; // Ditambahkan realisasiNonRkud

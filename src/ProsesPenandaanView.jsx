@@ -1,3 +1,5 @@
+import React from 'react';
+
 // --- UPDATED ProsesPenandaanView Component ---
 const ProsesPenandaanView = ({ data, theme, userRole, selectedYear }) => {
     const { anggaran, realisasi } = data;

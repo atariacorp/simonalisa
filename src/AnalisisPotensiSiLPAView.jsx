@@ -1,3 +1,5 @@
+import React from 'react';
+
 // NEW: AnalisisPotensiSiLPAView Component
 const AnalisisPotensiSiLPAView = ({ data, theme, selectedYear, userRole }) => {
     // 1. Mengambil data realisasiNonRkud

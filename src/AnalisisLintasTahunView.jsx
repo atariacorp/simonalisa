@@ -1,3 +1,4 @@
+import React from 'react';
 import { exp } from "firebase/firestore/pipelines";
 
 // --- UPDATED AnalisisLintasTahunView Component ---

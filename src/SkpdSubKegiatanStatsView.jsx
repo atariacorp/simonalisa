@@ -1,3 +1,5 @@
+import React from 'react';
+
 // --- GANTI SELURUH KOMPONEN DI BAWAH INI DENGAN VERSI YANG SUDAH DISEMPURNAKAN ---
 const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole }) => {
     const { anggaran, realisasi, realisasiNonRkud } = data;

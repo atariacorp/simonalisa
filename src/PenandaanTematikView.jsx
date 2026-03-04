@@ -1,3 +1,5 @@
+import React from 'react';
+
 // NEW: PenandaanTematikView Component
 const PenandaanTematikView = ({ theme, userRole, selectedYear, onUpload }) => {
     const [selectedTematik, setSelectedTematik] = React.useState('spm');

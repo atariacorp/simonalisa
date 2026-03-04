@@ -1,3 +1,4 @@
+import React from 'react';
 import { exp } from "firebase/firestore/pipelines";
 
 // --- KOMPONEN ACTIVITY LOG VIEW YANG DIPERBARUI ---

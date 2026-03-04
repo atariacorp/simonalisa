@@ -1,3 +1,5 @@
+import React from 'react';
+
 // UPDATED: PenandaanMandatoryView Component
 const PenandaanMandatoryView = ({ theme, userRole, selectedYear, onUpload }) => {
     const [selectedMandatory, setSelectedMandatory] = React.useState('pendidikan');

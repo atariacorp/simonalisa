@@ -1,3 +1,5 @@
+import React from 'react';
+
 // Helper function to format numbers to Indonesian Rupiah
 export const formatCurrency = (value) => {
     if (typeof value !== 'number' || isNaN(value)) {

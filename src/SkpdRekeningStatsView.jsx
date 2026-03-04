@@ -1,3 +1,5 @@
+import React from 'react';
+
 const SkpdRekeningStatsView = ({ data, theme, namaPemda, userCanUseAi }) => {
     const { anggaran, realisasi, realisasiNonRkud } = data;
     const [selectedSkpd, setSelectedSkpd] = React.useState('Semua SKPD');

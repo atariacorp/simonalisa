@@ -1,3 +1,5 @@
+import React from 'react';
+
 // --- Analisis Kinerja View ---
 const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
     const currentYear = new Date().getFullYear();

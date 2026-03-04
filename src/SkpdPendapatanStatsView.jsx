@@ -1,3 +1,5 @@
+import React from 'react';
+
 // --- UPDATED: SkpdPendapatanStatsView Component with Projection Feature ---
 const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole }) => {
     const { pendapatan, realisasiPendapatan } = data;

@@ -1,3 +1,5 @@
+import React from 'react';
+
 // --- UPDATED PengaturanView Component ---
 const PengaturanView = ({ selectedYear, onYearChange, theme, userRole, saveSettings, namaPemda: initialNamaPemda }) => {
     const currentYear = new Date().getFullYear();

@@ -1,3 +1,5 @@
+import React from 'react';
+
 // --- UPDATED: SumberDanaStatsView dengan Sub Kegiatan ---
 const SumberDanaStatsView = ({ data, theme, namaPemda, userRole }) => {
     const { anggaran, realisasi, realisasiNonRkud } = data;

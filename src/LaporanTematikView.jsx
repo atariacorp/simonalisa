@@ -1,3 +1,5 @@
+import React from 'react';
+
 // --- UPDATED: LaporanTematikView Component ---
 const LaporanTematikView = ({ data, theme, namaPemda, userRole, selectedYear }) => {
     const { anggaran, realisasi } = data;
