@@ -345,6 +345,4 @@ const PengaturanView = ({ selectedYear, onYearChange, theme, userRole, saveSetti
     );
 };
 
-export default PengaturanView;/ /   f i n a l   f i x  
- / /   f i n a l   f i x  
- 
+export default PengaturanView;
