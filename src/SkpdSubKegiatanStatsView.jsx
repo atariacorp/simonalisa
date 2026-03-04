@@ -1,5 +1,9 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
+import GeminiAnalysis from './GeminiAnalysis';
+import Pagination from './Pagination';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { formatCurrency } from './formatCurrency';
 
 // --- GANTI SELURUH KOMPONEN DI BAWAH INI DENGAN VERSI YANG SUDAH DISEMPURNAKAN ---
 const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole }) => {

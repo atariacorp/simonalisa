@@ -1,5 +1,9 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
+import { Download, Loader, UserPlus, Edit, Trash2 } from 'lucide-react';
+import { collection, doc, setDoc, getDocs, addDoc, deleteDoc, updateDoc, onSnapshot, query } from "firebase/firestore";
+import { db } from './firebase';
+import { logActivity } from './App'; // atau dari file terpisah jika sudah dipisah
 
 // --- UPDATED PengaturanView Component ---
 const PengaturanView = ({ selectedYear, onYearChange, theme, userRole, saveSettings, namaPemda: initialNamaPemda }) => {

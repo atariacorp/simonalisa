@@ -1,5 +1,12 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
+import GeminiAnalysis from './GeminiAnalysis';
+import Pagination from './Pagination';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Download, ChevronDown, ChevronRight } from 'lucide-react';
+import { collection, onSnapshot, query } from "firebase/firestore";
+import { db } from './firebase';
+import { formatCurrency } from './formatCurrency';
 
 // --- UPDATED: LaporanTematikView Component ---
 const LaporanTematikView = ({ data, theme, namaPemda, userRole, selectedYear }) => {

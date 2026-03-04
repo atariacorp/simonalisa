@@ -1,6 +1,12 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
-
+import GeminiAnalysis from './GeminiAnalysis';
+import Pagination from './Pagination';
+import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts';
+import { ChevronDown, ChevronsUpDown, Loader, TrendingUp, Award } from 'lucide-react';
+import { collection, getDocs, query } from "firebase/firestore";
+import { db } from './firebase';
+import { formatCurrency } from './formatCurrency';
 // --- Analisis Kinerja View ---
 const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
     const currentYear = new Date().getFullYear();

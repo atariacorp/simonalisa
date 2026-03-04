@@ -1,5 +1,10 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
+import GeminiAnalysis from './GeminiAnalysis';
+import Pagination from './Pagination';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Search } from 'lucide-react';
+import { formatCurrency } from './formatCurrency';
 
 // --- UPDATED: SkpdPendapatanStatsView Component with Projection Feature ---
 const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole }) => {

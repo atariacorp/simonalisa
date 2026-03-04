@@ -1,4 +1,4 @@
-import React from 'react';
+import StatCard from './StatCard';
 import { formatCurrency } from './formatCurrency';
 
 const StatCard = ({ icon, title, target, realisasi, percentage, colorClass, rkud, nonRkud, rkudPercentage, nonRkudPercentage }) => (

@@ -1,5 +1,8 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
+import GeminiAnalysis from './GeminiAnalysis';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { formatCurrency } from './formatCurrency';
 
 // NEW: AnalisisPotensiSiLPAView Component
 const AnalisisPotensiSiLPAView = ({ data, theme, selectedYear, userRole }) => {

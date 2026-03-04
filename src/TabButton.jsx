@@ -1,4 +1,4 @@
-import React from 'react';
+import TabButton from './TabButton';
 
 const TabButton = ({ title, isActive, onClick }) => {
   return (

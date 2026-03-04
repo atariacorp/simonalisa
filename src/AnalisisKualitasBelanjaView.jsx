@@ -1,5 +1,8 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
+import GeminiAnalysis from './GeminiAnalysis';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { formatCurrency } from './formatCurrency';
 
 // --- UPDATED AnalisisKualitasBelanjaView Component ---
 const AnalisisKualitasBelanjaView = ({ data, theme, selectedYear }) => {

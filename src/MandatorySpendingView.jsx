@@ -1,6 +1,9 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
-import { exp } from "firebase/firestore/pipelines";
+import TabButton from './TabButton';
+import AnalysisCard from './AnalysisCard';
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from './firebase';
 
 // UPDATED: MandatorySpendingView Component
 const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear }) => {

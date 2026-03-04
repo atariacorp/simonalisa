@@ -1,5 +1,11 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
+import SelectInput from './SelectInput';
+import Pagination from './Pagination';
+import { Search, Tag, Edit, Trash2, ChevronDown, ChevronRight, Loader } from 'lucide-react';
+import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, writeBatch } from "firebase/firestore";
+import { db } from './firebase';
+import { formatCurrency } from './formatCurrency';
 
 // --- UPDATED ProsesPenandaanView Component ---
 const ProsesPenandaanView = ({ data, theme, userRole, selectedYear }) => {

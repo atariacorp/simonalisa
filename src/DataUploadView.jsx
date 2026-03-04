@@ -1,5 +1,9 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
+import GeminiAnalysis from './GeminiAnalysis';
+import Pagination from './Pagination';
+import { Upload, Calendar, Trash2, Loader, Download, Columns, Search, CheckCircle2, AlertCircle } from 'lucide-react';
+import { formatCurrency } from './formatCurrency';
 
 // --- UPDATED DataUploadView Component with Delete per Month button ---
 const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, previewHeaders, groupedColumns, dataFilter, theme, onUpload, onDeleteMonth, isDeleting, selectedYear, userRole, getAnalysisPrompt, namaPemda }) => {

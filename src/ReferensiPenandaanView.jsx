@@ -1,5 +1,9 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
+import { Loader, Edit, Trash2 } from 'lucide-react';
+import { collection, addDoc, deleteDoc, updateDoc, onSnapshot } from "firebase/firestore";
+import { db } from './firebase';
+import { logActivity } from './App'; // atau dari file terpisah
 
 // NEW: ReferensiPenandaanView (Functional)
 const ReferensiPenandaanView = ({ userRole, selectedYear }) => {

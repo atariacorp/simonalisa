@@ -1,6 +1,11 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
-import { exp } from "firebase/firestore/pipelines";
+import GeminiAnalysis from './GeminiAnalysis';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { Loader, TrendingUp } from 'lucide-react';
+import { collection, getDocs, query } from "firebase/firestore";
+import { db } from './firebase';
+import { formatCurrency } from './formatCurrency';
 
 // --- UPDATED AnalisisLintasTahunView Component ---
 const AnalisisLintasTahunView = ({ theme, user, selectedYear, namaPemda }) => {

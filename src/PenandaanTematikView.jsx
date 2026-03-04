@@ -1,5 +1,9 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
+import Pagination from './Pagination';
+import { Upload, Search } from 'lucide-react';
+import { collection, onSnapshot, query } from "firebase/firestore";
+import { db } from './firebase';
 
 // NEW: PenandaanTematikView Component
 const PenandaanTematikView = ({ theme, userRole, selectedYear, onUpload }) => {

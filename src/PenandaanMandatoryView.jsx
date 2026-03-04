@@ -1,5 +1,9 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
+import Pagination from './Pagination';
+import { Upload, Search } from 'lucide-react';
+import { collection, onSnapshot, query } from "firebase/firestore";
+import { db } from './firebase';
 
 // UPDATED: PenandaanMandatoryView Component
 const PenandaanMandatoryView = ({ theme, userRole, selectedYear, onUpload }) => {

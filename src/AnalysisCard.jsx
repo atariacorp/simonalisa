@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import AnalysisCard from './AnalysisCard';
 import { Search, Download, ChevronDown, ChevronRight } from 'lucide-react';
 import ProgressCircle from './ProgressCircle';
 import Pagination from './Pagination';

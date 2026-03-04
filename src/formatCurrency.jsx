@@ -1,4 +1,4 @@
-import React from 'react';
+import { formatCurrency } from './formatCurrency';
 
 // Helper function to format numbers to Indonesian Rupiah
 export const formatCurrency = (value) => {
