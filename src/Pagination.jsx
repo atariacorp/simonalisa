@@ -1,4 +1,4 @@
-import Pagination from './Pagination';
+import React from 'react';
 
 const Pagination = ({ currentPage, totalPages, onPageChange, theme }) => {
     const getPageNumbers = () => {
