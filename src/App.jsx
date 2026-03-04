@@ -103,8 +103,8 @@ const App = () => {
     const loadScriptsAndAuth = async () => {
         try {
             await Promise.all([
-                loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'),
-                loadScript('https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js')
+                loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'),
+                loadScript('https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js')
             ]);
             setScriptsLoaded(true);
             
