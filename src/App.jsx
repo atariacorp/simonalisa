@@ -35,6 +35,7 @@ import GeminiAnalysis from './GeminiAnalysis';
 import { formatCurrency } from './formatCurrency';
 import LoginView from './LoginView';
 import DashboardView from './DashboardView';
+import GuideView from './GuideView';
 
 // --- Activity Logging Function ---
 const logActivity = async (action, details = {}) => {
