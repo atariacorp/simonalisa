@@ -293,6 +293,7 @@ const menuItems = [
           { id: 'sumber-dana-stats', label: 'Statistik Sumber Dana', icon: Droplets },
           { id: 'skpd-rekening-stats', label: 'Statistik Rekening', icon: FileText },
           { id: 'skpd-subkegiatan-stats', label: 'Statistik Sub Kegiatan', icon: FileText },
+          { id: 'panduan', label: 'Panduan', icon: BookOpen, requiredRole: ['admin', 'editor', 'viewer'] }
       ]
     },
     {
@@ -710,6 +711,7 @@ const menuItems = [
       case 'realisasiNonRkud': return <DataUploadView title="Unggah Data Realisasi Non RKUD" data={realisasiNonRkud} onUpload={handleUpload} instruction={REALISASI_NON_RKUD_INSTRUCTION} columnMapping={REALISASI_NON_RKUD_MAPPING} previewHeaders={REALISASI_NON_RKUD_PREVIEW_HEADERS} groupedColumns={REALISASI_NON_RKUD_GROUPED_COLUMNS}  isMonthly={true} dataFilter={REALISASI_NON_RKUD_FILTER} theme={theme} selectedYear={selectedYear} userRole={userRole} onDeleteMonth={handleDeleteMonthlyData} isDeleting={isDeleting} />;
       case 'proses-penandaan': return <ProsesPenandaanView data={allData} theme={theme} userRole={userRole} selectedYear={selectedYear} />;
       case 'activity-log': return <ActivityLogView theme={theme} />;
+      case 'panduan': return <GuideView />;
       default: return <DashboardView data={allData} theme={theme} selectedYear={selectedYear}/>;
     }
   };
