@@ -1,5 +1,5 @@
 import React from 'react';
-import SectionTitle from '../components/SectionTitle';
+import SectionTitle from './SectionTitle';  // <-- INI BENAR
 import { BookOpen, FileText, HelpCircle, ArrowRight, CheckCircle } from 'lucide-react';
 
 const GuideView = () => {
