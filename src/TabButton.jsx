@@ -1,4 +1,4 @@
-import TabButton from './TabButton';
+import React from 'react';
 
 const TabButton = ({ title, isActive, onClick }) => {
   return (
@@ -15,4 +15,4 @@ const TabButton = ({ title, isActive, onClick }) => {
   );
 };
 
-export default TabButton;   // <--- WAJIB
+export default TabButton;
