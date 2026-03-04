@@ -12,7 +12,7 @@ import {
   LogIn, LogOut, UserCircle, Trash2, UserPlus, ChevronsUpDown, Award,
   ChevronsLeft, ChevronsRight, PieChart as PieChartIcon, Building,
   Users, Briefcase, Shuffle, BookMarked, Columns, Edit, X, Tag,
-  ChevronRight, Download, History, ChevronUp
+  ChevronRight, Download, History, ChevronUp, BookOpen
 } from 'lucide-react';
 import {
   collection, doc, onSnapshot, setDoc, getDocs,
