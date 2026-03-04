@@ -1,4 +1,4 @@
-import SelectInput from './SelectInput';
+import React from 'react';
 
 const SelectInput = ({ label, value, onChange, options, placeholder, disabled = false, useObjectAsOption = false }) => {
   return (
