@@ -1,4 +1,4 @@
-import ProgressCircle from './ProgressCircle';
+import React from 'react';
 
 const ProgressCircle = ({ percentage, threshold, type }) => {
   const radius = 60;
