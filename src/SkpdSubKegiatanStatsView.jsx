@@ -1,5 +1,5 @@
 import React from 'react';
-import SectionTitle from './SectionTitle';s
+import SectionTitle from './SectionTitle';
 
 // --- GANTI SELURUH KOMPONEN DI BAWAH INI DENGAN VERSI YANG SUDAH DISEMPURNAKAN ---
 const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole }) => {

@@ -1,6 +1,10 @@
 import React from 'react';
 import SectionTitle from './SectionTitle';
-import { exp } from "firebase/firestore/pipelines";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { db } from './firebase';
+import Pagination from './Pagination';
+import { Users, Loader } from 'lucide-react';
+
 
 // --- KOMPONEN ACTIVITY LOG VIEW YANG DIPERBARUI ---
 const ActivityLogView = ({ theme }) => {
