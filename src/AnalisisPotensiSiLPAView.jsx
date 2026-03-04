@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionTitle from './SectionTitle';
 
 // NEW: AnalisisPotensiSiLPAView Component
 const AnalisisPotensiSiLPAView = ({ data, theme, selectedYear, userRole }) => {

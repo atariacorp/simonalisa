@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionTitle from './SectionTitle';
 
 // UPDATED: PenandaanMandatoryView Component
 const PenandaanMandatoryView = ({ theme, userRole, selectedYear, onUpload }) => {

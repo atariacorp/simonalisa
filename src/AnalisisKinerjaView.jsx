@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionTitle from './SectionTitle';
 
 // --- Analisis Kinerja View ---
 const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {

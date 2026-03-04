@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionTitle from './SectionTitle';
 
 // --- UPDATED ProsesPenandaanView Component ---
 const ProsesPenandaanView = ({ data, theme, userRole, selectedYear }) => {

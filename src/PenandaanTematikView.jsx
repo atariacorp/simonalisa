@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionTitle from './SectionTitle';
 
 // NEW: PenandaanTematikView Component
 const PenandaanTematikView = ({ theme, userRole, selectedYear, onUpload }) => {

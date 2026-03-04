@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionTitle from './SectionTitle';
 
 // --- UPDATED: SkpdPendapatanStatsView Component with Projection Feature ---
 const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole }) => {

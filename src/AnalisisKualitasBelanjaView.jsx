@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionTitle from './SectionTitle';
 
 // --- UPDATED AnalisisKualitasBelanjaView Component ---
 const AnalisisKualitasBelanjaView = ({ data, theme, selectedYear }) => {

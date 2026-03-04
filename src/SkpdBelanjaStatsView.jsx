@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionTitle from './SectionTitle';
 
 // NEW: SkpdBelanjaStatsView Component
 const SkpdBelanjaStatsView = ({ data, theme, namaPemda }) => {

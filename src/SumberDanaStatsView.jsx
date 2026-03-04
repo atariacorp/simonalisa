@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionTitle from './SectionTitle';
 
 // --- UPDATED: SumberDanaStatsView dengan Sub Kegiatan ---
 const SumberDanaStatsView = ({ data, theme, namaPemda, userRole }) => {

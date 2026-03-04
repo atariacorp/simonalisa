@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionTitle from './SectionTitle';
 import { exp } from "firebase/firestore/pipelines";
 
 // UPDATED: MandatorySpendingView Component

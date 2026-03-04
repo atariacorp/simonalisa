@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionTitle from './SectionTitle';
 
 const SkpdRekeningStatsView = ({ data, theme, namaPemda, userCanUseAi }) => {
     const { anggaran, realisasi, realisasiNonRkud } = data;

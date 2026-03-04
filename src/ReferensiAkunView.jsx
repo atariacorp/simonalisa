@@ -1,4 +1,5 @@
 import React from 'react';
+import SectionTitle from './SectionTitle';
 
 // --- REFACTORED ReferensiAkunView Component ---
 const ReferensiAkunView = ({ theme, userRole, selectedYear, onUpload }) => {
