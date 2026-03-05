@@ -36,6 +36,7 @@ import { formatCurrency } from './formatCurrency';
 import LoginView from './LoginView';
 import DashboardView from './DashboardView';
 import GuideView from './GuideView';
+import { brandingConfig } from './config/branding';
 
 // ==================== IMPORT SEMUA VIEW ====================
 import AnalisisKinerjaView from './AnalisisKinerjaView';
@@ -744,16 +745,24 @@ const menuItems = [
         <div>
             <div className="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
                 <div className={`flex items-center gap-2 ${isSidebarMinimized ? 'justify-center w-full' : ''}`}>
-                    {!isSidebarMinimized && (
-                        <div>
-                            <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400">Analisis APBD</h1>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Tahun: {selectedYear}</p>
-                            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-1 truncate" title={namaPemda}>
-                                {namaPemda || 'Nama Instansi Belum Diatur'}
-                            </p>
-                        </div>
-                    )}
-                </div>
+    {/* LOGO DITAMBAHKAN DI SINI */}
+    <img 
+        src={brandingConfig.logo.path}
+        alt={brandingConfig.logo.alt}
+        className={`${isSidebarMinimized ? 'w-8 h-8' : 'w-10 h-10'} flex-shrink-0`}
+    />
+    {!isSidebarMinimized && (
+        <div className="flex-1">
+            <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                {brandingConfig.text.sidebarTitle}
+            </h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Tahun: {selectedYear}</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-1 truncate" title={namaPemda}>
+                {namaPemda || 'Nama Instansi Belum Diatur'}
+            </p>
+        </div>
+    )}
+</div>
                  <button onClick={toggleTheme} className={`p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 ${isSidebarMinimized ? 'hidden' : ''}`}>
                     {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
                 </button>
