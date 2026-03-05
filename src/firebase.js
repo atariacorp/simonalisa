@@ -3,7 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyCE_IJlJdEHJKBOiNBMzNCNH_fKH0ln-NA",
   authDomain: "analisis-apbd.firebaseapp.com",
   projectId: "analisis-apbd",
@@ -17,4 +17,4 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-export { db, auth }; // <-- PASTIKAN INI ADA
+export { db, auth };
