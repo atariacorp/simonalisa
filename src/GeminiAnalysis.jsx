@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Loader, Search, Sparkles } from 'lucide-react';
-import API_KEYS from './keys'; // sesuaikan path jika perlu
 
 const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData = null, selectedYear = new Date().getFullYear(), interactivePlaceholder = "Ajukan pertanyaan tentang data...", userRole }) => {
     const [analysis, setAnalysis] = useState('');
@@ -18,51 +17,40 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, allData =
         setError('');
         const prompt = getAnalysisPrompt(query, allData);
 
-        // Daftar API key yang akan dicoba
-        const apiKeys = [
-            API_KEYS.primary,
-            API_KEYS.secondary,
-            API_KEYS.tertiary
-        ].filter(key => key); // buang key kosong
+        // API Key baru - HARDCODE LANGSUNG DI SINI
+        const API_KEY = "AIzaSyDAQEbbYaGi2AMyxywCLVcDV2-UWbkAGpM";
 
-        let lastError = null;
+        try {
+            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { contents: chatHistory };
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
 
-        for (const apiKey of apiKeys) {
-            try {
-                const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                const payload = { contents: chatHistory };
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.candidates?.[0]?.content?.parts?.[0]) {
-                        setAnalysis(result.candidates[0].content.parts[0].text);
-                        setIsLoading(false);
-                        return; // sukses
-                    } else {
-                        throw new Error("Respons dari API tidak memiliki format yang diharapkan.");
-                    }
-                } else if (response.status === 429) {
-                    console.log(`Key ${apiKey} quota exhausted, trying next...`);
-                    lastError = `Key ${apiKey} quota exhausted`;
-                    continue;
+            if (response.ok) {
+                const result = await response.json();
+                if (result.candidates?.[0]?.content?.parts?.[0]) {
+                    setAnalysis(result.candidates[0].content.parts[0].text);
+                    setIsLoading(false);
+                    return;
                 } else {
-                    throw new Error(`API call failed with status: ${response.status}`);
+                    throw new Error("Respons dari API tidak memiliki format yang diharapkan.");
                 }
-            } catch (err) {
-                console.error("Gemini API error with key:", apiKey, err);
-                lastError = err;
+            } else if (response.status === 429) {
+                throw new Error("API key quota exhausted");
+            } else {
+                throw new Error(`API call failed with status: ${response.status}`);
             }
+        } catch (err) {
+            console.error("Gemini API error:", err);
+            setError(`Gagal mendapatkan analisis: ${err.message}`);
+        } finally {
+            setIsLoading(false);
         }
-
-        setError(`Gagal mendapatkan analisis. Semua API Key tidak berfungsi. ${lastError ? 'Error terakhir: ' + (lastError.message || lastError) : ''}`);
-        setIsLoading(false);
     };
 
     const renderFormattedText = (text) => {
