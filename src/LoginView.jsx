@@ -27,6 +27,12 @@ const LoginView = ({ theme }) => {
         <div className={`min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 ${theme}`}>
             <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
                 <div className="text-center">
+                    {/* LOGO DITAMBAHKAN DI SINI */}
+                    <img 
+                        src="/logo.png" 
+                        alt="Logo Kota Medan" 
+                        className="w-24 h-24 mx-auto mb-4"
+                    />
                     <h1 className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                         Sistem Informasi Analisa APBD Kota Medan
                     </h1>
