@@ -2,12 +2,197 @@ import React from 'react';
 import SectionTitle from './SectionTitle';
 import GeminiAnalysis from './GeminiAnalysis';
 import Pagination from './Pagination';
-import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts';
+import { 
+  BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
+  ResponsiveContainer, ComposedChart, Cell, 
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar 
+} from 'recharts';
 import { ChevronDown, ChevronsUpDown, Loader, TrendingUp, Award } from 'lucide-react';
 import { collection, getDocs, query } from "firebase/firestore";
 import { db } from './firebase';
 import { formatCurrency } from './formatCurrency';
-// --- Analisis Kinerja View ---
+
+// Komponen Grafik Kombinasi
+const CombinationChart = ({ data, yearA, yearB, analysisType }) => {
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF4560'];
+  
+  // Siapkan data untuk chart
+  const chartData = data.map(item => {
+    if (analysisType === 'Belanja') {
+      return {
+        name: item.skpd.length > 25 ? item.skpd.substring(0, 25) + '...' : item.skpd,
+        skpdFull: item.skpd,
+        [`pagu${yearA}`]: item.paguA / 1e9, // Konversi ke Miliar
+        [`realisasi${yearA}`]: item.realisasiA / 1e9,
+        [`persen${yearA}`]: item.kinerjaA,
+        [`pagu${yearB}`]: item.paguB / 1e9,
+        [`realisasi${yearB}`]: item.realisasiB / 1e9,
+        [`persen${yearB}`]: item.kinerjaB,
+      };
+    } else {
+      return {
+        name: item.skpd.length > 25 ? item.skpd.substring(0, 25) + '...' : item.skpd,
+        skpdFull: item.skpd,
+        [`target${yearA}`]: item.targetA / 1e9,
+        [`realisasi${yearA}`]: item.realisasiA / 1e9,
+        [`persen${yearA}`]: item.kinerjaA,
+        [`target${yearB}`]: item.targetB / 1e9,
+        [`realisasi${yearB}`]: item.realisasiB / 1e9,
+        [`persen${yearB}`]: item.kinerjaB,
+      };
+    }
+  }).slice(0, 15); // Tampilkan top 15 saja
+
+  return (
+    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mt-6">
+      <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
+        Komposisi {analysisType} {yearA} vs {yearB} (dalam Miliar Rp)
+      </h3>
+      <ResponsiveContainer width="100%" height={500}>
+        <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 100 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
+          <XAxis 
+            dataKey="name" 
+            angle={-45} 
+            textAnchor="end" 
+            interval={0} 
+            height={80}
+            tick={{ fontSize: 11 }}
+          />
+          <YAxis 
+            yAxisId="left"
+            tickFormatter={(val) => `${val} M`} 
+            tick={{ fontSize: 11 }}
+            label={{ value: 'Nilai (Miliar Rp)', angle: -90, position: 'insideLeft', style: { fontSize: 12 } }}
+          />
+          <YAxis 
+            yAxisId="right" 
+            orientation="right" 
+            domain={[0, 100]}
+            tickFormatter={(val) => `${val}%`}
+            tick={{ fontSize: 11 }}
+            label={{ value: 'Persentase (%)', angle: 90, position: 'insideRight', style: { fontSize: 12 } }}
+          />
+          <Tooltip 
+            formatter={(value, name) => {
+              if (name.includes('persen')) return `${value.toFixed(2)}%`;
+              return formatCurrency(value * 1e9);
+            }}
+            labelFormatter={(label) => {
+              const item = chartData.find(d => d.name === label);
+              return item?.skpdFull || label;
+            }}
+          />
+          <Legend 
+            verticalAlign="top" 
+            height={36}
+            formatter={(value) => {
+              return value.replace(yearA, '').replace(yearB, '').replace('pagu', 'Pagu ')
+                .replace('target', 'Target ').replace('realisasi', 'Realisasi ')
+                .replace('persen', 'Persentase ');
+            }}
+          />
+          
+          {/* Bar untuk Tahun A */}
+          <Bar 
+            yAxisId="left" 
+            dataKey={analysisType === 'Belanja' ? `pagu${yearA}` : `target${yearA}`} 
+            fill="#435EBE" 
+            name={`Pagu/Target ${yearA}`}
+            barSize={20}
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Bar>
+          
+          {/* Bar untuk Tahun B */}
+          <Bar 
+            yAxisId="left" 
+            dataKey={analysisType === 'Belanja' ? `pagu${yearB}` : `target${yearB}`} 
+            fill="#1E293B" 
+            name={`Pagu/Target ${yearB}`}
+            barSize={20}
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
+            ))}
+          </Bar>
+          
+          {/* Bar Realisasi Tahun A */}
+          <Bar 
+            yAxisId="left" 
+            dataKey={`realisasi${yearA}`} 
+            fill="#4CAF50" 
+            name={`Realisasi ${yearA}`}
+            barSize={20}
+          />
+          
+          {/* Bar Realisasi Tahun B */}
+          <Bar 
+            yAxisId="left" 
+            dataKey={`realisasi${yearB}`} 
+            fill="#FF9800" 
+            name={`Realisasi ${yearB}`}
+            barSize={20}
+          />
+          
+          {/* Line untuk Persentase Tahun A */}
+          <Line 
+            yAxisId="right" 
+            type="monotone" 
+            dataKey={`persen${yearA}`} 
+            stroke="#FF6B6B" 
+            name={`% Penyerapan ${yearA}`}
+            strokeWidth={3}
+            dot={{ r: 5 }}
+          />
+          
+          {/* Line untuk Persentase Tahun B */}
+          <Line 
+            yAxisId="right" 
+            type="monotone" 
+            dataKey={`persen${yearB}`} 
+            stroke="#4ECDC4" 
+            name={`% Penyerapan ${yearB}`}
+            strokeWidth={3}
+            dot={{ r: 5 }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+      
+      {/* Ringkasan Statistik */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+          <p className="text-xs text-blue-600 dark:text-blue-400">Total Pagu/Target {yearA}</p>
+          <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
+            {formatCurrency(data.reduce((sum, item) => sum + (analysisType === 'Belanja' ? item.paguA : item.targetA), 0))}
+          </p>
+        </div>
+        <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+          <p className="text-xs text-green-600 dark:text-green-400">Total Realisasi {yearA}</p>
+          <p className="text-lg font-bold text-green-700 dark:text-green-300">
+            {formatCurrency(data.reduce((sum, item) => sum + item.realisasiA, 0))}
+          </p>
+        </div>
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+          <p className="text-xs text-blue-600 dark:text-blue-400">Total Pagu/Target {yearB}</p>
+          <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
+            {formatCurrency(data.reduce((sum, item) => sum + (analysisType === 'Belanja' ? item.paguB : item.targetB), 0))}
+          </p>
+        </div>
+        <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+          <p className="text-xs text-green-600 dark:text-green-400">Total Realisasi {yearB}</p>
+          <p className="text-lg font-bold text-green-700 dark:text-green-300">
+            {formatCurrency(data.reduce((sum, item) => sum + item.realisasiB, 0))}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Analisis Kinerja View (DIMODIFIKASI) ---
 const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
@@ -24,6 +209,7 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
     const [error, setError] = React.useState('');
     const [sortConfig, setSortConfig] = React.useState({ key: 'kinerjaA', direction: 'descending' });
     const [selectedSkpd, setSelectedSkpd] = React.useState('Semua SKPD');
+    const [viewMode, setViewMode] = React.useState('table'); // 'table' atau 'chart'
 
     // 1. Memperbarui fungsi untuk mengambil data realisasiNonRkud
     const fetchDataForYear = async (year) => {
@@ -250,7 +436,7 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
             <SectionTitle>Analisis Kinerja SKPD</SectionTitle>
             <GeminiAnalysis getAnalysisPrompt={getAnalysisPrompt} disabledCondition={sortedData.length === 0} theme={theme} />
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                     <select value={yearA} onChange={e => setYearA(parseInt(e.target.value))} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
                         {years.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
@@ -261,19 +447,53 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
                         <option>Belanja</option>
                         <option>Pendapatan</option>
                     </select>
-                    <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                            {months.map(m => <option key={`start-${m}`} value={m}>Dari: {m}</option>)}
-                        </select>
-                        <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                            {months.map(m => <option key={`end-${m}`} value={m}>Sampai: {m}</option>)}
-                        </select>
-                        <select value={selectedSkpd} onChange={e => setSelectedSkpd(e.target.value)} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                            <option>Semua SKPD</option>
-                            {skpdList.map(skpd => <option key={skpd} value={skpd}>{skpd}</option>)}
-                        </select>
+                    
+                    {/* Toggle View Mode */}
+                    <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+                        <button
+                            onClick={() => setViewMode('table')}
+                            className={`flex-1 px-4 py-2 text-sm font-medium ${
+                                viewMode === 'table' 
+                                    ? 'bg-purple-600 text-white' 
+                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                            }`}
+                        >
+                            Tabel
+                        </button>
+                        <button
+                            onClick={() => setViewMode('chart')}
+                            className={`flex-1 px-4 py-2 text-sm font-medium ${
+                                viewMode === 'chart' 
+                                    ? 'bg-purple-600 text-white' 
+                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                            }`}
+                        >
+                            Grafik
+                        </button>
                     </div>
                 </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        {months.map(m => <option key={`start-${m}`} value={m}>Dari: {m}</option>)}
+                    </select>
+                    <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        {months.map(m => <option key={`end-${m}`} value={m}>Sampai: {m}</option>)}
+                    </select>
+                </div>
+
+                {/* Filter SKPD */}
+                <div className="mb-6">
+                    <select 
+                        value={selectedSkpd} 
+                        onChange={e => setSelectedSkpd(e.target.value)} 
+                        className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                        <option>Semua SKPD</option>
+                        {skpdList.map(skpd => <option key={skpd} value={skpd}>{skpd}</option>)}
+                    </select>
+                </div>
+
                 {isLoading && <div className="text-center py-10"><Loader className="animate-spin mx-auto text-purple-500" size={40}/></div>}
                 {error && <p className="text-center text-red-500 py-10">{error}</p>}
                 {!isLoading && !error && (
@@ -294,34 +514,48 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
                             </ResponsiveContainer>
                         </div>
                     )}
-                    <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-700">
-                                <tr>
-                                    {tableHeaders.map(header => (
-                                        <th key={header.key} onClick={() => header.key !== 'growth' && requestSort(header.key)} className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${header.key !== 'growth' ? 'cursor-pointer' : ''}`}>
-                                            <div className="flex items-center">{header.label} {header.key !== 'growth' && renderSortIcon(header.key)}</div>
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {sortedData.map((item) => (
-                                    <tr key={item.skpd} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 max-w-xs whitespace-normal break-words">{item.skpd}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">{formatCurrency(analysisType === 'Belanja' ? item.paguB : item.targetB)}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">{formatCurrency(analysisType === 'Belanja' ? item.paguA : item.targetA)}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">{formatCurrency(item.realisasiB)}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">{formatCurrency(item.realisasiA)}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold" style={{ color: item.kinerjaB > 85 ? '#10B981' : item.kinerjaB < 50 ? '#EF4444' : 'inherit' }}>{item.kinerjaB.toFixed(2)}%</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold" style={{ color: item.kinerjaA > 85 ? '#10B981' : item.kinerjaA < 50 ? '#EF4444' : 'inherit' }}>{item.kinerjaA.toFixed(2)}%</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold">{renderGrowth(item.kinerjaA, item.kinerjaB)}</td>
+                    
+                    {/* TAMPILAN GRAFIK (BARU) */}
+                    {viewMode === 'chart' && sortedData.length > 0 && (
+                        <CombinationChart 
+                            data={sortedData} 
+                            yearA={yearA} 
+                            yearB={yearB} 
+                            analysisType={analysisType} 
+                        />
+                    )}
+                    
+                    {/* TAMPILAN TABEL (LAMA) */}
+                    {viewMode === 'table' && (
+                        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead className="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        {tableHeaders.map(header => (
+                                            <th key={header.key} onClick={() => header.key !== 'growth' && requestSort(header.key)} className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${header.key !== 'growth' ? 'cursor-pointer' : ''}`}>
+                                                <div className="flex items-center">{header.label} {header.key !== 'growth' && renderSortIcon(header.key)}</div>
+                                            </th>
+                                        ))}
                                     </tr>
-                                ))}
-                                {sortedData.length === 0 && <tr><td colSpan={tableHeaders.length} className="text-center py-8 text-gray-500">Tidak ada data untuk ditampilkan.</td></tr>}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    {sortedData.map((item) => (
+                                        <tr key={item.skpd} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                            <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 max-w-xs whitespace-normal break-words">{item.skpd}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">{formatCurrency(analysisType === 'Belanja' ? item.paguB : item.targetB)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">{formatCurrency(analysisType === 'Belanja' ? item.paguA : item.targetA)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">{formatCurrency(item.realisasiB)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">{formatCurrency(item.realisasiA)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold" style={{ color: item.kinerjaB > 85 ? '#10B981' : item.kinerjaB < 50 ? '#EF4444' : 'inherit' }}>{item.kinerjaB.toFixed(2)}%</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold" style={{ color: item.kinerjaA > 85 ? '#10B981' : item.kinerjaA < 50 ? '#EF4444' : 'inherit' }}>{item.kinerjaA.toFixed(2)}%</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold">{renderGrowth(item.kinerjaA, item.kinerjaB)}</td>
+                                        </tr>
+                                    ))}
+                                    {sortedData.length === 0 && <tr><td colSpan={tableHeaders.length} className="text-center py-8 text-gray-500">Tidak ada data untuk ditampilkan.</td></tr>}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                     </>
                 )}
             </div>

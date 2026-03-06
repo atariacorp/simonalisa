@@ -215,9 +215,75 @@ const AnalisisLintasTahunView = ({ theme, user, selectedYear, namaPemda }) => {
         );
     };
 
-    return (
+        return (
         <div className="space-y-6">
             <SectionTitle>Analisis Lintas Tahun</SectionTitle>
+            
+            {/* DASHBOARD EKSEKUTIF - NARASI UNTUK PIMPINAN */}
+            <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-l-4 border-purple-600 rounded-r-lg">
+                <div className="flex items-start gap-3">
+                    <div className="text-2xl">📈</div>
+                    <div className="flex-1">
+                        <h3 className="font-bold text-purple-800 dark:text-purple-300 text-lg mb-1">
+                            PANTAUAN LINTAS TAHUN - ANALISIS PERBANDINGAN
+                        </h3>
+                        <p className="text-sm text-purple-700 dark:text-purple-400 mb-2">
+                            Menu ini membandingkan kinerja APBD antara dua tahun berbeda. 
+                            Gunakan untuk mengidentifikasi tren, perubahan kebijakan, dan efektivitas program dari tahun ke tahun.
+                        </p>
+                        
+                        {/* 3 Card Poin Penting */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
+                            {/* Card 1: Tren Pertumbuhan */}
+                            <div className="bg-white/80 dark:bg-gray-800/80 p-2 rounded border border-purple-200 dark:border-purple-800">
+                                <div className="flex items-center gap-1 mb-1">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                    <span className="font-semibold text-xs text-gray-700 dark:text-gray-300">TREN PERTUMBUHAN</span>
+                                </div>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                    Perhatikan <span className="text-green-500 font-medium">pertumbuhan positif</span> (↑) atau 
+                                    <span className="text-red-500 font-medium"> penurunan</span> (↓) dari tahun sebelumnya.
+                                </p>
+                            </div>
+
+                            {/* Card 2: Pola Musiman */}
+                            <div className="bg-white/80 dark:bg-gray-800/80 p-2 rounded border border-purple-200 dark:border-purple-800">
+                                <div className="flex items-center gap-1 mb-1">
+                                    <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                                    <span className="font-semibold text-xs text-gray-700 dark:text-gray-300">POLA MUSIMAN</span>
+                                </div>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                    Lihat grafik garis untuk melihat pola penyerapan. Apakah ada bulan dengan lonjakan konsisten?
+                                </p>
+                            </div>
+
+                            {/* Card 3: Kinerja SKPD */}
+                            <div className="bg-white/80 dark:bg-gray-800/80 p-2 rounded border border-purple-200 dark:border-purple-800">
+                                <div className="flex items-center gap-1 mb-1">
+                                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                    <span className="font-semibold text-xs text-gray-700 dark:text-gray-300">KINERJA SKPD</span>
+                                </div>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                    Pilih SKPD tertentu untuk analisis mendalam. Bandingkan pagu vs realisasi antar tahun.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Tips Cepat */}
+                        <div className="mt-2 text-xs text-purple-600 dark:text-purple-400 flex items-center gap-2">
+                            <span className="font-bold">⚡ 3 DETIK INSIGHT:</span>
+                            <span>Bandingkan {yearA} vs {yearB} | Lihat kardus pertumbuhan | Cek pola garis kumulatif</span>
+                        </div>
+                        
+                        {/* Informasi Periode */}
+                        <div className="mt-1 text-xs text-purple-600 dark:text-purple-400 flex items-center gap-2">
+                            <span className="font-bold">📅 PERIODE ANALISIS:</span>
+                            <span>{startMonth} - {endMonth} {yearA} vs {yearB}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
@@ -257,13 +323,20 @@ const AnalisisLintasTahunView = ({ theme, user, selectedYear, namaPemda }) => {
                             theme={theme}
                             interactivePlaceholder="Bandingkan realisasi belanja Juli..."
                         />
-                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                        
+                        {/* Ringkasan Angka Penting */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                             {comparisonData.map(item => (
                                 <ComparisonCard key={item.name} title={item.name} valueA={item[yearA]} valueB={item[yearB]} yearA={yearA} yearB={yearB} />
                             ))}
                         </div>
-                        <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Grafik Perbandingan APBD</h3>
+                        
+                        {/* Grafik Perbandingan Utama */}
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                Grafik Perbandingan APBD {yearA} vs {yearB}
+                            </h3>
                             <ResponsiveContainer width="100%" height={400}>
                                 <BarChart data={comparisonData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
@@ -277,24 +350,59 @@ const AnalisisLintasTahunView = ({ theme, user, selectedYear, namaPemda }) => {
                             </ResponsiveContainer>
                         </div>
                         
-                        {/* --- UPDATED: Restructured Layout --- */}
+                        {/* --- ANALISIS BELANJA DAN PENDAPATAN SIDE BY SIDE --- */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8">
-                            <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-lg space-y-6">
+                            {/* KIRI: BELANJA */}
+                            <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-lg space-y-6 border-l-4 border-blue-500">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-2xl">💰</span>
+                                    <h3 className="font-semibold text-gray-900 dark:text-white text-lg">Analisis Belanja per SKPD</h3>
+                                </div>
+                                
                                 <div>
-                                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Statistik Belanja per SKPD</h3>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pilih SKPD Belanja</label>
                                     <select value={selectedSkpdBelanja} onChange={e => setSelectedSkpdBelanja(e.target.value)} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                        <option value="Semua SKPD">Semua SKPD</option>
+                                        <option value="Semua SKPD">🏢 Semua SKPD</option>
                                         {skpdListBelanja.map(skpd => <option key={skpd} value={skpd}>{skpd}</option>)}
                                     </select>
+                                    
                                     {selectedSkpdBelanja !== 'Semua SKPD' && skpdBelanjaComparison && (
                                         <div className="mt-4 space-y-4">
-                                            <ComparisonCard title={`Anggaran ${selectedSkpdBelanja}`} valueA={skpdBelanjaComparison.anggaranA} valueB={skpdBelanjaComparison.anggaranB} yearA={yearA} yearB={yearB} />
-                                            <ComparisonCard title={`Realisasi ${selectedSkpdBelanja} (${startMonth} - ${endMonth})`} valueA={skpdBelanjaComparison.realisasiA} valueB={skpdBelanjaComparison.realisasiB} yearA={yearA} yearB={yearB} />
+                                            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
+                                                <p className="text-xs text-gray-500">Anggaran {selectedSkpdBelanja}</p>
+                                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                                    <div>
+                                                        <p className="text-sm text-gray-600">{yearA}</p>
+                                                        <p className="text-lg font-bold text-blue-600">{formatCurrency(skpdBelanjaComparison.anggaranA)}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-gray-600">{yearB}</p>
+                                                        <p className="text-lg font-bold text-gray-700">{formatCurrency(skpdBelanjaComparison.anggaranB)}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
+                                                <p className="text-xs text-gray-500">Realisasi {startMonth} - {endMonth}</p>
+                                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                                    <div>
+                                                        <p className="text-sm text-gray-600">{yearA}</p>
+                                                        <p className="text-lg font-bold text-green-600">{formatCurrency(skpdBelanjaComparison.realisasiA)}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-gray-600">{yearB}</p>
+                                                        <p className="text-lg font-bold text-orange-600">{formatCurrency(skpdBelanjaComparison.realisasiB)}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
+                                
                                 <div>
-                                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Pola Penyerapan Anggaran - {selectedSkpdBelanja}</h3>
+                                    <h4 className="font-medium text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                                        <TrendingUp size={16} className="text-blue-500" />
+                                        Pola Penyerapan Kumulatif
+                                    </h4>
                                     <ResponsiveContainer width="100%" height={300}>
                                         <LineChart data={monthlyComparisonData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
@@ -302,29 +410,67 @@ const AnalisisLintasTahunView = ({ theme, user, selectedYear, namaPemda }) => {
                                             <YAxis tickFormatter={(val) => `${(val / 1e9).toFixed(1)}M`} tick={{ fontSize: 10 }} />
                                             <Tooltip formatter={(value) => formatCurrency(value)} />
                                             <Legend wrapperStyle={{fontSize: "12px"}}/>
-                                            <Line type="monotone" dataKey={`Realisasi Kumulatif ${yearA}`} stroke="#8884d8" strokeWidth={2} name={`${yearA}`} />
-                                            <Line type="monotone" dataKey={`Realisasi Kumulatif ${yearB}`} stroke="#82ca9d" strokeWidth={2} name={`${yearB}`} />
+                                            <Line type="monotone" dataKey={`Realisasi Kumulatif ${yearA}`} stroke="#435EBE" strokeWidth={3} name={`${yearA}`} dot={{ r: 3 }} />
+                                            <Line type="monotone" dataKey={`Realisasi Kumulatif ${yearB}`} stroke="#F59E0B" strokeWidth={3} name={`${yearB}`} dot={{ r: 3 }} />
                                         </LineChart>
                                     </ResponsiveContainer>
+                                    <p className="text-xs text-gray-400 mt-2 text-center">
+                                        *Garis lebih curam = percepatan penyerapan lebih tinggi
+                                    </p>
                                 </div>
                             </div>
                             
-                            <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-lg space-y-6">
+                            {/* KANAN: PENDAPATAN */}
+                            <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-lg space-y-6 border-l-4 border-green-500">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-2xl">📊</span>
+                                    <h3 className="font-semibold text-gray-900 dark:text-white text-lg">Analisis Pendapatan per SKPD</h3>
+                                </div>
+                                
                                 <div>
-                                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Statistik Pendapatan per SKPD</h3>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pilih SKPD Pendapatan</label>
                                     <select value={selectedSkpdPendapatan} onChange={e => setSelectedSkpdPendapatan(e.target.value)} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                        <option value="Semua SKPD">Semua SKPD</option>
+                                        <option value="Semua SKPD">🏢 Semua SKPD</option>
                                         {skpdListPendapatan.map(skpd => <option key={skpd} value={skpd}>{skpd}</option>)}
                                     </select>
+                                    
                                     {selectedSkpdPendapatan !== 'Semua SKPD' && skpdPendapatanComparison && (
                                         <div className="mt-4 space-y-4">
-                                            <ComparisonCard title={`Target ${selectedSkpdPendapatan}`} valueA={skpdPendapatanComparison.targetA} valueB={skpdPendapatanComparison.targetB} yearA={yearA} yearB={yearB} />
-                                            <ComparisonCard title={`Realisasi ${selectedSkpdPendapatan} (${startMonth} - ${endMonth})`} valueA={skpdPendapatanComparison.realisasiA} valueB={skpdPendapatanComparison.realisasiB} yearA={yearA} yearB={yearB} />
+                                            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
+                                                <p className="text-xs text-gray-500">Target {selectedSkpdPendapatan}</p>
+                                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                                    <div>
+                                                        <p className="text-sm text-gray-600">{yearA}</p>
+                                                        <p className="text-lg font-bold text-blue-600">{formatCurrency(skpdPendapatanComparison.targetA)}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-gray-600">{yearB}</p>
+                                                        <p className="text-lg font-bold text-gray-700">{formatCurrency(skpdPendapatanComparison.targetB)}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
+                                                <p className="text-xs text-gray-500">Realisasi {startMonth} - {endMonth}</p>
+                                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                                    <div>
+                                                        <p className="text-sm text-gray-600">{yearA}</p>
+                                                        <p className="text-lg font-bold text-green-600">{formatCurrency(skpdPendapatanComparison.realisasiA)}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-gray-600">{yearB}</p>
+                                                        <p className="text-lg font-bold text-orange-600">{formatCurrency(skpdPendapatanComparison.realisasiB)}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
+                                
                                 <div>
-                                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Pola Pencapaian Pendapatan - {selectedSkpdPendapatan}</h3>
+                                    <h4 className="font-medium text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                                        <TrendingUp size={16} className="text-green-500" />
+                                        Pola Pencapaian Kumulatif
+                                    </h4>
                                     <ResponsiveContainer width="100%" height={300}>
                                         <LineChart data={monthlyPendapatanComparisonData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
@@ -332,12 +478,24 @@ const AnalisisLintasTahunView = ({ theme, user, selectedYear, namaPemda }) => {
                                             <YAxis tickFormatter={(val) => `${(val / 1e9).toFixed(1)}M`} tick={{ fontSize: 10 }} />
                                             <Tooltip formatter={(value) => formatCurrency(value)} />
                                             <Legend wrapperStyle={{fontSize: "12px"}}/>
-                                            <Line type="monotone" dataKey={`Pendapatan Kumulatif ${yearA}`} stroke="#435EBE" strokeWidth={2} name={`${yearA}`} />
-                                            <Line type="monotone" dataKey={`Pendapatan Kumulatif ${yearB}`} stroke="#F59E0B" strokeWidth={2} name={`${yearB}`} />
+                                            <Line type="monotone" dataKey={`Pendapatan Kumulatif ${yearA}`} stroke="#435EBE" strokeWidth={3} name={`${yearA}`} dot={{ r: 3 }} />
+                                            <Line type="monotone" dataKey={`Pendapatan Kumulatif ${yearB}`} stroke="#10B981" strokeWidth={3} name={`${yearB}`} dot={{ r: 3 }} />
                                         </LineChart>
                                     </ResponsiveContainer>
+                                    <p className="text-xs text-gray-400 mt-2 text-center">
+                                        *Garis lebih curam = percepatan realisasi PAD lebih tinggi
+                                    </p>
                                 </div>
                             </div>
+                        </div>
+                        
+                                                {/* Catatan Kaki */}
+                        <div className="mt-4 text-xs text-gray-400 dark:text-gray-500 text-center border-t pt-4">
+                            <span className="mx-2">📈 Hijau = Pertumbuhan Positif</span>
+                            <span className="mx-2">📉 Merah = Penurunan</span>
+                            <span className="mx-2">🔵 Biru = Tahun {yearA}</span>
+                            <span className="mx-2">🟡 Oranye = Tahun {yearB}</span>
+                            <span className="mx-2">| Klik dropdown untuk filter SKPD</span>
                         </div>
                     </div>
                 )}

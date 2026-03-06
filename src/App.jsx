@@ -12,7 +12,7 @@ import {
   LogIn, LogOut, UserCircle, Trash2, UserPlus, ChevronsUpDown, Award,
   ChevronsLeft, ChevronsRight, PieChart as PieChartIcon, Building,
   Users, Briefcase, Shuffle, BookMarked, Columns, Edit, X, Tag,
-  ChevronRight, Download, History, ChevronUp, BookOpen
+  ChevronRight, Download, History, ChevronUp, BookOpen, Menu, HelpCircle
 } from 'lucide-react';
 import {
   collection, doc, onSnapshot, setDoc, getDocs,
@@ -36,7 +36,7 @@ import { formatCurrency } from './formatCurrency';
 import LoginView from './LoginView';
 import DashboardView from './DashboardView';
 import GuideView from './GuideView';
-import { brandingConfig } from './config/branding';
+import { brandingConfig } from './assets/config/branding';
 
 // ==================== IMPORT SEMUA VIEW ====================
 import AnalisisKinerjaView from './AnalisisKinerjaView';
@@ -100,9 +100,12 @@ const App = () => {
   const [user, setUser] = React.useState(null);
   const [userRole, setUserRole] = React.useState('guest');
   const [isSidebarMinimized, setIsSidebarMinimized] = React.useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [namaPemda, setNamaPemda] = React.useState('');
   const [lastUpdate, setLastUpdate] = React.useState(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [searchMenuTerm, setSearchMenuTerm] = React.useState('');
+  const [activeView, setActiveView] = React.useState('dashboard');
 
   React.useEffect(() => {
     const loadScript = (src) => {
@@ -120,8 +123,6 @@ const App = () => {
         });
     };
 
-    // ... lanjutan kode App (sisanya tetap sama)
-
     const loadScriptsAndAuth = async () => {
         try {
             await Promise.all([
@@ -131,7 +132,7 @@ const App = () => {
             setScriptsLoaded(true);
             
       const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-          setIsAuthLoading(true); // Start loading on auth state change
+          setIsAuthLoading(true);
           if(currentUser) {
                     const userDocRef = doc(db, "users", currentUser.uid);
                     const userDocSnap = await getDoc(userDocRef);
@@ -150,7 +151,7 @@ const App = () => {
                     setUser(null);
                     setUserRole('guest');
                 }
-                setIsAuthLoading(false); // Stop loading after auth check is complete
+                setIsAuthLoading(false);
             });
             return () => unsubscribe();
         } catch(error) {
@@ -239,6 +240,17 @@ const App = () => {
     }
   }, [theme]);
 
+  React.useEffect(() => {
+    // Handle window resize untuk reset mobile menu
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const saveSettings = async (settings) => {
       if (userRole !== 'admin') return;
       const settingsDocRef = doc(db, "publicSettings", "settings");
@@ -269,8 +281,6 @@ const App = () => {
       }
   };
 
-  const [activeView, setActiveView] = React.useState('dashboard');
-
   const { anggaran, pendapatan, penerimaanPembiayaan, pengeluaranPembiayaan, realisasi, realisasiPendapatan, realisasiNonRkud } = appData;
   const allData = { anggaran, pendapatan, penerimaanPembiayaan, pengeluaranPembiayaan, realisasi, realisasiPendapatan, realisasiNonRkud };
   
@@ -295,7 +305,8 @@ const App = () => {
     'skpd-pendapatan-stats': 'Menampilkan statistik perbandingan antara target dan realisasi pendapatan untuk setiap SKPD.',
     'sumber-dana-stats': 'Merinci komposisi sumber pendanaan yang digunakan oleh masing-masing SKPD.',
     'skpd-rekening-stats': 'Merinci pagu anggaran dan realisasi belanja hingga ke level rekening untuk setiap SKPD.',
-    'skpd-subkegiatan-stats': 'Merinci pagu anggaran dan realisasi belanja hingga ke level sub kegiatan beserta rincian rekening di dalamnya.'
+    'skpd-subkegiatan-stats': 'Merinci pagu anggaran dan realisasi belanja hingga ke level sub kegiatan beserta rincian rekening di dalamnya.',
+    'panduan': 'Panduan penggunaan aplikasi SIMONALISA.'
   };
   
 const menuItems = [
@@ -364,14 +375,34 @@ const menuItems = [
         id: 'activity-log',
         label: 'Log Aktivitas',
         icon: History,
-        requiredRole: ['admin'] // Hanya admin yang bisa melihat
-}
+        requiredRole: ['admin']
+    }
   ];
+
+  // Filter menu berdasarkan pencarian
+  const filteredMenuItems = React.useMemo(() => {
+    if (!searchMenuTerm) return menuItems;
+    
+    return menuItems.map(item => {
+      if (item.subMenus) {
+        const filteredSubMenus = item.subMenus.filter(sub => 
+          sub.label.toLowerCase().includes(searchMenuTerm.toLowerCase())
+        );
+        if (filteredSubMenus.length > 0) {
+          return { ...item, subMenus: filteredSubMenus };
+        }
+      }
+      if (item.label.toLowerCase().includes(searchMenuTerm.toLowerCase())) {
+        return item;
+      }
+      return null;
+    }).filter(Boolean);
+  }, [searchMenuTerm]);
 
   const ANGGARAN_MAPPING = {
       NamaSKPD: ['Nama SKPD'],
       NamaSubUnit: ['Nama Sub Unit'],
-      KodeBidangUrusan: ['Kode Bidang Urusan'], // <-- DITAMBAHKAN
+      KodeBidangUrusan: ['Kode Bidang Urusan'],
       KodeKegiatan: ['Kode Kegiatan'],
       NamaKegiatan: ['Nama Kegiatan'],
       KodeSubKegiatan: ['Kode Sub Kegiatan'],
@@ -385,6 +416,7 @@ const menuItems = [
   const ANGGARAN_PREVIEW_HEADERS = ['Nama SKPD', 'Nama Sub Unit', 'Kode Bidang Urusan', 'Kode Kegiatan', 'Nama Kegiatan', 'Kode Sub Kegiatan', 'Nama Sub Kegiatan', 'Nama Sumber Dana', 'Kode Rekening', 'Nama Rekening', 'Nama Paket Kelompok', 'Pagu'];
   const ANGGARAN_GROUPED_COLUMNS = ['Nama SKPD', 'Nama Sub Unit', 'Kode Bidang Urusan', 'Kode Kegiatan', 'Nama Kegiatan', 'Kode Sub Kegiatan', 'Nama Sub Kegiatan'];
   const ANGGARAN_INSTRUCTION = "Aplikasi akan mencari kolom: 'Nama SKPD', 'Nama Sub Unit', 'Kode Bidang Urusan', 'Kode Kegiatan', 'Nama Kegiatan', 'Kode Sub Kegiatan', 'Nama Sub Kegiatan', 'Nama Sumber Dana', 'Kode Rekening', 'Nama Rekening', 'Nama Paket Kelompok', dan 'Pagu'.";
+  
   const PENDAPATAN_MAPPING = {
       NamaOPD: ['Nama OPD'],
       NamaAkun: ['nama akun'],
@@ -413,7 +445,7 @@ const menuItems = [
       KodeRekening: ['Kode Rekening', 'koderek'],
       NamaRekening: ['Nama Rekening'],
       KeteranganDokumen: ['Keterangan Dokumen'],
-      NomorSP2D: ['Nomor SP2D'], // <-- Kolom baru ditambahkan
+      NomorSP2D: ['Nomor SP2D'],
       NilaiRealisasi: ['Nilai Realisasi']
   };
   const REALISASI_BELANJA_PREVIEW_HEADERS = ['Nama SKPD', 'Nama Sub SKPD', 'Kode Kegiatan', 'Nama Kegiatan', 'Kode Sub Kegiatan', 'Nama Sub Kegiatan', 'Kode Rekening', 'Nama Rekening', 'Keterangan Dokumen', 'Nomor SP2D', 'Nilai Realisasi'];
@@ -431,8 +463,7 @@ const menuItems = [
   const REALISASI_PENDAPATAN_INSTRUCTION = "Ambil Data Dari SIPD AKLAP (Data Jurnal). Pastikan Kolom Excel Debet Kredit Di Cleansing. Realisasi Pendapatan diambil dari Kolom Kredit.";
   const REALISASI_PENDAPATAN_FILTER = { column: 'namaakunutama', value: 'PENDAPATAN DAERAH' };
   
-  // --- UPDATE BLOK KODE NON RKUD BERIKUT ---
-    const REALISASI_NON_RKUD_MAPPING = {
+  const REALISASI_NON_RKUD_MAPPING = {
     NAMASKPD: ['namaskpd', 'nama skpd', 'NAMA SKPD'],
     NAMASUBSKPD: ['namaunitskpd', 'nama sub skpd', 'NAMA SUB SKPD'],
     NAMAKEGIATAN: ['namakegiatan', 'nama kegiatan', 'NAMA KEGIATAN'],
@@ -446,8 +477,6 @@ const menuItems = [
   const REALISASI_NON_RKUD_PREVIEW_HEADERS = ['NAMA SKPD', 'NAMA SUB SKPD', 'NAMA KEGIATAN', 'NAMA SUB KEGIATAN', 'NAMA REKENING', 'NILAI REALISASI'];
   const REALISASI_NON_RKUD_GROUPED_COLUMNS = ['NAMA SKPD', 'NAMA SUB SKPD', 'NAMA KEGIATAN', 'NAMA SUB KEGIATAN'];
   const REALISASI_NON_RKUD_INSTRUCTION = "Ambil Data Dari SIPD AKLAP (Data Jurnal). Sesuaikan isi data sesuai format. Pastikan semua pencairan melalui Non RKUD. (BOK, BOS, BOSP, TPG, Tamsil, BLUD).";
-  
-  // Baris ini hilang dan perlu ditambahkan
   const REALISASI_NON_RKUD_FILTER = null;
   
   if (loadError) {
@@ -504,7 +533,6 @@ const menuItems = [
       }
   };
 
-// ... (Fungsi Inti penghapusan data di database) ...
   const handleDeleteMonthlyData = async (collectionName, month, setProgress) => {
     if (userRole !== 'admin') {
       setProgress('Error: Anda tidak memiliki izin untuk menghapus data.');
@@ -704,8 +732,6 @@ const menuItems = [
       `;
   };
 
-
-
   const renderView = () => {
     switch (activeView) {
       case 'dashboard': return <DashboardView data={allData} theme={theme} selectedYear={selectedYear} namaPemda={namaPemda} lastUpdate={lastUpdate} userRole={userRole} />;
@@ -740,53 +766,167 @@ const menuItems = [
   };
 
   return (
-    <div className={`${theme} min-h-screen bg-gray-100 dark:bg-gray-900 font-sans flex`}>
-      <nav className={`transition-all duration-300 ${isSidebarMinimized ? 'w-20' : 'w-64'} bg-white dark:bg-gray-800 shadow-lg flex-shrink-0 flex flex-col justify-between`}>
-        <div>
-            <div className="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
-                <div className={`flex items-center gap-2 ${isSidebarMinimized ? 'justify-center w-full' : ''}`}>
-    {/* LOGO DITAMBAHKAN DI SINI */}
-    <img 
-        src={brandingConfig.logo.path}
-        alt={brandingConfig.logo.alt}
-        className={`${isSidebarMinimized ? 'w-8 h-8' : 'w-10 h-10'} flex-shrink-0`}
-    />
-    {!isSidebarMinimized && (
-        <div className="flex-1">
-            <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                {brandingConfig.text.sidebarTitle}
-            </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Tahun: {selectedYear}</p>
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-1 truncate" title={namaPemda}>
-                {namaPemda || 'Nama Instansi Belum Diatur'}
-            </p>
+    <div className={`${theme} min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800 font-sans flex`}>
+      {/* Mobile Menu Button - Hanya muncul di layar kecil */}
+      <div className="lg:hidden fixed top-4 left-4 z-50">
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-3 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-xl shadow-lg border border-white/30 dark:border-gray-700/30 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all"
+        >
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+
+      {/* Overlay untuk mobile saat sidebar terbuka */}
+      {isMobileMenuOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* SIDEBAR GLASSMORPHISM */}
+      <nav className={`
+  fixed lg:relative z-50 h-full
+  transition-all duration-300 ease-in-out
+  ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
+  lg:translate-x-0
+  ${isSidebarMinimized ? 'lg:w-16' : 'lg:w-64'}
+  w-72
+  backdrop-blur-xl bg-gradient-to-b from-white/80 to-white/70 dark:from-gray-800/80 dark:to-gray-900/80 
+  border-r border-white/30 dark:border-gray-700/30 shadow-2xl flex-shrink-0 flex flex-col justify-between
+  overflow-hidden
+      `}>
+        {/* Decorative Background Elements */}
+        <div className="absolute top-0 -left-20 w-64 h-64 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse-slow"></div>
+        <div className="absolute bottom-0 -right-20 w-64 h-64 bg-gradient-to-tr from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
+        
+        <div className="relative z-10 h-full flex flex-col">
+          {/* Header with Logo */}
+<div className={`p-6 ${!isSidebarMinimized ? 'border-b border-white/30 dark:border-gray-700/30' : ''}`}>
+  <div className={`flex items-center gap-3 ${isSidebarMinimized ? 'justify-center' : ''}`}>
+    {/* Logo Container with Glassmorphism */}
+    <div className="relative group">
+      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl blur-md opacity-60 group-hover:opacity-80 transition-opacity"></div>
+      <div className="relative p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-white/50 dark:border-gray-600/50 transform group-hover:scale-105 transition-transform">
+        <img 
+          src={brandingConfig.logo.path} // Ini akan mengambil "/logo.png"
+          alt={brandingConfig.logo.alt}
+          width={isSidebarMinimized ? brandingConfig.logo.sidebarMinimizedWidth : brandingConfig.logo.sidebarWidth}
+          height={isSidebarMinimized ? brandingConfig.logo.sidebarMinimizedWidth : brandingConfig.logo.sidebarWidth}
+          className="rounded-xl"
+          onError={(e) => {
+            e.target.src = `https://ui-avatars.com/api/?name=SIM&background=4f46e5&color=fff&rounded=true&bold=true&size=${isSidebarMinimized ? 32 : 40}`;
+          }}
+        />
+      </div>
+      {/* Tooltip untuk minimized mode */}
+      {isSidebarMinimized && (
+        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+          {brandingConfig.text.appName}
         </div>
+      )}
+    </div>
+
+    {!isSidebarMinimized && (
+      <div className="flex-1 animate-fadeIn">
+        <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+          {brandingConfig.text.sidebarTitle}
+        </h1>
+        <p className="text-xs text-gray-500 dark:text-gray-400">Tahun Anggaran {selectedYear}</p>
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-1 truncate max-w-[200px]" title={namaPemda}>
+          {namaPemda || brandingConfig.text.subTitle}
+        </p>
+      </div>
     )}
+    
+    {/* Theme Toggle - Only visible when sidebar expanded */}
+    {!isSidebarMinimized && (
+      <button 
+        onClick={toggleTheme} 
+        className="p-2 rounded-xl bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-white/30 dark:border-gray-600/30 text-gray-600 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all hover:scale-105"
+        title="Ganti Tema"
+      >
+        {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+      </button>
+    )}
+  </div>
 </div>
-                 <button onClick={toggleTheme} className={`p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 ${isSidebarMinimized ? 'hidden' : ''}`}>
-                    {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-                </button>
-            </div>
-             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <div className={`flex items-center ${isSidebarMinimized ? 'justify-center' : ''}`}>
-                    <UserCircle size={isSidebarMinimized ? 32 : 40} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                    {!isSidebarMinimized && (
-                        <div className="ml-3 overflow-hidden">
-                            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{user.email}</p>
-                            <p className="text-xs font-medium text-white px-2 py-0.5 rounded-full inline-block" style={{backgroundColor: userRole === 'admin' ? '#10B981' : (userRole === 'editor' ? '#F59E0B' : '#6B7280')}}>{userRole}</p>
-                        </div>
-                    )}
+
+          {/* User Info */}
+          <div className={`p-4 ${!isSidebarMinimized ? 'mx-4 mt-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-white/30 dark:border-gray-700/30' : ''}`}>
+            <div className={`flex items-center ${isSidebarMinimized ? 'justify-center' : 'gap-3'}`}>
+              <div className="relative group">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-0.5 transform group-hover:scale-105 transition-transform">
+                  <div className="w-full h-full rounded-xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm flex items-center justify-center">
+                    <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                      {user?.email?.[0]?.toUpperCase() || 'U'}
+                    </span>
+                  </div>
                 </div>
                 {!isSidebarMinimized && (
-                    <button onClick={handleLogout} className="w-full mt-4 flex items-center justify-center px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-sm hover:bg-red-600 transition-colors text-sm">
-                        <LogOut size={16} className="mr-2" />
-                        Logout
-                    </button>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800 animate-pulse"></div>
                 )}
+                {/* Tooltip untuk minimized mode */}
+                {isSidebarMinimized && (
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                    {user?.email || 'User'}
+                  </div>
+                )}
+              </div>
+
+              {!isSidebarMinimized && (
+                <div className="flex-1 overflow-hidden animate-fadeIn">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
+                    {user?.email || 'User'}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-sm">
+                      {userRole === 'admin' ? 'Administrator' : userRole === 'editor' ? 'Editor' : 'Viewer'}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
-        
-            <ul className="mt-4 flex-1 overflow-y-auto">
-            {menuItems.filter(item => {
+
+            {!isSidebarMinimized && (
+              <button 
+                onClick={handleLogout} 
+                className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold rounded-xl shadow-lg shadow-rose-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-sm group"
+              >
+                <LogOut size={16} className="group-hover:rotate-12 transition-transform" />
+                Keluar
+              </button>
+            )}
+          </div>
+
+          {/* Search Bar - Only when expanded */}
+          {!isSidebarMinimized && (
+            <div className="px-4 mb-4 animate-fadeIn">
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Cari menu..."
+                  value={searchMenuTerm}
+                  onChange={(e) => setSearchMenuTerm(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-white/30 dark:border-gray-600/30 rounded-xl text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                />
+                {searchMenuTerm && (
+                  <button
+                    onClick={() => setSearchMenuTerm('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Menu Items with Scroll */}
+          <ul className="flex-1 overflow-y-auto px-3 space-y-1 scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent">
+            {filteredMenuItems.filter(item => {
                 if (userRole === 'guest') return item.id === 'dashboard-group';
                 if (!item.requiredRole) return true;
                 return item.requiredRole.includes(userRole);
@@ -799,57 +939,156 @@ const menuItems = [
                 else if (item.id === 'penganggaran-group') [isOpen, setIsOpen] = [isPenganggaranOpen, setIsPenganggaranOpen];
                 else if (item.id === 'penatausahaan-group') [isOpen, setIsOpen] = [isPenatausahaanOpen, setIsPenatausahaanOpen];
 
+                // Jika menu tidak memiliki submenus dan tidak cocok dengan pencarian, sembunyikan
+                if (!item.subMenus && searchMenuTerm && !item.label.toLowerCase().includes(searchMenuTerm.toLowerCase())) {
+                  return null;
+                }
+
                 return (
-                <li key={item.id} className="px-4">
+                <li key={item.id} className="mb-1">
                     {isDropdown ? (
-                    <>
-                        <button onClick={() => setIsOpen(!isOpen)} title={item.label} className={`w-full flex items-center justify-between px-4 py-3 my-1 text-sm font-medium rounded-lg transition-colors duration-200 ${isSidebarMinimized ? 'justify-center' : ''} ${isGroupActive ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
-                        <div className="flex items-center">
-                            <item.icon size={20} className={!isSidebarMinimized ? "mr-3" : ""} />
-                            {!isSidebarMinimized && item.label}
-                        </div>
-                        {!isSidebarMinimized && <ChevronDown className={`transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} size={16}/>}
+                    <div>
+                        <button 
+                          onClick={() => setIsOpen(!isOpen)} 
+                          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 ${
+                            isSidebarMinimized ? 'justify-center' : ''
+                          } ${
+                            isGroupActive 
+                              ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50 dark:border-indigo-800/50' 
+                              : 'text-gray-600 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50 hover:backdrop-blur-sm'
+                          }`}
+                          title={item.label}
+                        >
+                          <div className="flex items-center">
+                            <item.icon size={20} className={`${!isSidebarMinimized ? "mr-3" : ""} ${isGroupActive ? 'text-indigo-600 dark:text-indigo-400' : ''}`} />
+                            {!isSidebarMinimized && (
+                              <span className="text-sm font-medium">{item.label}</span>
+                            )}
+                          </div>
+                          {!isSidebarMinimized && (
+                            <ChevronDown 
+                              size={16} 
+                              className={`transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${isGroupActive ? 'text-indigo-600' : 'text-gray-400'}`}
+                            />
+                          )}
                         </button>
+
                         {isOpen && !isSidebarMinimized && (
-                        <ul className="pl-4 mt-1">
+                          <ul className="mt-1 ml-4 space-y-1 animate-slideDown">
                             {item.subMenus.map(subItem => (
-                            <li key={subItem.id}>
-                                <button onClick={() => setActiveView(subItem.id)} title={menuDescriptions[subItem.id] || subItem.label} className={`w-full flex items-center justify-between px-4 py-2 my-1 text-sm font-medium rounded-lg transition-colors duration-200 ${activeView === subItem.id ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
-                                <div className="flex items-center">
-                                    <subItem.icon size={18} className="mr-3"/>
-                                    {subItem.label}
-                                </div>
-                                {subItem.statusKey && (
+                              <li key={subItem.id}>
+                                <button 
+                                  onClick={() => {
+                                    setActiveView(subItem.id);
+                                    // Auto close sidebar on mobile after selection
+                                    if (window.innerWidth < 1024) {
+                                      setIsMobileMenuOpen(false);
+                                    }
+                                  }} 
+                                  className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm transition-all ${
+                                    activeView === subItem.id 
+                                      ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/30' 
+                                      : 'text-gray-500 dark:text-gray-400 hover:bg-white/40 dark:hover:bg-gray-800/40 hover:backdrop-blur-sm'
+                                  }`}
+                                  title={menuDescriptions[subItem.id] || subItem.label}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <subItem.icon size={16} />
+                                    <span className="font-medium">{subItem.label}</span>
+                                  </div>
+                                  {subItem.statusKey && (
                                     dataStatus[subItem.statusKey]
-                                    ? <CheckCircle2 size={16} className="text-green-500" />
-                                    : <AlertCircle size={16} className="text-yellow-500" />
-                                )}
+                                      ? <CheckCircle2 size={14} className="text-emerald-500 animate-pulse" />
+                                      : <AlertCircle size={14} className="text-amber-500" />
+                                  )}
                                 </button>
-                            </li>
+                              </li>
                             ))}
-                        </ul>
+                          </ul>
                         )}
-                    </>
+                    </div>
                     ) : (
-                    <button onClick={() => setActiveView(item.id)} title={item.label} className={`w-full flex items-center px-4 py-3 my-1 text-sm font-medium rounded-lg transition-colors duration-200 ${isSidebarMinimized ? 'justify-center' : ''} ${activeView === item.id ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
-                        <div className="flex items-center">
-                            <item.icon size={20} className={!isSidebarMinimized ? "mr-3" : ""} />
-                            {!isSidebarMinimized && item.label}
-                        </div>
+                    <button 
+                      onClick={() => {
+                        setActiveView(item.id);
+                        // Auto close sidebar on mobile after selection
+                        if (window.innerWidth < 1024) {
+                          setIsMobileMenuOpen(false);
+                        }
+                      }} 
+                      className={`w-full flex items-center px-4 py-3 rounded-xl transition-all duration-200 ${
+                        isSidebarMinimized ? 'justify-center' : ''
+                      } ${
+                        activeView === item.id 
+                          ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/30' 
+                          : 'text-gray-600 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50 hover:backdrop-blur-sm'
+                      }`}
+                      title={item.label}
+                    >
+                      <item.icon size={20} className={`${!isSidebarMinimized ? "mr-3" : ""} ${activeView === item.id ? 'text-white' : ''}`} />
+                      {!isSidebarMinimized && (
+                        <span className="text-sm font-medium">{item.label}</span>
+                      )}
                     </button>
                     )}
                 </li>
                 )
             })}
-            </ul>
-        </div>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-             <button onClick={() => setIsSidebarMinimized(!isSidebarMinimized)} className="w-full flex items-center justify-center p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg">
-                {isSidebarMinimized ? <ChevronsRight size={20} /> : <ChevronsLeft size={20} />}
-             </button>
+          </ul>
+
+          {/* Sidebar Footer */}
+          <div className="relative z-10 p-4 border-t border-white/30 dark:border-gray-700/30">
+            <button 
+              onClick={() => setIsSidebarMinimized(!isSidebarMinimized)} 
+              className="w-full flex items-center justify-center p-3 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm hover:bg-white/70 dark:hover:bg-gray-700/70 text-gray-600 dark:text-gray-300 rounded-xl border border-white/30 dark:border-gray-600/30 transition-all group"
+              title={isSidebarMinimized ? "Perluas Sidebar" : "Persempit Sidebar"}
+            >
+              {isSidebarMinimized ? (
+                <ChevronsRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              ) : (
+                <ChevronsLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+              )}
+              {!isSidebarMinimized && <span className="ml-2 text-xs font-medium">Persempit</span>}
+            </button>
+            
+            {/* Copyright - Only show when expanded */}
+            {!isSidebarMinimized && (
+  <div className="mt-4 text-center animate-fadeIn">
+    <p className="text-[10px] text-gray-400 dark:text-gray-500">
+      {brandingConfig.text.footer}
+    </p>
+    <p className="text-[8px] text-gray-300 dark:text-gray-600 mt-1">
+      v4.0.0
+    </p>
+  </div>
+)}
+          </div>
         </div>
       </nav>
-      <main className="flex-1 p-8 overflow-y-auto">{renderView()}</main>
+
+      {/* Main Content - LEBIH RAPAT */}
+<main className={`
+  flex-1 transition-all duration-300
+  ${isSidebarMinimized ? 'lg:ml-18' : 'lg:ml-59'}
+  ml-0
+  p-3 md:p-5 overflow-y-auto
+  bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800
+`}>
+  {/* Mobile Header - Only visible on mobile */}
+  <div className="lg:hidden mb-3 flex items-center justify-between">
+    <div className="flex-1"></div>
+    <div className="flex items-center gap-2">
+      <button
+        onClick={toggleTheme}
+        className="p-1.5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700"
+      >
+        {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+      </button>
+    </div>
+  </div>
+
+  {renderView()}
+</main>
     </div>
   );
 };

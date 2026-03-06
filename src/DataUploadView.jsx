@@ -2,11 +2,17 @@ import React from 'react';
 import SectionTitle from './SectionTitle';
 import GeminiAnalysis from './GeminiAnalysis';
 import Pagination from './Pagination';
-import { Upload, Calendar, Trash2, Loader, Download, Columns, Search, CheckCircle2, AlertCircle } from 'lucide-react';
+import { 
+    Upload, Calendar, Trash2, Loader, Download, Columns, Search, 
+    CheckCircle2, AlertCircle, FileText, Database, TrendingUp, 
+    BarChart3, PieChart, Info, X, ChevronDown, ChevronUp, Filter,
+    Eye, EyeOff, RefreshCw, Sparkles, Shield, Clock, HardDrive
+} from 'lucide-react';
 import { formatCurrency } from './formatCurrency';
 import { logActivity } from './utils/logActivity';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RePieChart, Pie, Cell } from 'recharts';
 
-// --- UPDATED DataUploadView Component with Delete per Month button ---
+// --- UPDATED DataUploadView Component with Glassmorphism ---
 const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, previewHeaders, groupedColumns, dataFilter, theme, onUpload, onDeleteMonth, isDeleting, selectedYear, userRole, getAnalysisPrompt, namaPemda }) => {
   const fileInputRef = React.useRef(null);
   const [error, setError] = React.useState('');
@@ -16,11 +22,17 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
   const [selectedMonth, setSelectedMonth] = React.useState(months[0]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [currentPage, setCurrentPage] = React.useState(1);
+  const [showFilters, setShowFilters] = React.useState(true);
+  const [showStats, setShowStats] = React.useState(true);
+  const [chartView, setChartView] = React.useState('bar'); // 'bar' atau 'pie'
   const ITEMS_PER_PAGE = 10;
   
   const [visibleHeaders, setVisibleHeaders] = React.useState(previewHeaders || []);
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = React.useState(false);
   const columnSelectorRef = React.useRef(null);
+
+  // Warna untuk visualisasi
+  const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6B7280'];
 
   React.useEffect(() => {
     setVisibleHeaders(previewHeaders || []);
@@ -75,15 +87,62 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
                                 .flat()
                                 .reduce((sum, item) => sum + (item.nilai || 0), 0);
     
+    // Hitung statistik per bulan untuk chart
+    const monthlyStats = months.map(month => {
+        const total = (data[month] || []).reduce((sum, item) => sum + (item.nilai || 0), 0);
+        return {
+            month: month.substring(0, 3),
+            fullMonth: month,
+            value: total / 1e9, // Konversi ke Miliar
+            rawValue: total
+        };
+    }).filter(m => m.rawValue > 0);
+    
+    // Hitung distribusi berdasarkan kolom pertama (misalnya SKPD)
+    const firstGroupColumn = groupedColumns?.[0] || 'SKPD';
+    const firstGroupKey = firstGroupColumn.replace(/[^A-Za-z0-9]/g, '');
+    
+    const distributionMap = new Map();
+    Object.entries(data).forEach(([month, items]) => {
+        items.forEach(item => {
+            const group = item[firstGroupKey] || 'Lainnya';
+            if (!distributionMap.has(group)) {
+                distributionMap.set(group, { name: group, value: 0, count: 0 });
+            }
+            const entry = distributionMap.get(group);
+            entry.value += (item.nilai || 0);
+            entry.count++;
+        });
+    });
+    
+    const distributionData = Array.from(distributionMap.values())
+        .map(d => ({ ...d, value: d.value / 1e9 }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+    
      if (title.includes('Realisasi Belanja') || title.includes('Non RKUD')) {
-        return { type: 'belanja', totalBulanIni, totalSemuaBulan };
+        return { 
+            type: 'belanja', 
+            totalBulanIni, 
+            totalSemuaBulan,
+            monthlyStats,
+            distributionData,
+            itemCount: Object.values(data).flat().length
+        };
     }
     if (title.includes('Realisasi Pendapatan')) {
-        return { type: 'pendapatan', totalBulanIni, totalSemuaBulan };
+        return { 
+            type: 'pendapatan', 
+            totalBulanIni, 
+            totalSemuaBulan,
+            monthlyStats,
+            distributionData,
+            itemCount: Object.values(data).flat().length
+        };
     }
 
     return null;
-  }, [data, selectedMonth, isMonthly, title]);
+  }, [data, selectedMonth, isMonthly, title, groupedColumns]);
 
   const handleSmartParsing = (json) => {
     if (!json || json.length === 0) {
@@ -314,7 +373,7 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
           const workbook = window.XLSX.utils.book_new();
           window.XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
           
-          const fileName = `${title} - ${isMonthly ? selectedMonth : ''} ${selectedYear}.xlsx`;
+          const fileName = `${title.replace(/ /g, '_')}_${isMonthly ? selectedMonth : ''}_${selectedYear}.xlsx`;
           window.XLSX.writeFile(workbook, fileName);
       } catch (err) {
           console.error("Error creating Excel file:", err);
@@ -343,11 +402,52 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
     }
   };
 
-
   return (
     <div className="space-y-6">
-        <SectionTitle>{title} - Tahun {selectedYear}</SectionTitle>
+        <SectionTitle>{title} - Tahun Anggaran {selectedYear}</SectionTitle>
         
+        {/* Executive Dashboard */}
+        {summaryData && (
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 shadow-[0_8px_32px_rgba(0,0,0,0.12)] mb-6">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-400/10 to-purple-400/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-emerald-400/10 to-teal-400/10 rounded-full blur-3xl -ml-20 -mb-20"></div>
+                
+                <div className="relative p-6">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl shadow-lg">
+                            <Database className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-white">Dashboard Data {title}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Ringkasan dan analisis data {title} tahun {selectedYear}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {/* Quick Stats Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md rounded-xl border border-white/40 dark:border-gray-700/50 p-4">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Total {selectedMonth}</p>
+                            <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{formatCurrency(summaryData.totalBulanIni)}</p>
+                        </div>
+                        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md rounded-xl border border-white/40 dark:border-gray-700/50 p-4">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Total Semua Bulan</p>
+                            <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(summaryData.totalSemuaBulan)}</p>
+                        </div>
+                        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md rounded-xl border border-white/40 dark:border-gray-700/50 p-4">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Jumlah Entri</p>
+                            <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{summaryData.itemCount.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md rounded-xl border border-white/40 dark:border-gray-700/50 p-4">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Bulan dengan Data</p>
+                            <p className="text-xl font-bold text-rose-600 dark:text-rose-400">{summaryData.monthlyStats?.length || 0}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+
         {getAnalysisPrompt && (
             <GeminiAnalysis 
                 getAnalysisPrompt={(customQuery) => getAnalysisPrompt(isMonthly ? selectedMonth : 'annual', dataToPreview, customQuery)}
@@ -357,117 +457,262 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
             />
         )}
 
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md">
-            {isMonthly && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                    <div>
-                         <h3 className="font-bold text-lg text-gray-700 dark:text-gray-300 mb-4">Status Unggahan Bulanan</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {months.map(month => {
-                                const hasData = data[month] && data[month].length > 0;
-                                return (
-                                    <div key={month} className={`flex items-center p-3 rounded-lg ${hasData ? 'bg-green-100 dark:bg-green-900/50' : 'bg-yellow-100 dark:bg-yellow-900/50'}`}>
-                                        {hasData ? <CheckCircle2 className="text-green-500 mr-2" size={20} /> : <AlertCircle className="text-yellow-500 mr-2" size={20} />}
-                                        <span className={`font-medium ${hasData ? 'text-green-800 dark:text-green-300' : 'text-yellow-800 dark:text-yellow-300'}`}>{month}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-gray-700/30 shadow-xl p-6">
+            {/* Upload Status Section */}
+            {isMonthly && summaryData && (
+                <div className="mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-indigo-500" />
+                            Status Unggahan Bulanan
+                        </h3>
+                        <button
+                            onClick={() => setShowStats(!showStats)}
+                            className="p-2 bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm rounded-lg hover:bg-white/70 dark:hover:bg-gray-700/70 transition-colors"
+                        >
+                            {showStats ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
                     </div>
-                    {summaryData && summaryData.type === 'belanja' && (
-                        <div className="space-y-4">
-                            <h3 className="font-bold text-lg text-gray-700 dark:text-gray-300">Ringkasan Belanja</h3>
-                            <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
-                                <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Total Belanja Bulan {selectedMonth}</p>
-                                <p className="text-2xl font-bold text-blue-900 dark:text-blue-200">{formatCurrency(summaryData.totalBulanIni)}</p>
+                    
+                    {showStats && (
+                        <>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
+                                {months.map(month => {
+                                    const hasData = data[month] && data[month].length > 0;
+                                    return (
+                                        <div 
+                                            key={month} 
+                                            className={`flex items-center p-3 rounded-xl backdrop-blur-sm border ${
+                                                hasData 
+                                                    ? 'bg-emerald-50/70 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' 
+                                                    : 'bg-amber-50/70 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                                            } ${selectedMonth === month ? 'ring-2 ring-indigo-500' : ''}`}
+                                            onClick={() => setSelectedMonth(month)}
+                                        >
+                                            {hasData ? 
+                                                <CheckCircle2 className="text-emerald-500 mr-2" size={18} /> : 
+                                                <AlertCircle className="text-amber-500 mr-2" size={18} />
+                                            }
+                                            <span className={`text-sm font-medium ${
+                                                hasData 
+                                                    ? 'text-emerald-700 dark:text-emerald-300' 
+                                                    : 'text-amber-700 dark:text-amber-300'
+                                            }`}>{month}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <div className="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-lg border border-indigo-200 dark:border-indigo-700">
-                                <p className="text-sm font-medium text-indigo-800 dark:text-indigo-300">Total Belanja Semua Bulan (s/d Desember)</p>
-                                <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-200">{formatCurrency(summaryData.totalSemuaBulan)}</p>
-                            </div>
-                        </div>
-                    )}
-                    {summaryData && summaryData.type === 'pendapatan' && (
-                        <div className="space-y-4">
-                            <h3 className="font-bold text-lg text-gray-700 dark:text-gray-300">Ringkasan Pendapatan</h3>
-                            <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg border border-green-200 dark:border-green-700">
-                                <p className="text-sm font-medium text-green-800 dark:text-green-300">Total Pendapatan Bulan {selectedMonth}</p>
-                                <p className="text-2xl font-bold text-green-900 dark:text-green-200">{formatCurrency(summaryData.totalBulanIni)}</p>
-                            </div>
-                            <div className="bg-teal-50 dark:bg-teal-900/30 p-4 rounded-lg border border-teal-200 dark:border-teal-700">
-                                <p className="text-sm font-medium text-teal-800 dark:text-teal-300">Total Pendapatan Semua Bulan (s/d Desember)</p>
-                                <p className="text-2xl font-bold text-teal-900 dark:text-teal-200">{formatCurrency(summaryData.totalSemuaBulan)}</p>
-                            </div>
-                        </div>
+
+                            {/* Chart Section */}
+                            {summaryData.monthlyStats?.length > 0 && (
+                                <div className="mb-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="font-semibold text-gray-700 dark:text-gray-300">Tren Bulanan</h4>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setChartView('bar')}
+                                                className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                                                    chartView === 'bar' 
+                                                        ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400' 
+                                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                                }`}
+                                            >
+                                                Bar
+                                            </button>
+                                            <button
+                                                onClick={() => setChartView('pie')}
+                                                className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                                                    chartView === 'pie' 
+                                                        ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400' 
+                                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                                }`}
+                                            >
+                                                Pie
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl p-4">
+                                        <ResponsiveContainer width="100%" height={250}>
+                                            {chartView === 'bar' ? (
+                                                <BarChart data={summaryData.monthlyStats}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.1)" />
+                                                    <XAxis dataKey="month" />
+                                                    <YAxis tickFormatter={(val) => `${val}M`} />
+                                                    <Tooltip 
+                                                        formatter={(value) => `${value} Miliar`}
+                                                        contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                                                    />
+                                                    <Bar dataKey="value" fill="url(#barGradient)" barSize={30} />
+                                                    <defs>
+                                                        <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="0%" stopColor="#6366F1" stopOpacity={0.8}/>
+                                                            <stop offset="100%" stopColor="#8B5CF6" stopOpacity={0.8}/>
+                                                        </linearGradient>
+                                                    </defs>
+                                                </BarChart>
+                                            ) : (
+                                                <RePieChart>
+                                                    <Pie
+                                                        data={summaryData.monthlyStats}
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        innerRadius={60}
+                                                        outerRadius={90}
+                                                        paddingAngle={2}
+                                                        dataKey="value"
+                                                        label={({ month, percent }) => `${month} ${(percent * 100).toFixed(0)}%`}
+                                                    >
+                                                        {summaryData.monthlyStats.map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                        ))}
+                                                    </Pie>
+                                                    <Tooltip formatter={(value) => `${value} Miliar`} />
+                                                </RePieChart>
+                                            )}
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Distribution Chart */}
+                            {summaryData.distributionData?.length > 0 && (
+                                <div className="mb-4">
+                                    <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-3">Distribusi per {groupedColumns?.[0] || 'Kategori'}</h4>
+                                    <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl p-4">
+                                        <ResponsiveContainer width="100%" height={200}>
+                                            <BarChart data={summaryData.distributionData} layout="vertical">
+                                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.1)" />
+                                                <XAxis type="number" tickFormatter={(val) => `${val}M`} />
+                                                <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 10 }} />
+                                                <Tooltip formatter={(value) => `${value} Miliar`} />
+                                                <Bar dataKey="value" fill="#8884d8" barSize={15} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             )}
 
-            <div className="bg-gray-50 dark:bg-gray-900/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-                <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 font-semibold">Pilih file CSV atau Excel untuk diunggah.</p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{instruction}</p>
+            {/* Upload Section */}
+            <div className="bg-gradient-to-br from-indigo-50/30 to-purple-50/30 dark:from-indigo-900/10 dark:to-purple-900/10 backdrop-blur-sm rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-800 p-8 text-center">
+                <div className="flex flex-col items-center justify-center">
+                    <div className="p-4 bg-indigo-100 dark:bg-indigo-900/30 rounded-full mb-4">
+                        <Upload className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">Unggah Data {title}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 max-w-2xl mb-4">{instruction}</p>
 
-                <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2">
-                    {isMonthly && (
-                        <div className="inline-flex items-center bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg">
-                            <span className="pl-3 text-gray-500 dark:text-gray-400"><Calendar size={20}/></span>
-                            <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="py-2 pl-2 pr-4 bg-transparent text-gray-700 dark:text-gray-300 font-medium focus:outline-none">
-                                {months.map(month => <option key={month} value={month}>{month}</option>)}
-                            </select>
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                        {isMonthly && (
+                            <div className="inline-flex items-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm">
+                                <Calendar className="ml-3 text-gray-400" size={18}/>
+                                <select 
+                                    value={selectedMonth} 
+                                    onChange={e => setSelectedMonth(e.target.value)} 
+                                    className="py-2.5 pl-2 pr-8 bg-transparent text-gray-700 dark:text-gray-300 font-medium focus:outline-none rounded-xl"
+                                >
+                                    {months.map(month => <option key={month} value={month}>{month}</option>)}
+                                </select>
+                            </div>
+                        )}
+                        <button 
+                            onClick={handleButtonClick} 
+                            disabled={isUploading || userRole !== 'admin'} 
+                            className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
+                        >
+                            {isUploading ? <Loader className="animate-spin" size={18} /> : <Upload size={18} />}
+                            {isUploading ? 'Mengunggah...' : `Pilih File ${isMonthly ? selectedMonth : ''}`}
+                        </button>
+                        {isMonthly && onDeleteMonth && userRole === 'admin' && (
+                            <button 
+                                onClick={() => {
+                                    const dataType = title.includes('Belanja') 
+                                        ? 'realisasi' 
+                                        : title.includes('Pendapatan') 
+                                            ? 'realisasiPendapatan' 
+                                            : 'realisasiNonRkud';
+                                    onDeleteMonth(dataType, selectedMonth, setUploadProgress);
+                                }}
+                                disabled={isUploading || isDeleting || !data[selectedMonth] || data[selectedMonth].length === 0}
+                                className="p-2.5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold rounded-xl shadow-lg transition-all disabled:opacity-50"
+                                title={`Hapus Data ${selectedMonth}`}
+                            >
+                               {isDeleting ? <Loader className="animate-spin" size={18}/> : <Trash2 size={18}/>}
+                            </button>
+                        )}
+                    </div>
+                    {userRole !== 'admin' && (
+                        <div className="mt-4 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-2">
+                            <Shield size={14} className="text-amber-500" />
+                            <p className="text-xs text-amber-600 dark:text-amber-400">Hanya Admin yang dapat mengunggah data.</p>
                         </div>
                     )}
-                    <button onClick={handleButtonClick} disabled={isUploading || userRole !== 'admin'} className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        {isUploading ? 'Mengunggah...' : `Pilih File untuk ${isMonthly ? selectedMonth : 'Data'}`}
-                    </button>
-                    {isMonthly && onDeleteMonth && userRole === 'admin' && (
-                        <button 
-                            onClick={() => {
-                                const dataType = title.includes('Belanja') 
-                                    ? 'realisasi' 
-                                    : title.includes('Pendapatan') 
-                                        ? 'realisasiPendapatan' 
-                                        : 'realisasiNonRkud';
-                                onDeleteMonth(dataType, selectedMonth, setUploadProgress);
-                            }}
-                            disabled={isUploading || isDeleting || !data[selectedMonth] || data[selectedMonth].length === 0}
-                            className="p-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            title={`Hapus Data ${selectedMonth}`}
-                        >
-                           {isDeleting ? <Loader className="animate-spin" size={20}/> : <Trash2 size={20}/>}
-                        </button>
-                    )}
+                    <input type="file" ref={fileInputRef} className="hidden" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={handleFileUpload}/>
                 </div>
-                {userRole !== 'admin' && <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Hanya Admin yang dapat mengunggah data.</p>}
-                <input type="file" ref={fileInputRef} className="hidden" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={handleFileUpload}/>
-                {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-                {uploadProgress && <p className="mt-4 text-sm text-blue-600">{uploadProgress}</p>}
+                
+                {error && (
+                    <div className="mt-4 p-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg flex items-center gap-2">
+                        <AlertCircle size={16} className="text-rose-500" />
+                        <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>
+                    </div>
+                )}
+                
+                {uploadProgress && (
+                    <div className="mt-4 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
+                        <RefreshCw size={16} className="text-emerald-500 animate-spin" />
+                        <p className="text-sm text-emerald-600 dark:text-emerald-400">{uploadProgress}</p>
+                    </div>
+                )}
             </div>
 
+            {/* Data Preview Section */}
             <div className="mt-8">
-                <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                    <h3 className="font-bold text-lg text-gray-700 dark:text-gray-300">Pratinjau Data {isMonthly ? `untuk ${selectedMonth}` : ''}</h3>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                    <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-indigo-500" />
+                        Pratinjau Data {isMonthly ? `- ${selectedMonth}` : ''}
+                    </h3>
+                    
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className="px-3 py-2 bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-white/70 dark:hover:bg-gray-700/70 transition-colors flex items-center gap-1"
+                        >
+                            <Filter size={16} />
+                            Filter
+                        </button>
+                        
                         {isMonthly && (
-                            <button onClick={handleDownloadExcel} disabled={dataToPreview.length === 0} className="flex items-center justify-center px-4 py-2 border border-green-600 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button 
+                                onClick={handleDownloadExcel} 
+                                disabled={dataToPreview.length === 0} 
+                                className="flex items-center justify-center px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-xl shadow-lg transition-all disabled:opacity-50"
+                            >
                                 <Download size={16} className="mr-2"/>
                                 Download
                             </button>
                         )}
-                        <div className="relative flex-grow" ref={columnSelectorRef}>
-                            <button onClick={() => setIsColumnSelectorOpen(prev => !prev)} className="flex items-center justify-center w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        
+                        <div className="relative" ref={columnSelectorRef}>
+                            <button 
+                                onClick={() => setIsColumnSelectorOpen(prev => !prev)} 
+                                className="flex items-center justify-center px-4 py-2 bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-white/70 dark:hover:bg-gray-700/70 transition-colors"
+                            >
                                 <Columns size={16} className="mr-2"/>
                                 Kolom
                             </button>
                             {isColumnSelectorOpen && (
-                                <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 p-2">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 px-2 pb-2">Tampilkan/Sembunyikan Kolom</p>
-                                    <div className="max-h-60 overflow-y-auto">
+                                <div className="absolute top-full right-0 mt-2 w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/30 dark:border-gray-700/30 rounded-xl shadow-xl z-50 p-3">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 px-2 pb-2 border-b border-gray-200 dark:border-gray-700">Tampilkan/Sembunyikan Kolom</p>
+                                    <div className="max-h-60 overflow-y-auto mt-2">
                                     {(previewHeaders || []).map(header => (
                                         <label key={header} className="flex items-center px-2 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md cursor-pointer">
                                             <input
                                                 type="checkbox"
-                                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                                 checked={visibleHeaders.includes(header)}
                                                 onChange={() => handleToggleHeader(header)}
                                             />
@@ -478,84 +723,124 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
                                 </div>
                             )}
                         </div>
-                        <div className="relative flex-grow">
+                        
+                        <div className="relative flex-grow min-w-[200px]">
                             <input 
                                 type="text"
-                                placeholder="Cari..."
+                                placeholder="Cari data..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full pl-10 pr-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                             />
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20}/>
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18}/>
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    <X size={16} />
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
-                <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                        <tr>
-                            {visibleHeaders.map(header => (
-                                <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{header}</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {paginatedData.length > 0 ? (() => {
-                        let lastGroupValues = {};
-                        return paginatedData.map((item, index) => {
-                            return (
-                            <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                {visibleHeaders.map((header, colIndex) => {
-                                    const key = header.replace(/[^A-Za-z0-9]/g, '');
-                                    const isGrouped = groupedColumns && groupedColumns.includes(header);
-                                    let showValue = true;
 
-                                    if (isGrouped) {
-                                        const headerIndex = groupedColumns.indexOf(header);
-                                        for (let i = 0; i < headerIndex; i++) {
-                                            const parentHeader = groupedColumns[i];
-                                            const parentKey = parentHeader.replace(/[^A-Za-z0-9]/g, '');
-                                            if (item[parentKey] !== lastGroupValues[parentKey]) {
-                                                for (let j = i; j < groupedColumns.length; j++) {
-                                                    lastGroupValues[groupedColumns[j].replace(/[^A-Za-z0-9]/g, '')] = null;
+                {/* Table Preview */}
+                <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm">
+                            <tr>
+                                {visibleHeaders.map(header => (
+                                    <th key={header} className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        {header}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        {paginatedData.length > 0 ? (() => {
+                            let lastGroupValues = {};
+                            return paginatedData.map((item, index) => {
+                                return (
+                                <tr key={index} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors">
+                                    {visibleHeaders.map((header, colIndex) => {
+                                        const key = header.replace(/[^A-Za-z0-9]/g, '');
+                                        const isGrouped = groupedColumns && groupedColumns.includes(header);
+                                        let showValue = true;
+
+                                        if (isGrouped) {
+                                            const headerIndex = groupedColumns.indexOf(header);
+                                            for (let i = 0; i < headerIndex; i++) {
+                                                const parentHeader = groupedColumns[i];
+                                                const parentKey = parentHeader.replace(/[^A-Za-z0-9]/g, '');
+                                                if (item[parentKey] !== lastGroupValues[parentKey]) {
+                                                    for (let j = i; j < groupedColumns.length; j++) {
+                                                        lastGroupValues[groupedColumns[j].replace(/[^A-Za-z0-9]/g, '')] = null;
+                                                    }
+                                                    break;
                                                 }
-                                                break;
+                                            }
+                                            if (item[key] === lastGroupValues[key]) {
+                                                showValue = false;
+                                            } else {
+                                                lastGroupValues[key] = item[key];
                                             }
                                         }
-                                        if (item[key] === lastGroupValues[key]) {
-                                            showValue = false;
+                                        
+                                        let cellValue;
+                                        if (colIndex === visibleHeaders.length - 1) {
+                                            cellValue = formatCurrency(item.nilai);
                                         } else {
-                                            lastGroupValues[key] = item[key];
+                                            cellValue = item[key];
                                         }
-                                    }
-                                    
-                                    let cellValue;
-                                    if (colIndex === visibleHeaders.length - 1) {
-                                        cellValue = formatCurrency(item.nilai);
-                                    } else {
-                                        cellValue = item[key];
-                                    }
-                                    
-                                    return (
-                                        <td key={header} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                            <span className={colIndex === 0 ? 'font-medium text-gray-900 dark:text-gray-100' : ''}>{isGrouped && !showValue ? '' : cellValue}</span>
-                                        </td>
-                                    );
-                                })}
+                                        
+                                        return (
+                                            <td key={header} className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                                                <span className={colIndex === 0 ? 'font-medium text-gray-900 dark:text-gray-200' : ''}>
+                                                    {isGrouped && !showValue ? '' : cellValue}
+                                                </span>
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                                );
+                            });
+                            })() : (
+                            <tr>
+                            <td colSpan={visibleHeaders.length} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <div className="flex flex-col items-center gap-2">
+                                    <Database className="w-8 h-8 text-gray-400" />
+                                    <p>Belum ada data yang diunggah</p>
+                                    <p className="text-xs text-gray-400">Gunakan form di atas untuk mengunggah file</p>
+                                </div>
+                            </td>
                             </tr>
-                            );
-                        });
-                        })() : (
-                        <tr>
-                        <td colSpan={visibleHeaders.length} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Belum ada data yang diunggah atau tidak ditemukan.</td>
-                        </tr>
-                    )}
-                    </tbody>
-                </table>
+                        )}
+                        </tbody>
+                    </table>
                 </div>
+                
                 {totalPages > 1 && (
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} theme={theme} />
+                    <div className="mt-6">
+                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} theme={theme} />
+                    </div>
                 )}
+            </div>
+
+            {/* Footer Info */}
+            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+                <span className="flex items-center gap-1">
+                    <HardDrive size={12} />
+                    Total data: {dataToPreview.length} baris
+                </span>
+                <span className="flex items-center gap-1">
+                    <Clock size={12} />
+                    Update terakhir: {new Date().toLocaleDateString('id-ID')}
+                </span>
+                <span className="flex items-center gap-1">
+                    <Shield size={12} />
+                    Format: CSV, XLSX, XLS
+                </span>
             </div>
         </div>
     </div>
