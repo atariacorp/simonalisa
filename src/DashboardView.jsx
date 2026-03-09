@@ -153,56 +153,45 @@ const CustomHeatmap = ({ data }) => {
   );
 };
 
-const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, userCanUseAi }) => {
+const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, userCanUseAi, allData }) => {
   const [analysis, setAnalysis] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const generateAnalysis = async () => {
-    if (disabledCondition) return;
-    
-    setLoading(true);
-    setError(null);
-    const apiKey = ""; // Environment provides key
-    const prompt = getAnalysisPrompt("");
+  if (disabledCondition) return;
+  
+  setLoading(true);
+  setError(null);
 
-    const fetchWithRetry = async (url, options, retries = 5, backoff = 1000) => {
-      try {
-        const response = await fetch(url, options);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        return await response.json();
-      } catch (err) {
-        if (retries > 0) {
-          await new Promise(resolve => setTimeout(resolve, backoff));
-          return fetchWithRetry(url, options, retries - 1, backoff * 2);
-        }
-        throw err;
-      }
-    };
+  const prompt = getAnalysisPrompt("", allData);
 
-    try {
-      const result = await fetchWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            systemInstruction: { 
-              parts: [{ text: `Anda adalah analis keuangan publik profesional. Berikan analisis singkat, padat, dan strategis dalam bahasa Indonesia yang berfokus pada evaluasi kinerja penyerapan anggaran pemerintah daerah. Format dengan poin-poin tebal yang rapi.` }] 
-            }
-          })
-        }
-      );
+  try {
+    // ✅ BENAR: Memanggil API internal kita sendiri
+    // BUKAN memanggil generativelanguage.googleapis.com
+    const response = await fetch('/api/gemini', { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
 
-      const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-      setAnalysis(text || "Gagal menghasilkan analisis.");
-    } catch (err) {
-      setError("Gagal menghubungi layanan AI. Silakan coba lagi nanti.");
-    } finally {
-      setLoading(false);
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Gagal menghubungi AI");
     }
-  };
+
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    setAnalysis(text || "Gagal menghasilkan analisis.");
+
+  } catch (err) {
+    setError(err.message || "Gagal menghubungi layanan AI.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-gray-900 dark:to-indigo-900/20 p-6 md:p-8 rounded-3xl border border-indigo-100 dark:border-indigo-900/50 mb-8 shadow-sm">
@@ -498,32 +487,28 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
                 .sort((a, b) => b.nilai - a.nilai);
   }, [pendapatan]);
 
-  const getDashboardAnalysisPrompt = (customQuery, allData) => {
-    return `
-    Anda adalah seorang Auditor Ahli dan Penasihat Keuangan Daerah untuk ${namaPemda || 'pemerintah daerah'}.
-    Tugas Anda adalah menganalisis data ringkas APBD tahun ${selectedYear} berikut dan memberikan peringatan dini serta rekomendasi kebijakan yang tajam.
+  const getDashboardAnalysisPrompt = (query, allData) => {
+  // Kita ambil data dari argumen allData, bukan variabel luar agar lebih konsisten
+  const { totalPendapatan, totalRealisasiPendapatan, totalAnggaran, totalGabunganBelanja } = allData;
+  
+  return `
+    ROLE: Auditor Ahli Keuangan Daerah (SIMONALISA).
+    PEMDA: ${namaPemda || 'Pemerintah Daerah'}
+    TAHUN: ${selectedYear}
     
-    Data Ringkas:
-    - Target Pendapatan: ${formatCurrency(totalPendapatan)}
-    - Realisasi Pendapatan: ${formatCurrency(totalRealisasiPendapatan)} (${pencapaianPendapatanPercentage.toFixed(2)}%)
-    - Pagu Anggaran Belanja: ${formatCurrency(totalAnggaran)}
-    - Realisasi Belanja (Gabungan): ${formatCurrency(totalGabunganBelanja)} (${penyerapanAnggaranPercentage.toFixed(2)}%)
-     - (Rincian: RKUD ${formatCurrency(totalRealisasiBelanja)}, Non-RKUD ${formatCurrency(totalRealisasiNonRKUD)})
-    - Target Penerimaan Pembiayaan: ${formatCurrency(totalPenerimaanPembiayaan)}
-    - Target Pengeluaran Pembiayaan: ${formatCurrency(totalPengeluaranPembiayaan)}
+    DATA RINGKAS:
+    - Pendapatan: Target ${formatCurrency(totalPendapatan)}, Realisasi ${formatCurrency(totalRealisasiPendapatan)}
+    - Belanja: Pagu ${formatCurrency(totalAnggaran)}, Realisasi ${formatCurrency(totalGabunganBelanja)}
     
-    Format Laporan Anda HARUS JELAS dan TEGAS. Gunakan format Markdown:
-    
-    ### 1. PERINGATAN UTAMA (TEMUAN PALING KRITIS)
-    (Identifikasi 1-2 masalah paling mendesak. Misalnya: Penyerapan anggaran sangat rendah? Realisasi pendapatan jauh dari target?)
-    
-    ### 2. ANALISIS RISIKO
-    (Jelaskan 2-3 risiko utama yang mungkin terjadi jika peringatan di atas tidak ditangani. Misalnya: Risiko SiLPA tinggi, Risiko gagal bayar proyek, Risiko target PAD tidak tercapai.)
-    
-    ### 3. REKOMENDASI KEBIJAKAN YANG DAPAT DITINDAKLANJUTI
-    (Berikan 3-5 poin rekomendasi yang spesifik, konkret, dan langsung dapat dieksekusi oleh pimpinan daerah untuk mengatasi risiko tersebut.)
-    `;
-  };
+    USER_QUERY: ${query || "Berikan ringkasan eksekutif dan peringatan dini."}
+
+    INSTRUKSI:
+    1. Berikan analisis dalam format Markdown yang tajam.
+    2. Identifikasi 1 masalah paling kritis (Peringatan Utama).
+    3. Sebutkan risiko utama & rekomendasi konkret.
+    4. Langsung ke inti analisis, tanpa basa-basi pembuka.
+  `;
+};
   
   const apbdChartData = [
       { name: 'Pendapatan Daerah', Target: totalPendapatan, Realisasi: totalRealisasiPendapatan },
@@ -618,12 +603,21 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
           </div>
         </div>
 
-        {/* Gemini Analysis */}
-        <GeminiAnalysis 
-            getAnalysisPrompt={getDashboardAnalysisPrompt} 
-            disabledCondition={totalAnggaran === 0 && totalPendapatan === 0} 
-            userCanUseAi={userCanUseAi}
-        />
+        {/* Cari baris ini di sekitar 514 */}
+<GeminiAnalysis 
+    getAnalysisPrompt={getDashboardAnalysisPrompt} 
+    disabledCondition={totalAnggaran === 0 && totalPendapatan === 0} 
+    userCanUseAi={userCanUseAi}
+    // TAMBAHKAN INI agar data bisa dibaca oleh fungsi prompt
+    allData={{
+        totalPendapatan,
+        totalRealisasiPendapatan,
+        totalAnggaran,
+        totalGabunganBelanja,
+        totalRealisasiBelanja,
+        totalRealisasiNonRKUD
+    }}
+/>
 
         {/* TAB NAVIGASI */}
         <div className="flex justify-center md:justify-start mb-8">
