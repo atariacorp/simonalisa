@@ -1,10 +1,10 @@
 import React from 'react';
-import SectionTitle from './SectionTitle';
-import GeminiAnalysis from './GeminiAnalysis';
-import Pagination from './Pagination';
+import SectionTitle from './components/SectionTitle';
+import GeminiAnalysis from './components/GeminiAnalysis';
+import Pagination from './components/Pagination';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Download, Filter, TrendingUp, TrendingDown, DollarSign, Target, Info, AlertTriangle, CheckCircle, Eye, EyeOff, Layers } from 'lucide-react';
-import { formatCurrency } from './formatCurrency';
+import { formatCurrency } from './utils/formatCurrency';
 
 // Custom Tooltip dengan desain modern
 const CustomTooltip = ({ active, payload, label }) => {

@@ -1,7 +1,7 @@
 import React from 'react';
-import SectionTitle from './SectionTitle';
-import GeminiAnalysis from './GeminiAnalysis';
-import Pagination from './Pagination';
+import SectionTitle from './components/SectionTitle';
+import GeminiAnalysis from './components/GeminiAnalysis';
+import Pagination from './components/Pagination';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Line, Cell } from 'recharts';
 import { 
   Search, TrendingUp, TrendingDown, Target, DollarSign, Calendar, 
@@ -10,7 +10,7 @@ import {
   ChevronRight, Sparkles, LayoutDashboard, PieChart, ArrowUpRight,
   ArrowDownRight, Shield, AlertOctagon, Layers, BarChart3
 } from 'lucide-react';
-import { formatCurrency } from './formatCurrency';
+import { formatCurrency } from './utils/formatCurrency';
 
 // Custom Tooltip dengan desain modern dan glassmorphism
 const CustomTooltip = ({ active, payload, label }) => {

@@ -1,8 +1,8 @@
 import React from 'react';
-import SectionTitle from './SectionTitle';
-import GeminiAnalysis from './GeminiAnalysis';
-import SelectInput from './SelectInput';
-import Pagination from './Pagination';
+import SectionTitle from './components/SectionTitle';
+import GeminiAnalysis from './components/GeminiAnalysis';
+import SelectInput from './components/SelectInput';
+import Pagination from './components/Pagination';
 import { 
     Search, Tag, Edit, Trash2, ChevronDown, ChevronRight, Loader,
     Filter, Download, TrendingUp, AlertCircle, CheckCircle, Info,
@@ -10,8 +10,8 @@ import {
     Database, Eye, EyeOff, X, ChevronsLeft, ChevronsRight
 } from 'lucide-react';
 import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, writeBatch } from "firebase/firestore";
-import { db } from './firebase';
-import { formatCurrency } from './formatCurrency';
+import { db } from './utils/firebase';
+import { formatCurrency } from './utils/formatCurrency';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RePieChart, Pie, Cell } from 'recharts';
 
 // --- UPDATED ProsesPenandaanView Component with Glassmorphism ---

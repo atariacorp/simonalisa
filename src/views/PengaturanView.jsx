@@ -1,6 +1,6 @@
 import React from 'react';
-import SectionTitle from './SectionTitle';
-import GeminiAnalysis from './GeminiAnalysis';
+import SectionTitle from './components/SectionTitle';
+import GeminiAnalysis from './components/GeminiAnalysis';
 import { 
     Download, Loader, UserPlus, Edit, Trash2, 
     Shield, Calendar, Building2, Users, Database,
@@ -9,10 +9,10 @@ import {
     Lock, Globe, Clock, Award, Sparkles, Cpu
 } from 'lucide-react';
 import { collection, doc, setDoc, getDocs, addDoc, deleteDoc, updateDoc, onSnapshot, query } from "firebase/firestore";
-import { db } from './firebase';
+import { db } from './utils/firebase';
 import { logActivity } from './utils/logActivity';
-import { firebaseConfig } from './firebase';
-import { formatCurrency } from './formatCurrency';
+import { firebaseConfig } from './utils/firebase';
+import { formatCurrency } from './utils/formatCurrency';
 
 // --- UPDATED PengaturanView Component with Glassmorphism ---
 const PengaturanView = ({ selectedYear, onYearChange, theme, userRole, saveSettings, namaPemda: initialNamaPemda }) => {

@@ -20,44 +20,62 @@ import {
   orderBy
 } from "firebase/firestore";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
-
+import { useAuth, useData } from './hooks';
+import { menuItems, menuDescriptions } from './constants/menuItems';
 // Import dari firebase.js (konfigurasi terpusat)
-import { db, auth } from './firebase';
+import { db, auth } from './utils/firebase';
 
-// Import komponen yang sudah dipisah
-import SectionTitle from './SectionTitle';
-import Pagination from './Pagination';
-import TabButton from './TabButton';
-import ProgressCircle from './ProgressCircle';
-import SelectInput from './SelectInput';
-import AnalysisCard from './AnalysisCard';
-import GeminiAnalysis from './GeminiAnalysis';
-import { formatCurrency } from './formatCurrency';
-import LoginView from './LoginView';
-import DashboardView from './DashboardView';
-import GuideView from './GuideView';
+// Import dari hooks
+import { useAuth } from './hooks/useAuth';
+import { useData } from './hooks/useData';
+
+// Import dari constants
+import { menuItems, menuDescriptions } from './constants/menuItems';
+
+// Import dari utils
+import { formatCurrency } from './utils/formatCurrency';
+import { db, auth } from './utils/firebase';
+import { logActivity } from './utils/logActivity';
+
+// Import komponen
+import SectionTitle from './components/SectionTitle';
+import Pagination from './components/Pagination';
+import TabButton from './components/TabButton';
+import ProgressCircle from './components/ProgressCircle';
+import SelectInput from './components/SelectInput';
+import AnalysisCard from './components/AnalysisCard';
+import GeminiAnalysis from './components/GeminiAnalysis';
+import StatCard from './components/StatCard';
+
+// Import views
+import LoginView from './views/LoginView';
+import DashboardView from './views/DashboardView';
+import GuideView from './views/GuideView';
+import AnalisisKinerjaView from './views/AnalisisKinerjaView';
+import AnalisisKualitasBelanjaView from './views/AnalisisKualitasBelanjaView';
+import AnalisisLintasTahunView from './views/AnalisisLintasTahunView';
+import AnalisisPotensiSiLPAView from './views/AnalisisPotensiSiLPAView';
+import MandatorySpendingView from './views/MandatorySpendingView';
+import LaporanTematikView from './views/LaporanTematikView';
+import SumberDanaStatsView from './views/SumberDanaStatsView';
+import SkpdBelanjaStatsView from './views/SkpdBelanjaStatsView';
+import SkpdPendapatanStatsView from './views/SkpdPendapatanStatsView';
+import SkpdRekeningStatsView from './views/SkpdRekeningStatsView';
+import SkpdSubKegiatanStatsView from './views/SkpdSubKegiatanStatsView';
+import PenandaanTematikView from './views/PenandaanTematikView';
+import PengaturanView from './views/PengaturanView';
+import DataUploadView from './views/DataUploadView';
+import ReferensiAkunView from './views/ReferensiAkunView';
+import PenandaanMandatoryView from './views/PenandaanMandatoryView';
+import ReferensiPenandaanView from './views/ReferensiPenandaanView';
+import ProsesPenandaanView from './views/ProsesPenandaanView';
+import ActivityLogView from './views/ActivityLogView';
+
+// Import dari services
+import { uploadData, deleteMonthlyData, fetchData } from './services/firebaseService';
+
+// Import branding
 import { brandingConfig } from './assets/config/branding';
-
-// ==================== IMPORT SEMUA VIEW ====================
-import AnalisisKinerjaView from './AnalisisKinerjaView';
-import AnalisisKualitasBelanjaView from './AnalisisKualitasBelanjaView';
-import AnalisisLintasTahunView from './AnalisisLintasTahunView';
-import AnalisisPotensiSiLPAView from './AnalisisPotensiSiLPAView';
-import MandatorySpendingView from './MandatorySpendingView';
-import LaporanTematikView from './LaporanTematikView';
-import SumberDanaStatsView from './SumberDanaStatsView';
-import SkpdBelanjaStatsView from './SkpdBelanjaStatsView';
-import SkpdPendapatanStatsView from './SkpdPendapatanStatsView';
-import SkpdRekeningStatsView from './SkpdRekeningStatsView';
-import SkpdSubKegiatanStatsView from './SkpdSubKegiatanStatsView';
-import PenandaanTematikView from './PenandaanTematikView';
-import PengaturanView from './PengaturanView';
-import DataUploadView from './DataUploadView';
-import ReferensiAkunView from './ReferensiAkunView';
-import PenandaanMandatoryView from './PenandaanMandatoryView';
-import ReferensiPenandaanView from './ReferensiPenandaanView';
-import ProsesPenandaanView from './ProsesPenandaanView';
-import ActivityLogView from './ActivityLogView';
 
 // --- Activity Logging Function ---
 const logActivity = async (action, details = {}) => {

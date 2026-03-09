@@ -1,8 +1,8 @@
 import React from 'react';
-import SectionTitle from './SectionTitle';
+import SectionTitle from './components/SectionTitle';
 import { Upload } from 'lucide-react';
 import { collection, onSnapshot, query } from "firebase/firestore";
-import { db } from './firebase';
+import { db } from './utils/firebase';
 
 // --- REFACTORED ReferensiAkunView Component ---
 const ReferensiAkunView = ({ theme, userRole, selectedYear, onUpload }) => {

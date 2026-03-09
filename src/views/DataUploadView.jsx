@@ -1,14 +1,14 @@
 import React from 'react';
-import SectionTitle from './SectionTitle';
-import GeminiAnalysis from './GeminiAnalysis';
-import Pagination from './Pagination';
+import SectionTitle from './components/SectionTitle';
+import GeminiAnalysis from './components/GeminiAnalysis';
+import Pagination from './components/Pagination';
 import { 
     Upload, Calendar, Trash2, Loader, Download, Columns, Search, 
     CheckCircle2, AlertCircle, FileText, Database, TrendingUp, 
     BarChart3, PieChart, Info, X, ChevronDown, ChevronUp, Filter,
     Eye, EyeOff, RefreshCw, Sparkles, Shield, Clock, HardDrive
 } from 'lucide-react';
-import { formatCurrency } from './formatCurrency';
+import { formatCurrency } from './utils/formatCurrency';
 import { logActivity } from './utils/logActivity';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RePieChart, Pie, Cell } from 'recharts';
 

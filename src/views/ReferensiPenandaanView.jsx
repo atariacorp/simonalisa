@@ -1,8 +1,8 @@
 import React from 'react';
-import SectionTitle from './SectionTitle';
+import SectionTitle from './components/SectionTitle';
 import { Loader, Edit, Trash2 } from 'lucide-react';
 import { collection, addDoc, deleteDoc, updateDoc, onSnapshot } from "firebase/firestore";
-import { db } from './firebase';
+import { db } from './utils/firebase';
 import { logActivity } from './utils/logActivity';
 
 // NEW: ReferensiPenandaanView (Functional)

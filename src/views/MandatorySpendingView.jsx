@@ -13,7 +13,7 @@ import {
 // MENGGUNAKAN SUMBER DATA FIREBASE ASLI DARI APLIKASI ANDA
 // ==============================================================================
 import { collection, onSnapshot } from "firebase/firestore";
-import { db } from './firebase'; 
+import { db } from './utils/firebase'; 
 
 // --- UTILITIES ---
 const formatCurrency = (value) => {
