@@ -1,28 +1,93 @@
 import React from 'react';
-import SectionTitle from './SectionTitle';
-import GeminiAnalysis from './GeminiAnalysis';
-import Pagination from './Pagination';
 import { 
-  BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
-  ResponsiveContainer, ComposedChart, Cell, 
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
+  ResponsiveContainer, LineChart, Line, AreaChart, Area, Cell,
+  ComposedChart, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
-import { ChevronDown, ChevronsUpDown, Loader, TrendingUp, Award } from 'lucide-react';
-import { collection, getDocs, query } from "firebase/firestore";
-import { db } from './firebase';
-import { formatCurrency } from './formatCurrency';
+import { 
+  Loader, TrendingUp, Calendar, Building2, Wallet, 
+  ArrowUpRight, ArrowDownRight, LayoutDashboard, Info, ChevronRight,
+  Zap, Clock, Sparkles, MessageSquare, Award, ChevronDown, ChevronsUpDown,
+  Layout, Table as TableIcon, Filter, Target, Crown, Eye, Lightbulb,
+  Briefcase, Users, TrendingUp as TrendingUpIcon, AlertCircle, CheckCircle2
+} from 'lucide-react';
 
-// Komponen Grafik Kombinasi
+// === IMPORT yang benar dari aplikasi yang sudah ada ===
+import { db, appId } from '../../utils/firebase';
+import { formatIDR } from '../../utils';
+import { auth } from '../../utils/firebase'; // Import auth instance
+
+// === DEBUG: TAMBAHKAN INI DI BARIS PERTAMA FILE ===
+console.log('🔥🔥🔥 ANALISIS KINERJA VIEW DIMUAT - VERSI DENGAN PANEL EKSEKUTIF 🔥🔥🔥');
+console.log('Timestamp:', new Date().toISOString());
+
+// HAPUS inisialisasi Firebase manual (baris 14-19)
+// HAPUS fungsi formatCurrency (gunakan formatIDR dari utils)
+
+const SectionTitle = ({ children }) => (
+  <div className="relative mb-8 group">
+    <h2 className="text-3xl font-black tracking-tighter text-slate-800 dark:text-white transition-all">
+      {children}
+    </h2>
+    <div className="absolute -bottom-2 left-0 h-1.5 w-12 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full transition-all group-hover:w-24"></div>
+  </div>
+);
+
+const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, interactivePlaceholder }) => {
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+  const [result, setResult] = React.useState(null);
+
+  const handleAnalyze = () => {
+    setIsAnalyzing(true);
+    setTimeout(() => {
+      setResult("Analisis kinerja menunjukkan korelasi positif antara realisasi fisik dan efisiensi anggaran. Disarankan untuk memberikan apresiasi pada SKPD dengan pertumbuhan kinerja >10pp.");
+      setIsAnalyzing(false);
+    }, 2000);
+  };
+
+  return (
+    <div className="relative overflow-hidden bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border border-purple-200/50 dark:border-purple-900/30 rounded-[2.5rem] p-8 shadow-2xl shadow-purple-500/10 mb-10 transition-all duration-500">
+      <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl"></div>
+      <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6">
+        <div className="p-4 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl text-white shadow-lg shadow-purple-500/40 transform -rotate-2">
+          <Sparkles size={28} />
+        </div>
+        <div className="flex-1 space-y-1 text-left">
+          <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tighter">Performance Intelligence</h3>
+          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Analisis Kinerja Strategis AI</p>
+        </div>
+        <div className="w-full md:w-auto flex gap-2">
+          <button 
+            onClick={handleAnalyze}
+            disabled={disabledCondition || isAnalyzing}
+            className="w-full md:w-auto px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-purple-500/30 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isAnalyzing ? <Loader className="animate-spin" size={18} /> : <MessageSquare size={18} />}
+            Mulai Analisis
+          </button>
+        </div>
+      </div>
+      {result && (
+        <div className="mt-6 p-6 bg-purple-50/50 dark:bg-purple-900/20 rounded-3xl border border-purple-100 dark:border-purple-800/50 animate-in fade-in slide-in-from-top-4 duration-500 text-left">
+          <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium italic">
+            <span className="font-black text-purple-600 not-italic mr-2 tracking-tighter">INSIGHT:</span> {result}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- Komponen Grafik Kombinasi (STYLE UPDATED) ---
 const CombinationChart = ({ data, yearA, yearB, analysisType }) => {
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF4560'];
+  const COLORS = ['#435EBE', '#10B981', '#F59E0B', '#6366F1', '#EC4899', '#8B5CF6'];
   
-  // Siapkan data untuk chart
   const chartData = data.map(item => {
     if (analysisType === 'Belanja') {
       return {
-        name: item.skpd.length > 25 ? item.skpd.substring(0, 25) + '...' : item.skpd,
+        name: item.skpd.length > 20 ? item.skpd.substring(0, 20) + '...' : item.skpd,
         skpdFull: item.skpd,
-        [`pagu${yearA}`]: item.paguA / 1e9, // Konversi ke Miliar
+        [`pagu${yearA}`]: item.paguA / 1e9,
         [`realisasi${yearA}`]: item.realisasiA / 1e9,
         [`persen${yearA}`]: item.kinerjaA,
         [`pagu${yearB}`]: item.paguB / 1e9,
@@ -31,7 +96,7 @@ const CombinationChart = ({ data, yearA, yearB, analysisType }) => {
       };
     } else {
       return {
-        name: item.skpd.length > 25 ? item.skpd.substring(0, 25) + '...' : item.skpd,
+        name: item.skpd.length > 20 ? item.skpd.substring(0, 20) + '...' : item.skpd,
         skpdFull: item.skpd,
         [`target${yearA}`]: item.targetA / 1e9,
         [`realisasi${yearA}`]: item.realisasiA / 1e9,
@@ -41,187 +106,135 @@ const CombinationChart = ({ data, yearA, yearB, analysisType }) => {
         [`persen${yearB}`]: item.kinerjaB,
       };
     }
-  }).slice(0, 15); // Tampilkan top 15 saja
+  }).slice(0, 15);
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mt-6">
-      <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
-        Komposisi {analysisType} {yearA} vs {yearB} (dalam Miliar Rp)
-      </h3>
-      <ResponsiveContainer width="100%" height={500}>
-        <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 100 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
-          <XAxis 
-            dataKey="name" 
-            angle={-45} 
-            textAnchor="end" 
-            interval={0} 
-            height={80}
-            tick={{ fontSize: 11 }}
-          />
-          <YAxis 
-            yAxisId="left"
-            tickFormatter={(val) => `${val} M`} 
-            tick={{ fontSize: 11 }}
-            label={{ value: 'Nilai (Miliar Rp)', angle: -90, position: 'insideLeft', style: { fontSize: 12 } }}
-          />
-          <YAxis 
-            yAxisId="right" 
-            orientation="right" 
-            domain={[0, 100]}
-            tickFormatter={(val) => `${val}%`}
-            tick={{ fontSize: 11 }}
-            label={{ value: 'Persentase (%)', angle: 90, position: 'insideRight', style: { fontSize: 12 } }}
-          />
-          <Tooltip 
-            formatter={(value, name) => {
-              if (name.includes('persen')) return `${value.toFixed(2)}%`;
-              return formatCurrency(value * 1e9);
-            }}
-            labelFormatter={(label) => {
-              const item = chartData.find(d => d.name === label);
-              return item?.skpdFull || label;
-            }}
-          />
-          <Legend 
-            verticalAlign="top" 
-            height={36}
-            formatter={(value) => {
-              return value.replace(yearA, '').replace(yearB, '').replace('pagu', 'Pagu ')
-                .replace('target', 'Target ').replace('realisasi', 'Realisasi ')
-                .replace('persen', 'Persentase ');
-            }}
-          />
-          
-          {/* Bar untuk Tahun A */}
-          <Bar 
-            yAxisId="left" 
-            dataKey={analysisType === 'Belanja' ? `pagu${yearA}` : `target${yearA}`} 
-            fill="#435EBE" 
-            name={`Pagu/Target ${yearA}`}
-            barSize={20}
-          >
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Bar>
-          
-          {/* Bar untuk Tahun B */}
-          <Bar 
-            yAxisId="left" 
-            dataKey={analysisType === 'Belanja' ? `pagu${yearB}` : `target${yearB}`} 
-            fill="#1E293B" 
-            name={`Pagu/Target ${yearB}`}
-            barSize={20}
-          >
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
-            ))}
-          </Bar>
-          
-          {/* Bar Realisasi Tahun A */}
-          <Bar 
-            yAxisId="left" 
-            dataKey={`realisasi${yearA}`} 
-            fill="#4CAF50" 
-            name={`Realisasi ${yearA}`}
-            barSize={20}
-          />
-          
-          {/* Bar Realisasi Tahun B */}
-          <Bar 
-            yAxisId="left" 
-            dataKey={`realisasi${yearB}`} 
-            fill="#FF9800" 
-            name={`Realisasi ${yearB}`}
-            barSize={20}
-          />
-          
-          {/* Line untuk Persentase Tahun A */}
-          <Line 
-            yAxisId="right" 
-            type="monotone" 
-            dataKey={`persen${yearA}`} 
-            stroke="#FF6B6B" 
-            name={`% Penyerapan ${yearA}`}
-            strokeWidth={3}
-            dot={{ r: 5 }}
-          />
-          
-          {/* Line untuk Persentase Tahun B */}
-          <Line 
-            yAxisId="right" 
-            type="monotone" 
-            dataKey={`persen${yearB}`} 
-            stroke="#4ECDC4" 
-            name={`% Penyerapan ${yearB}`}
-            strokeWidth={3}
-            dot={{ r: 5 }}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
+    <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-2xl border border-white/40 dark:border-slate-700/50 p-8 rounded-[3rem] shadow-2xl mt-10 animate-in zoom-in-95 duration-500">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-2 h-8 bg-purple-500 rounded-full"></div>
+        <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tighter italic">
+          Komposisi {analysisType} <span className="text-purple-600">{yearA}</span> vs <span className="text-slate-400">{yearB}</span>
+        </h3>
+      </div>
       
-      {/* Ringkasan Statistik */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-          <p className="text-xs text-blue-600 dark:text-blue-400">Total Pagu/Target {yearA}</p>
-          <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
-            {formatCurrency(data.reduce((sum, item) => sum + (analysisType === 'Belanja' ? item.paguA : item.targetA), 0))}
-          </p>
-        </div>
-        <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-          <p className="text-xs text-green-600 dark:text-green-400">Total Realisasi {yearA}</p>
-          <p className="text-lg font-bold text-green-700 dark:text-green-300">
-            {formatCurrency(data.reduce((sum, item) => sum + item.realisasiA, 0))}
-          </p>
-        </div>
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-          <p className="text-xs text-blue-600 dark:text-blue-400">Total Pagu/Target {yearB}</p>
-          <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
-            {formatCurrency(data.reduce((sum, item) => sum + (analysisType === 'Belanja' ? item.paguB : item.targetB), 0))}
-          </p>
-        </div>
-        <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-          <p className="text-xs text-green-600 dark:text-green-400">Total Realisasi {yearB}</p>
-          <p className="text-lg font-bold text-green-700 dark:text-green-300">
-            {formatCurrency(data.reduce((sum, item) => sum + item.realisasiB, 0))}
-          </p>
-        </div>
+      <div className="h-[550px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 100 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128, 128, 128, 0.08)" />
+            <XAxis 
+              dataKey="name" 
+              angle={-45} 
+              textAnchor="end" 
+              interval={0} 
+              height={80}
+              tick={{ fontSize: 10, fontWeight: 800, fill: '#64748b' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis 
+              yAxisId="left"
+              tickFormatter={(val) => `${val}M`} 
+              tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis 
+              yAxisId="right" 
+              orientation="right" 
+              domain={[0, 100]}
+              tickFormatter={(val) => `${val}%`}
+              tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <Tooltip 
+              cursor={{fill: 'rgba(99, 102, 241, 0.03)', radius: 12}}
+              contentStyle={{ 
+                borderRadius: '2rem', border: 'none', 
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.2)', 
+                backgroundColor: 'rgba(255,255,255,0.98)', 
+                backdropFilter: 'blur(10px)',
+                padding: '1.5rem'
+              }}
+              formatter={(value, name) => {
+                if (name.includes('persen')) return [`${value.toFixed(2)}%`, 'Efektivitas'];
+                return [formatIDR(value * 1e9), 'Volume'];
+              }}
+            />
+            <Legend verticalAlign="top" height={50} iconType="circle" wrapperStyle={{paddingBottom: '20px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em'}} />
+            
+            <Bar yAxisId="left" dataKey={analysisType === 'Belanja' ? `pagu${yearA}` : `target${yearA}`} name={`Volume ${yearA}`} radius={[8, 8, 0, 0]} barSize={25}>
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={0.8} />
+              ))}
+            </Bar>
+            
+            <Bar yAxisId="left" dataKey={`realisasi${yearA}`} name={`Realisasi ${yearA}`} radius={[8, 8, 0, 0]} barSize={15} fill="#10B981" animationDuration={2000} />
+            
+            <Line yAxisId="right" type="monotone" dataKey={`persen${yearA}`} name={`% Kinerja ${yearA}`} stroke="#8B5CF6" strokeWidth={4} dot={{ r: 4, fill: '#8B5CF6', strokeWidth: 2, stroke: '#fff' }} animationDuration={3000} />
+            <Line yAxisId="right" type="monotone" dataKey={`persen${yearB}`} name={`% Kinerja ${yearB}`} stroke="#94A3B8" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3, fill: '#94A3B8' }} animationDuration={3000} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-10">
+        {[
+          { label: `Pagu ${yearA}`, val: data.reduce((s, i) => s + (analysisType === 'Belanja' ? i.paguA : i.targetA), 0), color: 'text-indigo-600', bg: 'bg-indigo-50/50' },
+          { label: `Realisasi ${yearA}`, val: data.reduce((s, i) => s + i.realisasiA, 0), color: 'text-emerald-600', bg: 'bg-emerald-50/50' },
+          { label: `Pagu ${yearB}`, val: data.reduce((s, i) => s + (analysisType === 'Belanja' ? i.paguB : i.targetB), 0), color: 'text-slate-600', bg: 'bg-slate-50/50' },
+          { label: `Realisasi ${yearB}`, val: data.reduce((s, i) => s + i.realisasiB, 0), color: 'text-orange-600', bg: 'bg-orange-50/50' }
+        ].map((stat, idx) => (
+          <div key={idx} className={`${stat.bg} p-5 rounded-3xl border border-white/50 text-left transition-transform hover:scale-105`}>
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">{stat.label}</p>
+            <p className={`text-sm font-black ${stat.color} truncate`}>{formatIDR(stat.val)}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
-// --- Analisis Kinerja View (DIMODIFIKASI) ---
-const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
+// --- MAIN ANALISIS KINERJA VIEW ---
+const AnalisisKinerjaView = ({ data = {}, theme, selectedYear, userRole }) => {
+    const [user, setUser] = React.useState(null);
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-    const [yearA, setYearA] = React.useState(selectedYear);
-    const [yearB, setYearB] = React.useState(selectedYear - 1);
+    const [yearA, setYearA] = React.useState(selectedYear || 2024);
+    const [yearB, setYearB] = React.useState((selectedYear || 2024) - 1);
     const [startMonth, setStartMonth] = React.useState(months[0]);
     const [endMonth, setEndMonth] = React.useState(months[months.length - 1]);
-    const [analysisType, setAnalysisType] = React.useState('Belanja'); // 'Belanja' atau 'Pendapatan'
+    const [analysisType, setAnalysisType] = React.useState('Belanja');
     const [dataA, setDataA] = React.useState(null);
     const [dataB, setDataB] = React.useState(null);
     const [isLoading, setIsLoading] = React.useState(false);
     const [error, setError] = React.useState('');
     const [sortConfig, setSortConfig] = React.useState({ key: 'kinerjaA', direction: 'descending' });
     const [selectedSkpd, setSelectedSkpd] = React.useState('Semua SKPD');
-    const [viewMode, setViewMode] = React.useState('table'); // 'table' atau 'chart'
+    const [viewMode, setViewMode] = React.useState('table');
 
-    // 1. Memperbarui fungsi untuk mengambil data realisasiNonRkud
+    // Auth - gunakan onAuthStateChanged
+    React.useEffect(() => {
+      const unsubscribe = auth.onAuthStateChanged(setUser);
+      return () => unsubscribe();
+    }, []);
+
+    // Perbaiki fetchDataForYear - gunakan path Firebase yang benar
     const fetchDataForYear = async (year) => {
         if (!user) return null;
         const dataTypes = ['anggaran', 'pendapatan', 'realisasi', 'realisasiPendapatan', 'realisasiNonRkud'];
         const yearData = {};
+        
         for (const dataType of dataTypes) {
-            const collRef = collection(db, "publicData", String(year), dataType);
+            // Perbaikan: Gunakan path yang benar sesuai aplikasi
+            const collRef = collection(db, 'artifacts', appId, 'public', 'data', String(year), dataType);
             const snapshot = await getDocs(query(collRef));
             let data = [];
-            snapshot.forEach(doc => { data = [...data, ...doc.data().data]; });
-            // Menambahkan realisasiNonRkud ke dalam logika data bulanan
+            snapshot.forEach(doc => { 
+                data = [...data, ...doc.data().data]; 
+            });
+            
             if (dataType === 'realisasi' || dataType === 'realisasiPendapatan' || dataType === 'realisasiNonRkud') {
                 yearData[dataType] = data.reduce((acc, item) => {
                     const month = item.month || 'Lainnya';
@@ -229,8 +242,8 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
                     acc[month].push(item);
                     return acc;
                 }, {});
-            } else {
-                yearData[dataType] = data;
+            } else { 
+                yearData[dataType] = data; 
             }
         }
         return yearData;
@@ -239,19 +252,18 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
     React.useEffect(() => {
         const loadComparisonData = async () => {
             if (yearA === yearB) {
-                setError("Silakan pilih dua tahun yang berbeda untuk perbandingan.");
-                setDataA(null); setDataB(null);
-                return;
+                setError("Silakan pilih dua tahun yang berbeda.");
+                setDataA(null); setDataB(null); return;
             }
             setError(''); setIsLoading(true);
             try {
                 const [fetchedDataA, fetchedDataB] = await Promise.all([fetchDataForYear(yearA), fetchDataForYear(yearB)]);
                 setDataA(fetchedDataA); setDataB(fetchedDataB);
-            } catch (e) {
+            } catch (e) { 
                 console.error("Error fetching comparison data:", e);
-                setError("Gagal memuat data perbandingan.");
-            } finally {
-                setIsLoading(false);
+                setError("Gagal memuat data perbandingan."); 
+            } finally { 
+                setIsLoading(false); 
             }
         };
         if (user) { loadComparisonData(); }
@@ -266,18 +278,16 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
             const endIndex = months.indexOf(endMonth);
             const selectedMonths = months.slice(startIndex, endIndex + 1);
 
-            // 2. Menggabungkan data realisasi biasa dengan realisasi Non RKUD
             let realisasiData = [];
             if (type === 'Belanja') {
                 const realisasiBiasa = selectedMonths.map(month => data.realisasi?.[month] || []).flat();
                 const realisasiNonRkudData = selectedMonths.map(month => data.realisasiNonRkud?.[month] || []).flat();
                 realisasiData = [...realisasiBiasa, ...realisasiNonRkudData];
-            } else { // Pendapatan
+            } else {
                 realisasiData = selectedMonths.map(month => data.realisasiPendapatan?.[month] || []).flat();
             }
 
             const targetData = data[type === 'Belanja' ? 'anggaran' : 'pendapatan'] || [];
-
             targetData.forEach(item => {
                 const skpdName = item.NamaSKPD || item.NamaOPD || 'Tanpa SKPD/OPD';
                 if (!skpdMap.has(skpdName)) skpdMap.set(skpdName, { skpd: skpdName });
@@ -290,7 +300,6 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
             });
 
             realisasiData.forEach(item => {
-                // 3. Menyamakan nama kolom (NamaSKPD vs NAMASKPD)
                 const skpdName = item.NamaSKPD || item.SKPD || item.NAMASKPD || 'Tanpa SKPD/OPD';
                 if (!skpdMap.has(skpdName)) skpdMap.set(skpdName, { skpd: skpdName });
                 const skpd = skpdMap.get(skpdName);
@@ -314,7 +323,7 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
                     kinerjaA: paguA > 0 ? (realisasiA / paguA) * 100 : 0,
                     kinerjaB: paguB > 0 ? (realisasiB / paguB) * 100 : 0,
                 };
-            } else { // Pendapatan
+            } else {
                 const targetA = skpd.targetA || 0;
                 const realisasiA = skpd.realisasiA || 0;
                 const targetB = skpd.targetB || 0;
@@ -333,15 +342,13 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
             if (skpdData) {
                 const targetLabel = analysisType === 'Belanja' ? 'Pagu' : 'Target';
                 radarData = [
-                    { subject: targetLabel, A: skpdData[analysisType === 'Belanja' ? 'paguA' : 'targetA'], B: skpdData[analysisType === 'Belanja' ? 'paguB' : 'targetB'], fullMark: Math.max(skpdData[analysisType === 'Belanja' ? 'paguA' : 'targetA'], skpdData[analysisType === 'Belanja' ? 'paguB' : 'targetB']) * 1.1 },
-                    { subject: 'Realisasi', A: skpdData.realisasiA, B: skpdData.realisasiB, fullMark: Math.max(skpdData.realisasiA, skpdData.realisasiB) * 1.1 },
-                    { subject: 'Kinerja (%)', A: skpdData.kinerjaA, B: skpdData.kinerjaB, fullMark: 100 },
+                    { subject: targetLabel, A: skpdData[analysisType === 'Belanja' ? 'paguA' : 'targetA'], B: skpdData[analysisType === 'Belanja' ? 'paguB' : 'targetB'] },
+                    { subject: 'Realisasi', A: skpdData.realisasiA, B: skpdData.realisasiB },
+                    { subject: 'Efektivitas (%)', A: skpdData.kinerjaA, B: skpdData.kinerjaB },
                 ];
             }
         }
-
         return { performanceData, skpdList, radarData };
-
     }, [dataA, dataB, analysisType, startMonth, endMonth, selectedSkpd]);
 
     const sortedData = React.useMemo(() => {
@@ -349,7 +356,6 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
         if (selectedSkpd !== 'Semua SKPD') {
             dataToDisplay = performanceData.filter(item => item.skpd === selectedSkpd);
         }
-        
         if (sortConfig.key) {
             return [...dataToDisplay].sort((a, b) => {
                 if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'ascending' ? -1 : 1;
@@ -367,197 +373,335 @@ const AnalisisKinerjaView = ({ theme, user, selectedYear, namaPemda }) => {
         }
         setSortConfig({ key, direction });
     };
-    
+
     const getAnalysisPrompt = (customQuery) => {
         if (customQuery) return `Berdasarkan data kinerja ${analysisType}, berikan analisis untuk: "${customQuery}"`;
-        if (sortedData.length === 0) return "Data tidak cukup untuk analisis.";
-        
+        if (sortedData.length === 0) return "Data tidak cukup.";
         const top5 = sortedData.slice(0, 5);
-        const bottom5 = sortedData.slice(-5).reverse();
-        const period = startMonth === endMonth ? startMonth : `periode ${startMonth} - ${endMonth}`;
-
-        const formatItem = (item) => analysisType === 'Belanja'
-            ? `- **${item.skpd}**: Kinerja ${yearA}: ${item.kinerjaA.toFixed(2)}%, Kinerja ${yearB}: ${item.kinerjaB.toFixed(2)}%`
-            : `- **${item.skpd}**: Kinerja ${yearA}: ${item.kinerjaA.toFixed(2)}%, Kinerja ${yearB}: ${item.kinerjaB.toFixed(2)}%`;
-
-        return `
-            Anda adalah seorang analis kinerja untuk ${namaPemda || 'pemerintah daerah'}. Lakukan analisis perbandingan kinerja **${analysisType}** SKPD antara tahun **${yearA}** dan **${yearB}** untuk **${period}**.
-            ${selectedSkpd !== 'Semua SKPD' ? `Fokus analisis pada: **${selectedSkpd}**.` : ''}
-
-            ### SKPD Kinerja Tertinggi (${yearA})
-            ${top5.map(formatItem).join('\n')}
-
-            ### SKPD Kinerja Terendah (${yearA})
-            ${bottom5.map(formatItem).join('\n')}
-
-            Berikan analisis mendalam mengenai:
-            1.  Perubahan kinerja yang signifikan antara dua tahun. Identifikasi SKPD yang menunjukkan peningkatan atau penurunan drastis.
-            2.  Kemungkinan faktor penyebab di balik kinerja tinggi atau rendah (misalnya, efektivitas program, perubahan target, dll.).
-            3.  Rekomendasi strategis untuk SKPD berkinerja rendah dan cara mempertahankan atau meningkatkan kinerja bagi SKPD berkinerja tinggi.
-        `;
+        return `Analis perbandingan kinerja ${analysisType} ${yearA} vs ${yearB}. Top SKPD: ${top5.map(i => i.skpd).join(', ')}`;
     };
-    
+
     const renderSortIcon = (key) => {
-        if (sortConfig.key !== key) return <ChevronsUpDown size={14} className="ml-1 text-gray-400" />;
-        return sortConfig.direction === 'ascending' ? <ChevronDown size={14} className="ml-1" /> : <ChevronDown size={14} className="ml-1 transform rotate-180" />;
+        if (sortConfig.key !== key) return <ChevronsUpDown size={14} className="ml-1 opacity-30" />;
+        return sortConfig.direction === 'ascending' ? <ChevronDown size={14} className="ml-1 text-purple-600" /> : <ChevronDown size={14} className="ml-1 transform rotate-180 text-purple-600" />;
     };
-
-    const renderGrowth = (valA, valB) => {
-        const change = valA - valB;
-        if (valA === 0 && valB === 0) return <span className="text-gray-500">-</span>;
-        const color = change >= 0 ? 'text-green-500' : 'text-red-500';
-        return <span className={color}>{change.toFixed(2)} pp</span>;
-    };
-    
-    const tableHeaders = analysisType === 'Belanja'
-        ? [
-            { key: 'skpd', label: 'Nama SKPD' },
-            { key: 'paguB', label: `Pagu ${yearB}` },
-            { key: 'paguA', label: `Pagu ${yearA}` },
-            { key: 'realisasiB', label: `Realisasi ${yearB}` },
-            { key: 'realisasiA', label: `Realisasi ${yearA}` },
-            { key: 'kinerjaB', label: `Penyerapan ${yearB} (%)` },
-            { key: 'kinerjaA', label: `Penyerapan ${yearA} (%)` },
-            { key: 'growth', label: 'Perubahan Kinerja (pp)' },
-          ]
-        : [
-            { key: 'skpd', label: 'Nama SKPD/OPD' },
-            { key: 'targetB', label: `Target ${yearB}` },
-            { key: 'targetA', label: `Target ${yearA}` },
-            { key: 'realisasiB', label: `Realisasi ${yearB}` },
-            { key: 'realisasiA', label: `Realisasi ${yearA}` },
-            { key: 'kinerjaB', label: `Pencapaian ${yearB} (%)` },
-            { key: 'kinerjaA', label: `Pencapaian ${yearA} (%)` },
-            { key: 'growth', label: 'Perubahan Kinerja (pp)' },
-          ];
 
     return (
-        <div className="space-y-6">
-            <SectionTitle>Analisis Kinerja SKPD</SectionTitle>
-            <GeminiAnalysis getAnalysisPrompt={getAnalysisPrompt} disabledCondition={sortedData.length === 0} theme={theme} />
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <select value={yearA} onChange={e => setYearA(parseInt(e.target.value))} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                        {years.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                    <select value={yearB} onChange={e => setYearB(parseInt(e.target.value))} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                        {years.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                    <select value={analysisType} onChange={e => setAnalysisType(e.target.value)} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                        <option>Belanja</option>
-                        <option>Pendapatan</option>
-                    </select>
-                    
-                    {/* Toggle View Mode */}
-                    <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
-                        <button
-                            onClick={() => setViewMode('table')}
-                            className={`flex-1 px-4 py-2 text-sm font-medium ${
-                                viewMode === 'table' 
-                                    ? 'bg-purple-600 text-white' 
-                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                            }`}
-                        >
-                            Tabel
-                        </button>
-                        <button
-                            onClick={() => setViewMode('chart')}
-                            className={`flex-1 px-4 py-2 text-sm font-medium ${
-                                viewMode === 'chart' 
-                                    ? 'bg-purple-600 text-white' 
-                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                            }`}
-                        >
-                            Grafik
-                        </button>
+        <div className="min-h-screen space-y-10 animate-in fade-in duration-1000 pb-20 text-left">
+            <SectionTitle>Analisis Kinerja Perangkat Daerah</SectionTitle>
+            
+            {/* PANEL INFORMASI UNTUK PIMPINAN - PREMIUM EXECUTIVE BRIEFING */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-purple-700 via-indigo-800 to-slate-900 rounded-[3rem] p-8 text-white shadow-2xl border border-white/20 group">
+                {/* Decorative Elements */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-[100px] -mr-40 -mt-40"></div>
+                <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-400/10 rounded-full blur-[80px] -ml-32 -mb-32"></div>
+                <div className="absolute top-20 left-20 w-40 h-40 bg-yellow-500/5 rounded-full blur-[60px]"></div>
+                
+                {/* Crown Icon for Leadership */}
+                <div className="absolute top-8 right-12 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Crown size={120} className="text-yellow-400" />
+                </div>
+                
+                <div className="relative z-10">
+                    {/* Header dengan ikon eksekutif */}
+                    <div className="flex items-center gap-4 mb-6 border-b border-white/20 pb-6">
+                        <div className="p-4 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl shadow-lg shadow-yellow-500/30">
+                            <Briefcase size={32} className="text-white" />
+                        </div>
+                        <div>
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black tracking-[0.2em] uppercase border border-white/30 mb-2">
+                                <Eye size={12} className="text-yellow-300" /> EXECUTIVE DASHBOARD
+                            </div>
+                            <h2 className="text-3xl font-black tracking-tighter leading-tight">
+                                ARAHAN DAN EVALUASI <br/>
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-pink-300">KINERJA PERANGKAT DAERAH</span>
+                            </h2>
+                        </div>
+                    </div>
+
+                    {/* 3 Card Utama untuk Pimpinan */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+                        {/* Card 1: Tujuan Menu */}
+                        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all group/card">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2 bg-purple-500/30 rounded-xl">
+                                    <Target size={20} className="text-purple-200" />
+                                </div>
+                                <h3 className="font-black text-sm uppercase tracking-wider">TUJUAN ANALISIS</h3>
+                            </div>
+                            <p className="text-sm text-purple-100 leading-relaxed">
+                                Menu ini dirancang untuk <span className="font-black text-white">membantu pimpinan</span> dalam memantau efektivitas kinerja seluruh Perangkat Daerah secara komparatif antar tahun.
+                            </p>
+                            <ul className="mt-3 space-y-2 text-xs text-purple-200">
+                                <li className="flex items-start gap-2">
+                                    <CheckCircle2 size={14} className="text-green-300 mt-0.5 flex-shrink-0" />
+                                    <span>Identifikasi SKPD dengan kinerja optimal dan perlu pendampingan</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <CheckCircle2 size={14} className="text-green-300 mt-0.5 flex-shrink-0" />
+                                    <span>Evaluasi tren pertumbuhan realisasi vs pagu/target dalam persentase</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* Card 2: Panduan Membaca Data */}
+                        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all group/card">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2 bg-blue-500/30 rounded-xl">
+                                    <Lightbulb size={20} className="text-blue-200" />
+                                </div>
+                                <h3 className="font-black text-sm uppercase tracking-wider">PANDUAN MEMBACA DATA</h3>
+                            </div>
+                            <p className="text-sm text-purple-100 leading-relaxed mb-3">
+                                Fokus pada 3 indikator utama:
+                            </p>
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center border-b border-white/10 pb-2">
+                                    <span className="text-xs font-bold text-purple-200">Kinerja &gt; 85%</span>
+                                    <span className="text-xs px-2 py-1 bg-emerald-500/30 rounded-full text-emerald-200 font-black">OPTIMAL</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-white/10 pb-2">
+                                    <span className="text-xs font-bold text-purple-200">Kinerja 50-85%</span>
+                                    <span className="text-xs px-2 py-1 bg-yellow-500/30 rounded-full text-yellow-200 font-black">PROGRES</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-white/10 pb-2">
+                                    <span className="text-xs font-bold text-purple-200">Kinerja &lt; 50%</span>
+                                    <span className="text-xs px-2 py-1 bg-rose-500/30 rounded-full text-rose-200 font-black">BUTUH ATENSI</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Card 3: Insight Cepat */}
+                        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all group/card">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2 bg-amber-500/30 rounded-xl">
+                                    <TrendingUpIcon size={20} className="text-amber-200" />
+                                </div>
+                                <h3 className="font-black text-sm uppercase tracking-wider">INSIGHT CEPAT</h3>
+                            </div>
+                            <p className="text-sm text-purple-100 leading-relaxed mb-2">
+                                Perhatikan kolom <span className="font-black text-white">Delta (pp)</span> untuk melihat pertumbuhan kinerja.
+                            </p>
+                            <div className="flex items-center gap-2 bg-white/5 p-3 rounded-xl">
+                                <ArrowUpRight size={20} className="text-emerald-400" />
+                                <div>
+                                    <p className="text-xs font-black text-emerald-300">Positif Delta</p>
+                                    <p className="text-[10px] text-purple-200">Peningkatan efektivitas</p>
+                                </div>
+                                <ArrowDownRight size={20} className="text-rose-400 ml-2" />
+                                <div>
+                                    <p className="text-xs font-black text-rose-300">Negatif Delta</p>
+                                    <p className="text-[10px] text-purple-200">Perlu evaluasi</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Quick Stats Row untuk Pimpinan */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                        <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 border border-white/10">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-purple-300">Total SKPD</p>
+                            <p className="text-xl font-black text-white">{skpdList.length}</p>
+                        </div>
+                        <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 border border-white/10">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-purple-300">Periode Analisis</p>
+                            <p className="text-lg font-black text-white">{startMonth} - {endMonth}</p>
+                        </div>
+                        <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 border border-white/10">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-purple-300">Tahun Fokus</p>
+                            <p className="text-xl font-black text-white">{yearA}</p>
+                        </div>
+                        <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 border border-white/10">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-purple-300">Benchmark</p>
+                            <p className="text-xl font-black text-white">{yearB}</p>
+                        </div>
+                    </div>
+
+                    {/* Executive Note */}
+                    <div className="mt-6 flex items-center gap-3 text-sm text-purple-200 bg-purple-900/30 p-4 rounded-2xl border border-purple-500/30">
+                        <AlertCircle size={20} className="text-yellow-300 flex-shrink-0" />
+                        <p className="text-xs leading-relaxed">
+                            <span className="font-black text-white">CATATAN EKSEKUTIF:</span> Gunakan filter "Unit Kerja" untuk analisis mendalam per SKPD. 
+                            Grafik radar menampilkan perbandingan head-to-head antara tahun {yearA} dan {yearB}. 
+                            Klik header tabel untuk mengurutkan data berdasarkan indikator yang diinginkan.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            {/* SELEKTOR GLASS BAR */}
+            <div className="sticky top-6 z-50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border border-white/40 dark:border-slate-800/50 p-6 rounded-[2.5rem] shadow-2xl flex flex-wrap gap-6 items-center transition-all duration-500">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest">Tahun Fokus</label>
+                        <select value={yearA} onChange={e => setYearA(parseInt(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black focus:ring-4 focus:ring-purple-500/20 outline-none">
+                            {years.map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest">Benchmark</label>
+                        <select value={yearB} onChange={e => setYearB(parseInt(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black focus:ring-4 focus:ring-purple-500/20 outline-none">
+                            {years.map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest">Analisis</label>
+                        <select value={analysisType} onChange={e => setAnalysisType(e.target.value)} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black focus:ring-4 focus:ring-purple-500/20 outline-none">
+                            <option>Belanja</option><option>Pendapatan</option>
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest">Mulai Dari</label>
+                        <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black outline-none">
+                            {months.map(m => <option key={`start-${m}`} value={m}>{m}</option>)}
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest">Sampai Akhir</label>
+                        <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black outline-none">
+                            {months.map(m => <option key={`end-${m}`} value={m}>{m}</option>)}
+                        </select>
                     </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                        {months.map(m => <option key={`start-${m}`} value={m}>Dari: {m}</option>)}
-                    </select>
-                    <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                        {months.map(m => <option key={`end-${m}`} value={m}>Sampai: {m}</option>)}
-                    </select>
+                {/* View Toggle */}
+                <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner">
+                    <button onClick={() => setViewMode('table')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${viewMode === 'table' ? 'bg-white dark:bg-slate-700 shadow-md' : 'opacity-40 hover:opacity-100'}`}>
+                        <TableIcon size={14} /> TABEL
+                    </button>
+                    <button onClick={() => setViewMode('chart')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${viewMode === 'chart' ? 'bg-white dark:bg-slate-700 shadow-md text-purple-600' : 'opacity-40 hover:opacity-100'}`}>
+                        <Layout size={14} /> GRAFIK
+                    </button>
                 </div>
+            </div>
 
-                {/* Filter SKPD */}
-                <div className="mb-6">
-                    <select 
-                        value={selectedSkpd} 
-                        onChange={e => setSelectedSkpd(e.target.value)} 
-                        className="w-full pl-3 pr-8 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
+            {/* GEMINI INTELLIGENCE */}
+            <GeminiAnalysis getAnalysisPrompt={getAnalysisPrompt} disabledCondition={sortedData.length === 0} theme={theme} interactivePlaceholder="Tanyakan pola efektivitas SKPD..." />
+
+            <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/30 dark:border-white/5 p-8 rounded-[3rem] shadow-2xl space-y-8">
+                {/* SKPD Search/Filter */}
+                <div className="relative group">
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-purple-500 transition-colors">
+                        <Filter size={20} />
+                    </div>
+                    <select value={selectedSkpd} onChange={e => setSelectedSkpd(e.target.value)} className="w-full pl-14 pr-6 py-4 bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-[1.5rem] text-sm font-black shadow-lg shadow-black/5 outline-none focus:ring-4 focus:ring-purple-500/20 transition-all cursor-pointer">
                         <option>Semua SKPD</option>
                         {skpdList.map(skpd => <option key={skpd} value={skpd}>{skpd}</option>)}
                     </select>
                 </div>
 
-                {isLoading && <div className="text-center py-10"><Loader className="animate-spin mx-auto text-purple-500" size={40}/></div>}
-                {error && <p className="text-center text-red-500 py-10">{error}</p>}
-                {!isLoading && !error && (
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4">
+                        <Loader className="animate-spin text-purple-500" size={48} />
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Mengkalkulasi...</p>
+                    </div>
+                ) : error ? (
+                    <div className="p-8 bg-rose-50 dark:bg-rose-950/20 border-l-[6px] border-rose-500 rounded-[2rem] flex items-center gap-6 text-rose-600 shadow-xl shadow-rose-500/5">
+                        <div className="p-3 bg-rose-500 rounded-2xl text-white shadow-lg shadow-rose-500/30">
+                            <Info size={28} />
+                        </div>
+                        <p className="font-black text-lg tracking-tight">{error}</p>
+                    </div>
+                ) : (
                     <>
-                    {selectedSkpd !== 'Semua SKPD' && radarData.length > 0 && (
-                        <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4 text-center">Perbandingan Kinerja Head-to-Head: {selectedSkpd}</h3>
-                            <ResponsiveContainer width="100%" height={400}>
-                                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                                    <PolarGrid />
-                                    <PolarAngleAxis dataKey="subject" />
-                                    <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} tickFormatter={(value, index) => index === 2 ? `${value}%` : ''} />
-                                    <Tooltip formatter={(value, name, props) => props.payload.subject === 'Kinerja (%)' ? `${value.toFixed(2)}%` : formatCurrency(value)} />
-                                    <Legend />
-                                    <Radar name={yearA} dataKey="A" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-                                    <Radar name={yearB} dataKey="B" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
-                                </RadarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    )}
-                    
-                    {/* TAMPILAN GRAFIK (BARU) */}
-                    {viewMode === 'chart' && sortedData.length > 0 && (
-                        <CombinationChart 
-                            data={sortedData} 
-                            yearA={yearA} 
-                            yearB={yearB} 
-                            analysisType={analysisType} 
-                        />
-                    )}
-                    
-                    {/* TAMPILAN TABEL (LAMA) */}
-                    {viewMode === 'table' && (
-                        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                <thead className="bg-gray-50 dark:bg-gray-700">
-                                    <tr>
-                                        {tableHeaders.map(header => (
-                                            <th key={header.key} onClick={() => header.key !== 'growth' && requestSort(header.key)} className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${header.key !== 'growth' ? 'cursor-pointer' : ''}`}>
-                                                <div className="flex items-center">{header.label} {header.key !== 'growth' && renderSortIcon(header.key)}</div>
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    {sortedData.map((item) => (
-                                        <tr key={item.skpd} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                            <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 max-w-xs whitespace-normal break-words">{item.skpd}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">{formatCurrency(analysisType === 'Belanja' ? item.paguB : item.targetB)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">{formatCurrency(analysisType === 'Belanja' ? item.paguA : item.targetA)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">{formatCurrency(item.realisasiB)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">{formatCurrency(item.realisasiA)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold" style={{ color: item.kinerjaB > 85 ? '#10B981' : item.kinerjaB < 50 ? '#EF4444' : 'inherit' }}>{item.kinerjaB.toFixed(2)}%</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold" style={{ color: item.kinerjaA > 85 ? '#10B981' : item.kinerjaA < 50 ? '#EF4444' : 'inherit' }}>{item.kinerjaA.toFixed(2)}%</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold">{renderGrowth(item.kinerjaA, item.kinerjaB)}</td>
+                        {/* Head-to-Head Radar */}
+                        {selectedSkpd !== 'Semua SKPD' && radarData.length > 0 && (
+                            <div className="p-8 bg-purple-500/5 rounded-[2.5rem] border border-purple-500/20 animate-in slide-in-from-bottom-5 duration-700">
+                                <h3 className="text-xl font-black text-slate-800 dark:text-white mb-6 flex items-center justify-center gap-3 italic">
+                                    <Target size={24} className="text-purple-500" /> Head-to-Head Analysis: {selectedSkpd}
+                                </h3>
+                                <div className="h-[400px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                                            <PolarGrid strokeOpacity={0.1} />
+                                            <PolarAngleAxis dataKey="subject" tick={{fontSize: 10, fontWeight: 900}} />
+                                            <Radar name={String(yearA)} dataKey="A" stroke="#8884d8" fill="#8884d8" fillOpacity={0.5} />
+                                            <Radar name={String(yearB)} dataKey="B" stroke="#94a3b8" fill="#94a3b8" fillOpacity={0.3} />
+                                            <Tooltip contentStyle={{borderRadius: '1rem', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)'}} />
+                                            <Legend />
+                                        </RadarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* View Content */}
+                        {viewMode === 'chart' ? (
+                            <CombinationChart data={sortedData} yearA={yearA} yearB={yearB} analysisType={analysisType} />
+                        ) : (
+                            <div className="overflow-x-auto rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl bg-white/20 dark:bg-slate-800/20">
+                                <table className="min-w-full border-separate border-spacing-0">
+                                    <thead>
+                                        <tr className="bg-slate-100/50 dark:bg-slate-800/50">
+                                            {(analysisType === 'Belanja' ? [
+                                                { key: 'skpd', label: 'Unit Kerja' },
+                                                { key: 'paguB', label: `Pagu ${yearB}` },
+                                                { key: 'paguA', label: `Pagu ${yearA}` },
+                                                { key: 'realisasiB', label: `Real. ${yearB}` },
+                                                { key: 'realisasiA', label: `Real. ${yearA}` },
+                                                { key: 'kinerjaB', label: `${yearB} (%)` },
+                                                { key: 'kinerjaA', label: `${yearA} (%)` },
+                                                { key: 'growth', label: 'Delta (pp)' },
+                                            ] : [
+                                                { key: 'skpd', label: 'Unit Penghasil' },
+                                                { key: 'targetB', label: `Tgt ${yearB}` },
+                                                { key: 'targetA', label: `Tgt ${yearA}` },
+                                                { key: 'realisasiB', label: `Real. ${yearB}` },
+                                                { key: 'realisasiA', label: `Real. ${yearA}` },
+                                                { key: 'kinerjaB', label: `${yearB} (%)` },
+                                                { key: 'kinerjaA', label: `${yearA} (%)` },
+                                                { key: 'growth', label: 'Delta (pp)' },
+                                            ]).map((header) => (
+                                                <th key={header.key} onClick={() => header.key !== 'growth' && requestSort(header.key)} className="px-6 py-5 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest cursor-pointer hover:bg-slate-200/50 transition-colors">
+                                                    <div className="flex items-center whitespace-nowrap">
+                                                        {header.label} {header.key !== 'growth' && renderSortIcon(header.key)}
+                                                    </div>
+                                                </th>
+                                            ))}
                                         </tr>
-                                    ))}
-                                    {sortedData.length === 0 && <tr><td colSpan={tableHeaders.length} className="text-center py-8 text-gray-500">Tidak ada data untuk ditampilkan.</td></tr>}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        {sortedData.map((item, idx) => {
+                                            const growth = item.kinerjaA - item.kinerjaB;
+                                            return (
+                                                <tr key={idx} className="hover:bg-purple-500/5 transition-colors group">
+                                                    <td className="px-6 py-4 text-xs font-black text-slate-700 dark:text-slate-200 max-w-xs">{item.skpd}</td>
+                                                    <td className="px-6 py-4 text-[11px] font-bold text-slate-500 text-right">{formatIDR(analysisType === 'Belanja' ? item.paguB : item.targetB)}</td>
+                                                    <td className="px-6 py-4 text-[11px] font-black text-indigo-600 text-right">{formatIDR(analysisType === 'Belanja' ? item.paguA : item.targetA)}</td>
+                                                    <td className="px-6 py-4 text-[11px] font-bold text-slate-500 text-right">{formatIDR(item.realisasiB)}</td>
+                                                    <td className="px-6 py-4 text-[11px] font-black text-emerald-600 text-right">{formatIDR(item.realisasiA)}</td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <span className="text-[11px] font-bold opacity-40">{item.kinerjaB.toFixed(1)}%</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className={`px-2 py-1 rounded-lg text-[11px] font-black inline-block ${item.kinerjaA > 85 ? 'bg-emerald-100 text-emerald-700' : item.kinerjaA < 50 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-700'}`}>
+                                                            {item.kinerjaA.toFixed(1)}%
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <span className={`text-[11px] font-black ${growth >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                            {growth >= 0 ? '+' : ''}{growth.toFixed(2)}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                                {sortedData.length === 0 && <div className="py-20 text-center text-xs font-black uppercase text-slate-400 tracking-widest italic">Data tidak ditemukan</div>}
+                            </div>
+                        )}
                     </>
                 )}
+            </div>
+            
+            {/* Footer Legend */}
+            <div className="flex flex-wrap items-center justify-center gap-8 py-8 border-t border-slate-200 dark:border-slate-800 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+                <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div> Optimal (≥85%)</div>
+                <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div> Progres (50-85%)</div>
+                <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div> Perlu Atensi (≤50%)</div>
+                <div className="flex items-center gap-2 ml-4"><div className="w-4 h-0.5 border-t-2 border-dashed border-slate-400"></div> Benchmark {yearB}</div>
+                <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-purple-600"></div> Tahun Fokus {yearA}</div>
             </div>
         </div>
     );

@@ -3,23 +3,36 @@ import SectionTitle from './SectionTitle';
 import GeminiAnalysis from './GeminiAnalysis';
 import Pagination from './Pagination';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Line, Cell } from 'recharts';
-import { Search, TrendingUp, TrendingDown, Target, DollarSign, Calendar, Filter, Download, Eye, EyeOff, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { 
+  Search, TrendingUp, TrendingDown, Target, DollarSign, Calendar, 
+  Filter, Download, Eye, EyeOff, AlertTriangle, CheckCircle, Info,
+  Award, Crown, Briefcase, Users, Lightbulb, Activity, Zap,
+  ChevronRight, Sparkles, LayoutDashboard, PieChart, ArrowUpRight,
+  ArrowDownRight, Shield, AlertOctagon, Layers, BarChart3
+} from 'lucide-react';
 import { formatCurrency } from './formatCurrency';
 
-// Custom Tooltip dengan desain modern
+// Custom Tooltip dengan desain modern dan glassmorphism
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
         return (
-            <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl p-4 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 min-w-[240px] z-50">
-                <p className="font-bold text-gray-800 dark:text-gray-100 text-sm mb-3 border-b border-gray-100 dark:border-gray-800 pb-2 max-w-[250px] break-words">{label}</p>
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl p-5 rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] border border-white/50 dark:border-gray-700/50 min-w-[280px] z-50 animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center gap-2 mb-3 border-b border-gray-100 dark:border-gray-800 pb-2">
+                    <div className="w-1.5 h-6 bg-gradient-to-b from-teal-500 to-emerald-500 rounded-full"></div>
+                    <p className="font-black text-sm text-gray-800 dark:text-white uppercase tracking-tight max-w-[220px] break-words">
+                        {label}
+                    </p>
+                </div>
                 {payload.map((entry, index) => (
-                    <div key={`item-${index}`} className="flex justify-between items-center text-xs mb-2">
-                        <span className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                    <div key={`item-${index}`} className="flex justify-between items-center text-xs mb-2 group/item hover:bg-gray-50 dark:hover:bg-gray-800/50 p-1 rounded-lg transition-colors">
+                        <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300 font-medium">
+                            <div className="w-2 h-2 rounded-full shadow-lg" style={{ backgroundColor: entry.color, boxShadow: `0 0 10px ${entry.color}` }}></div>
                             {entry.name}
                         </span>
-                        <span className="font-bold text-gray-800 dark:text-gray-200">
-                            {formatCurrency(entry.value)}
+                        <span className="font-black text-gray-900 dark:text-white tabular-nums">
+                            {entry.name?.toLowerCase().includes('persen') 
+                                ? `${Number(entry.value).toFixed(1)}%`
+                                : formatCurrency(entry.value)}
                         </span>
                     </div>
                 ))}
@@ -29,7 +42,7 @@ const CustomTooltip = ({ active, payload, label }) => {
     return null;
 };
 
-// --- UPDATED: SkpdPendapatanStatsView Component with Modern Design ---
+// --- ENHANCED: SkpdPendapatanStatsView Component with Executive Dashboard & Modern Design ---
 const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYear }) => {
     const { pendapatan, realisasiPendapatan } = data;
     const [selectedSkpd, setSelectedSkpd] = React.useState('Semua SKPD');
@@ -39,6 +52,8 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
     const [showProjection, setShowProjection] = React.useState(true);
     const [sortBy, setSortBy] = React.useState('target'); // 'target', 'realisasi', 'persentase'
     const [sortOrder, setSortOrder] = React.useState('desc');
+    const [viewMode, setViewMode] = React.useState('table'); // 'table' atau 'card'
+    const [showExecutiveInfo, setShowExecutiveInfo] = React.useState(true);
     
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     const [startMonth, setStartMonth] = React.useState(months[0]);
@@ -204,6 +219,46 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
 
     }, [pendapatan, realisasiPendapatan, selectedSkpd, projectionMonth, searchTerm]);
 
+    // === EXECUTIVE SUMMARY DATA ===
+    const executiveSummary = React.useMemo(() => {
+        if (!stats.tableData.length) return null;
+        
+        const totalTarget = stats.tableData.reduce((sum, item) => sum + item.totalTarget, 0);
+        const totalRealisasi = stats.tableData.reduce((sum, item) => sum + item.totalRealisasi, 0);
+        const rataRataPersentase = totalTarget > 0 ? (totalRealisasi / totalTarget) * 100 : 0;
+        
+        // Sumber pendapatan dengan kinerja terbaik
+        const topPerformers = [...stats.tableData]
+            .sort((a, b) => b.persentase - a.persentase)
+            .slice(0, 3);
+        
+        // Sumber pendapatan dengan kinerja terendah
+        const lowPerformers = [...stats.tableData]
+            .sort((a, b) => a.persentase - b.persentase)
+            .slice(0, 3);
+        
+        // Sumber pendapatan dengan kontribusi terbesar
+        const topContributors = [...stats.tableData]
+            .sort((a, b) => b.totalRealisasi - a.totalRealisasi)
+            .slice(0, 3);
+        
+        // Analisis gap
+        const totalGap = totalTarget - totalRealisasi;
+        const gapPercentage = totalTarget > 0 ? (totalGap / totalTarget) * 100 : 0;
+        
+        return {
+            totalTarget,
+            totalRealisasi,
+            totalGap,
+            gapPercentage,
+            rataRataPersentase,
+            topPerformers,
+            lowPerformers,
+            topContributors,
+            totalItems: stats.tableData.length
+        };
+    }, [stats.tableData]);
+
     const totalPages = Math.ceil(stats.tableData.length / ITEMS_PER_PAGE);
     const paginatedData = stats.tableData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -270,58 +325,231 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 animate-in fade-in duration-700 pb-10">
             <SectionTitle>STATISTIK PENDAPATAN PER SKPD</SectionTitle>
             
-            {/* Executive Dashboard */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-gray-900 dark:to-teal-900/20 border border-teal-100 dark:border-teal-800/50 shadow-[0_8px_32px_rgba(0,0,0,0.12)] mb-6">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-teal-400/10 to-emerald-400/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
-                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl -ml-20 -mb-20"></div>
-                
-                <div className="relative p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-3 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-xl shadow-lg">
-                            <TrendingUp className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-bold text-gray-800 dark:text-white">Analisis Pendapatan Daerah</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                {selectedSkpd === 'Semua SKPD' ? 'Seluruh SKPD/OPD' : selectedSkpd}
-                                {searchTerm && ` • Filter: "${searchTerm}"`}
-                            </p>
-                        </div>
+            {/* === EXECUTIVE DASHBOARD - INFORMASI UNTUK PIMPINAN === */}
+            {showExecutiveInfo && executiveSummary && (
+                <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-700 to-indigo-900 rounded-3xl p-8 text-white shadow-2xl border border-white/10 group mb-8">
+                    {/* Decorative Elements */}
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-40 -mt-40 transition-transform duration-1000 group-hover:scale-110"></div>
+                    <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-400/10 rounded-full blur-[80px] -ml-32 -mb-32"></div>
+                    
+                    {/* Crown Icon for Leadership */}
+                    <div className="absolute top-8 right-12 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Crown size={120} className="text-yellow-400" />
                     </div>
                     
-                    {/* Quick Stats */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl border border-white/40 dark:border-gray-700/50 p-4">
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Total Sumber Pendapatan</p>
-                            <p className="text-2xl font-bold text-gray-800 dark:text-white">{stats.tableData.length}</p>
+                    <div className="relative z-10">
+                        {/* Header */}
+                        <div className="flex items-center gap-4 mb-6 border-b border-white/20 pb-6">
+                            <div className="p-4 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl shadow-lg shadow-yellow-500/30">
+                                <Briefcase size={32} className="text-white" />
+                            </div>
+                            <div>
+                                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black tracking-[0.2em] uppercase border border-white/30 mb-2">
+                                    <Eye size={12} className="text-yellow-300" /> EXECUTIVE DASHBOARD
+                                </div>
+                                <h2 className="text-3xl font-black tracking-tighter leading-tight">
+                                    RINGKASAN EKSEKUTIF PENDAPATAN <br/>
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-pink-300">TAHUN {selectedYear}</span>
+                                </h2>
+                            </div>
+                            <button 
+                                onClick={() => setShowExecutiveInfo(false)}
+                                className="ml-auto p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all"
+                                title="Sembunyikan"
+                            >
+                                <EyeOff size={20} />
+                            </button>
                         </div>
-                        <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl border border-white/40 dark:border-gray-700/50 p-4">
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Rata-rata Realisasi</p>
-                            <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">
-                                {stats.tableData.length > 0 
-                                    ? (stats.tableData.reduce((sum, item) => sum + item.persentase, 0) / stats.tableData.length).toFixed(1) 
-                                    : 0}%
-                            </p>
+
+                        {/* 3 Card Utama - Kinerja */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+                            {/* Card 1: Capaian Keseluruhan */}
+                            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-3 bg-emerald-500/30 rounded-xl">
+                                        <Target size={24} className="text-emerald-200" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-emerald-200">TARGET VS REALISASI</p>
+                                        <p className="text-2xl font-black text-white">
+                                            {executiveSummary.rataRataPersentase.toFixed(1)}%
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-indigo-200">Target:</span>
+                                        <span className="font-bold text-white">{formatCurrency(executiveSummary.totalTarget)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-indigo-200">Realisasi:</span>
+                                        <span className="font-bold text-emerald-300">{formatCurrency(executiveSummary.totalRealisasi)}</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden mt-2">
+                                        <div 
+                                            className="h-full bg-gradient-to-r from-emerald-400 to-green-500 rounded-full"
+                                            style={{ width: `${Math.min(executiveSummary.rataRataPersentase, 100)}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Gap Analysis */}
+                            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-3 bg-amber-500/30 rounded-xl">
+                                        <AlertOctagon size={24} className="text-amber-200" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-amber-200">GAP ANALISIS</p>
+                                        <p className="text-2xl font-black text-white">
+                                            {executiveSummary.gapPercentage.toFixed(1)}%
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-indigo-200">Total Gap:</span>
+                                        <span className="font-bold text-amber-300">{formatCurrency(executiveSummary.totalGap)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-indigo-200">Jumlah Sumber:</span>
+                                        <span className="font-bold text-white">{executiveSummary.totalItems} item</span>
+                                    </div>
+                                    <div className="mt-2 p-2 bg-black/20 rounded-xl">
+                                        <p className="text-xs text-indigo-200">
+                                            {executiveSummary.gapPercentage > 20 
+                                                ? '⚠️ Gap signifikan, perlu evaluasi intensif'
+                                                : executiveSummary.gapPercentage > 10
+                                                ? '📊 Gap moderat, optimalkan penagihan'
+                                                : '✅ Gap minimal, kinerja baik'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 3: Proyeksi Akhir Tahun */}
+                            {projectionData && (
+                                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className={`p-3 rounded-xl bg-gradient-to-r ${projectionData.riskColor}`}>
+                                            {projectionData.riskCategory === 'aman' 
+                                                ? <CheckCircle size={24} className="text-white" />
+                                                : projectionData.riskCategory === 'waspada'
+                                                ? <Info size={24} className="text-white" />
+                                                : <AlertTriangle size={24} className="text-white" />
+                                            }
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-medium text-indigo-200">PROYEKSI AKHIR TAHUN</p>
+                                            <p className="text-2xl font-black text-white">
+                                                {projectionData.persenProyeksi.toFixed(1)}%
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-indigo-200">Proyeksi:</span>
+                                            <span className="font-bold text-white">{formatCurrency(projectionData.proyeksiAkhirTahun)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-indigo-200">Sisa {projectionData.monthsRemaining} bln:</span>
+                                            <span className="font-bold text-amber-300">{formatCurrency(projectionData.proyeksiAkhirTahun - projectionData.realisasiHinggaSaatIni)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl border border-white/40 dark:border-gray-700/50 p-4">
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Total Target</p>
-                            <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-                                {formatCurrency(stats.tableData.reduce((sum, item) => sum + item.totalTarget, 0))}
-                            </p>
+
+                        {/* Grid Insight untuk Pimpinan */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                            {/* Top Performers */}
+                            <div className="bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/10">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Award size={18} className="text-yellow-400" />
+                                    <h3 className="font-bold text-sm uppercase tracking-wider text-yellow-300">Kinerja Tertinggi</h3>
+                                </div>
+                                <div className="space-y-2">
+                                    {executiveSummary.topPerformers.map((item, idx) => (
+                                        <div key={idx} className="flex justify-between items-center p-2 bg-white/5 rounded-lg">
+                                            <span className="text-xs font-medium text-indigo-200 truncate max-w-[200px]">
+                                                {idx+1}. {item.sumberPendapatan}
+                                            </span>
+                                            <span className="text-xs font-bold text-emerald-400">
+                                                {item.persentase.toFixed(1)}%
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Low Performers */}
+                            <div className="bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/10">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <AlertTriangle size={18} className="text-rose-400" />
+                                    <h3 className="font-bold text-sm uppercase tracking-wider text-rose-300">Perlu Perhatian</h3>
+                                </div>
+                                <div className="space-y-2">
+                                    {executiveSummary.lowPerformers.map((item, idx) => (
+                                        <div key={idx} className="flex justify-between items-center p-2 bg-white/5 rounded-lg">
+                                            <span className="text-xs font-medium text-indigo-200 truncate max-w-[200px]">
+                                                {idx+1}. {item.sumberPendapatan}
+                                            </span>
+                                            <span className="text-xs font-bold text-rose-400">
+                                                {item.persentase.toFixed(1)}%
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
-                        <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl border border-white/40 dark:border-gray-700/50 p-4">
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Total Realisasi</p>
-                            <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                                {formatCurrency(stats.tableData.reduce((sum, item) => sum + item.totalRealisasi, 0))}
+
+                        {/* Quick Stats */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+                            <div className="bg-black/20 rounded-xl p-3 border border-white/10">
+                                <p className="text-[10px] font-bold uppercase text-indigo-300">Total Sumber</p>
+                                <p className="text-xl font-black text-white">{executiveSummary.totalItems}</p>
+                            </div>
+                            <div className="bg-black/20 rounded-xl p-3 border border-white/10">
+                                <p className="text-[10px] font-bold uppercase text-indigo-300">Periode</p>
+                                <p className="text-sm font-black text-white">{startMonth} - {endMonth}</p>
+                            </div>
+                            <div className="bg-black/20 rounded-xl p-3 border border-white/10">
+                                <p className="text-[10px] font-bold uppercase text-indigo-300">Fokus SKPD</p>
+                                <p className="text-sm font-black text-white truncate">{selectedSkpd}</p>
+                            </div>
+                            <div className="bg-black/20 rounded-xl p-3 border border-white/10">
+                                <p className="text-[10px] font-bold uppercase text-indigo-300">Kinerja Rata2</p>
+                                <p className="text-xl font-black text-emerald-300">{executiveSummary.rataRataPersentase.toFixed(1)}%</p>
+                            </div>
+                        </div>
+
+                        {/* Executive Note */}
+                        <div className="mt-6 flex items-center gap-3 text-sm bg-purple-900/30 p-4 rounded-2xl border border-purple-500/30">
+                            <Lightbulb size={20} className="text-yellow-300 flex-shrink-0" />
+                            <p className="text-xs leading-relaxed text-indigo-100">
+                                <span className="font-bold text-white">CATATAN EKSEKUTIF:</span> Fokus pada sumber pendapatan dengan kinerja rendah. 
+                                Optimalkan {executiveSummary.lowPerformers[0]?.sumberPendapatan || 'pendapatan utama'} yang masih di bawah target. 
+                                Proyeksi akhir tahun menunjukkan {projectionData?.riskCategory === 'aman' ? 'kinerja positif' : 'perlu evaluasi intensif'}.
                             </p>
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
 
+            {!showExecutiveInfo && (
+                <button 
+                    onClick={() => setShowExecutiveInfo(true)}
+                    className="mb-6 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-700 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                >
+                    <Eye size={18} /> Tampilkan Executive Dashboard
+                </button>
+            )}
+
+            {/* Gemini Analysis */}
             <GeminiAnalysis 
                 getAnalysisPrompt={getAnalysisPrompt} 
                 disabledCondition={stats.tableData.length === 0} 
@@ -332,34 +560,37 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
 
             {/* Projection Card dengan Glassmorphism */}
             {projectionData && showProjection && (
-                <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-gray-800 shadow-xl border border-gray-100 dark:border-gray-700">
-                    <div className={`absolute top-0 right-0 w-32 h-32 rounded-bl-full bg-gradient-to-br ${projectionData.riskColor} opacity-10`}></div>
+                <div className="relative overflow-hidden rounded-3xl bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl shadow-2xl border border-white/50 dark:border-gray-700/50 group hover:shadow-3xl transition-all duration-500">
+                    <div className={`absolute top-0 right-0 w-40 h-40 rounded-bl-full bg-gradient-to-br ${projectionData.riskColor} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
                     
-                    <div className="p-6">
-                        <div className="flex flex-col md:flex-row justify-between items-start mb-4">
-                            <div className="flex items-center gap-2">
-                                <Target className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                                <h3 className="text-lg font-bold text-gray-800 dark:text-white">Proyeksi Pendapatan Akhir Tahun</h3>
-                                {searchTerm && (
-                                    <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded-full">
-                                        Filter: "{searchTerm}"
-                                    </span>
-                                )}
+                    <div className="p-8">
+                        <div className="flex flex-col md:flex-row justify-between items-start mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className={`p-3 rounded-xl bg-gradient-to-r ${projectionData.riskColor} shadow-lg`}>
+                                    {projectionData.riskIcon}
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-gray-800 dark:text-white">Proyeksi Pendapatan Akhir Tahun</h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                        Berdasarkan realisasi hingga {projectionMonth}
+                                        {searchTerm && <span className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full text-xs">Filter: "{searchTerm}"</span>}
+                                    </p>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 mt-2 md:mt-0">
+                            <div className="flex items-center gap-2 mt-3 md:mt-0">
                                 <button
                                     onClick={() => setShowProjection(!showProjection)}
-                                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                    className="p-2.5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all"
                                     title={showProjection ? 'Sembunyikan' : 'Tampilkan'}
                                 >
-                                    {showProjection ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    {showProjection ? <EyeOff size={18} className="text-gray-600 dark:text-gray-300" /> : <Eye size={18} />}
                                 </button>
-                                <div className="flex items-center gap-2">
-                                    <Calendar size={16} className="text-gray-400" />
+                                <div className="flex items-center gap-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700">
+                                    <Calendar size={16} className="text-teal-500" />
                                     <select
                                         value={projectionMonth}
                                         onChange={(e) => setProjectionMonth(e.target.value)}
-                                        className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                        className="text-sm font-medium bg-transparent focus:outline-none cursor-pointer"
                                     >
                                         {months.map(m => <option key={m} value={m}>{m}</option>)}
                                     </select>
@@ -368,35 +599,35 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                            <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl p-5 border border-white/50 dark:border-gray-700/50 transition-all hover:scale-105 duration-300">
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Target Tahunan</p>
-                                <p className="text-xl font-bold text-gray-800 dark:text-white">{formatCurrency(projectionData.totalTarget)}</p>
+                                <p className="text-xl font-black text-gray-800 dark:text-white">{formatCurrency(projectionData.totalTarget)}</p>
                             </div>
-                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                            <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl p-5 border border-white/50 dark:border-gray-700/50 transition-all hover:scale-105 duration-300">
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Realisasi s/d {projectionMonth}</p>
-                                <p className="text-xl font-bold text-gray-800 dark:text-white">{formatCurrency(projectionData.realisasiHinggaSaatIni)}</p>
-                                <p className="text-xs text-gray-400">{projectionData.monthsPassed} bulan</p>
+                                <p className="text-xl font-black text-teal-600 dark:text-teal-400">{formatCurrency(projectionData.realisasiHinggaSaatIni)}</p>
+                                <p className="text-xs text-gray-400 mt-1">{projectionData.monthsPassed} bulan</p>
                             </div>
-                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                            <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl p-5 border border-white/50 dark:border-gray-700/50 transition-all hover:scale-105 duration-300">
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Proyeksi Akhir Tahun</p>
-                                <p className="text-xl font-bold text-teal-600 dark:text-teal-400">{formatCurrency(projectionData.proyeksiAkhirTahun)}</p>
+                                <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(projectionData.proyeksiAkhirTahun)}</p>
                             </div>
-                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                            <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl p-5 border border-white/50 dark:border-gray-700/50 transition-all hover:scale-105 duration-300">
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Potensi Capaian</p>
                                 <div className="flex items-center gap-2">
-                                    <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">{projectionData.persenProyeksi.toFixed(1)}%</p>
-                                    <div className={`px-2 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${projectionData.riskColor} text-white`}>
+                                    <p className="text-2xl font-black text-teal-600 dark:text-teal-400">{projectionData.persenProyeksi.toFixed(1)}%</p>
+                                    <div className={`px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${projectionData.riskColor} text-white shadow-lg`}>
                                         {projectionData.riskCategory === 'kritis' ? 'KRITIS' : 
                                          projectionData.riskCategory === 'waspada' ? 'WASPADA' : 'AMAN'}
                                     </div>
                                 </div>
                             </div>
-                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 flex items-center justify-between">
+                            <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl p-5 border border-white/50 dark:border-gray-700/50 transition-all hover:scale-105 duration-300 flex items-center justify-between">
                                 <div>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">Sisa Bulan</p>
-                                    <p className="text-2xl font-bold text-gray-800 dark:text-white">{projectionData.monthsRemaining}</p>
+                                    <p className="text-2xl font-black text-gray-800 dark:text-white">{projectionData.monthsRemaining}</p>
                                 </div>
-                                <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${projectionData.riskColor} flex items-center justify-center shadow-lg`}>
+                                <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${projectionData.riskColor} flex items-center justify-center shadow-xl`}>
                                     {projectionData.riskIcon}
                                 </div>
                             </div>
@@ -405,171 +636,235 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
                 </div>
             )}
 
-            {/* Main Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                {/* Filter Section */}
-                <div className="p-6 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">SKPD/OPD</label>
-                            <select
-                                value={selectedSkpd}
-                                onChange={(e) => setSelectedSkpd(e.target.value)}
-                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+            {/* Main Card - Glassmorphism Enhanced */}
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/50 dark:border-gray-700/50 overflow-hidden transition-all duration-500 hover:shadow-3xl">
+                {/* Filter Section - Glassmorphism */}
+                <div className="p-8 bg-gradient-to-r from-white/50 to-white/30 dark:from-gray-800/50 dark:to-gray-900/50 border-b border-gray-200/50 dark:border-gray-700/50">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-black text-gray-800 dark:text-white flex items-center gap-2">
+                            <div className="w-1.5 h-6 bg-gradient-to-b from-teal-500 to-emerald-500 rounded-full"></div>
+                            PANEL ANALISIS PENDAPATAN
+                        </h3>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setViewMode(viewMode === 'table' ? 'card' : 'table')}
+                                className="p-2.5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all"
+                                title={viewMode === 'table' ? 'Tampilan Card' : 'Tampilan Tabel'}
                             >
-                                <option value="Semua SKPD">🏢 Semua SKPD</option>
-                                {skpdList.map(skpd => <option key={skpd} value={skpd}>{skpd}</option>)}
-                            </select>
-                        </div>
-
-                        <div className="relative">
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cari Sumber Pendapatan</label>
-                            <input 
-                                type="text" 
-                                placeholder="Ketik kata kunci..." 
-                                value={searchTerm} 
-                                onChange={(e) => setSearchTerm(e.target.value)} 
-                                className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" 
-                            />
-                            <Search className="absolute left-3 top-8 text-gray-400" size={16}/>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Dari Bulan</label>
-                            <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg">
-                                {months.map(month => <option key={`start-${month}`} value={month}>{month}</option>)}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Sampai Bulan</label>
-                            <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg">
-                                {months.map(month => <option key={`end-${month}`} value={month}>{month}</option>)}
-                            </select>
-                        </div>
-
-                        <div className="flex items-end gap-2">
+                                {viewMode === 'table' ? <LayoutDashboard size={18} /> : <BarChart3 size={18} />}
+                            </button>
                             <button
                                 onClick={() => setChartType(chartType === 'bar' ? 'composed' : 'bar')}
-                                className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm font-medium"
+                                className="px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all text-sm font-medium flex items-center gap-2"
                             >
-                                {chartType === 'bar' ? '📊 Bar Chart' : '📈 Composed Chart'}
+                                {chartType === 'bar' ? <BarChart3 size={16} /> : <PieChart size={16} />}
+                                {chartType === 'bar' ? 'Bar Chart' : 'Composed Chart'}
                             </button>
                         </div>
                     </div>
 
-                    {/* Sorting Buttons */}
-                    <div className="flex flex-wrap gap-2 mt-4">
-                        <button
-                            onClick={() => handleSort('target')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                sortBy === 'target' 
-                                    ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-400' 
-                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                            }`}
-                        >
-                            Target {sortBy === 'target' && (sortOrder === 'desc' ? '↓' : '↑')}
-                        </button>
-                        <button
-                            onClick={() => handleSort('realisasi')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                sortBy === 'realisasi' 
-                                    ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-400' 
-                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                            }`}
-                        >
-                            Realisasi {sortBy === 'realisasi' && (sortOrder === 'desc' ? '↓' : '↑')}
-                        </button>
-                        <button
-                            onClick={() => handleSort('persentase')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                sortBy === 'persentase' 
-                                    ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-400' 
-                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                            }`}
-                        >
-                            Persentase {sortBy === 'persentase' && (sortOrder === 'desc' ? '↓' : '↑')}
-                        </button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">SKPD/OPD</label>
+                            <div className="relative group">
+                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-teal-500 group-hover:scale-110 transition-transform" size={18} />
+                                <select
+                                    value={selectedSkpd}
+                                    onChange={(e) => setSelectedSkpd(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/50 transition-all appearance-none cursor-pointer"
+                                >
+                                    <option value="Semua SKPD">🏢 Semua SKPD</option>
+                                    {skpdList.map(skpd => <option key={skpd} value={skpd}>{skpd}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pencarian</label>
+                            <div className="relative group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-teal-500 transition-colors" size={18} />
+                                <input 
+                                    type="text" 
+                                    placeholder="Ketik kata kunci..." 
+                                    value={searchTerm} 
+                                    onChange={(e) => setSearchTerm(e.target.value)} 
+                                    className="w-full pl-10 pr-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/50 transition-all" 
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Dari Bulan</label>
+                            <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/50 transition-all">
+                                {months.map(month => <option key={`start-${month}`} value={month}>{month}</option>)}
+                            </select>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sampai Bulan</label>
+                            <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/50 transition-all">
+                                {months.map(month => <option key={`end-${month}`} value={month}>{month}</option>)}
+                            </select>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Urutkan</label>
+                            <div className="flex gap-2">
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => handleSort(e.target.value)}
+                                    className="flex-1 px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/50 transition-all"
+                                >
+                                    <option value="target">Target</option>
+                                    <option value="realisasi">Realisasi</option>
+                                    <option value="persentase">Persentase</option>
+                                </select>
+                                <button
+                                    onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                                    className="px-3 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all"
+                                >
+                                    {sortOrder === 'desc' ? <ArrowDownRight size={18} /> : <ArrowUpRight size={18} />}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Chart Section */}
+                {/* Chart Section - Enhanced */}
                 {stats.chartData.length > 0 && (
-                    <div className="p-6 bg-gradient-to-br from-teal-50/30 to-transparent dark:from-teal-900/10">
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-                            <TrendingUp className="w-5 h-5 text-teal-500" />
-                            Komposisi Pendapatan (Top 15)
-                        </h3>
-                        <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl p-4 border border-white/40 dark:border-gray-700/50">
-                            <ResponsiveContainer width="100%" height={400}>
+                    <div className="p-8 bg-gradient-to-br from-teal-50/30 via-white/30 to-transparent dark:from-teal-900/10 dark:via-gray-900/30">
+                        <div className="flex items-center gap-2 mb-6">
+                            <div className="p-2 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-xl shadow-lg">
+                                <TrendingUp className="w-5 h-5 text-white" />
+                            </div>
+                            <h3 className="text-lg font-black text-gray-800 dark:text-white">Komposisi Pendapatan (Top 15)</h3>
+                            <span className="ml-auto text-xs px-3 py-1 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-full">
+                                {stats.chartData.length} item
+                            </span>
+                        </div>
+                        <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-md rounded-2xl p-6 border border-white/50 dark:border-gray-700/50">
+                            <ResponsiveContainer width="100%" height={450}>
                                 {chartType === 'bar' ? (
                                     <BarChart data={stats.chartData} margin={{ top: 20, right: 30, left: 20, bottom: 100 }}>
                                         <defs>
                                             <linearGradient id="targetGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#6366F1" stopOpacity={0.8}/>
-                                                <stop offset="100%" stopColor="#818CF8" stopOpacity={0.8}/>
+                                                <stop offset="0%" stopColor="#6366F1" stopOpacity={0.9}/>
+                                                <stop offset="100%" stopColor="#818CF8" stopOpacity={0.9}/>
                                             </linearGradient>
                                             <linearGradient id="realisasiGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#10B981" stopOpacity={0.8}/>
-                                                <stop offset="100%" stopColor="#34D399" stopOpacity={0.8}/>
+                                                <stop offset="0%" stopColor="#10B981" stopOpacity={0.9}/>
+                                                <stop offset="100%" stopColor="#34D399" stopOpacity={0.9}/>
                                             </linearGradient>
+                                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                                                <feMerge>
+                                                    <feMergeNode in="coloredBlur"/>
+                                                    <feMergeNode in="SourceGraphic"/>
+                                                </feMerge>
+                                            </filter>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.1)" />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.1)" vertical={false} />
                                         <XAxis 
                                             dataKey="name" 
                                             angle={-45} 
                                             textAnchor="end" 
                                             interval={0} 
-                                            tick={{ fontSize: 10, fill: '#64748b' }}
+                                            tick={{ fontSize: 9, fontWeight: 500, fill: '#64748b' }}
                                             height={100}
+                                            axisLine={false}
+                                            tickLine={false}
                                         />
                                         <YAxis 
                                             tickFormatter={(val) => `${(val / 1e9).toFixed(1)}M`} 
-                                            tick={{ fontSize: 11, fill: '#64748b' }}
+                                            tick={{ fontSize: 10, fontWeight: 600, fill: '#64748b' }}
+                                            axisLine={false}
+                                            tickLine={false}
                                         />
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} />
                                         <Legend 
                                             verticalAlign="top" 
-                                            height={36}
+                                            height={40}
                                             iconType="circle"
+                                            wrapperStyle={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}
                                         />
-                                        <Bar dataKey="Target" fill="url(#targetGradient)" name="Target" radius={[4, 4, 0, 0]} barSize={20} />
-                                        <Bar dataKey="Realisasi" fill="url(#realisasiGradient)" name="Realisasi" radius={[4, 4, 0, 0]} barSize={20} />
+                                        <Bar 
+                                            dataKey="Target" 
+                                            fill="url(#targetGradient)" 
+                                            name="Target" 
+                                            radius={[8, 8, 0, 0]} 
+                                            barSize={25} 
+                                            animationDuration={2000}
+                                            filter="url(#glow)"
+                                        />
+                                        <Bar 
+                                            dataKey="Realisasi" 
+                                            fill="url(#realisasiGradient)" 
+                                            name="Realisasi" 
+                                            radius={[8, 8, 0, 0]} 
+                                            barSize={25} 
+                                            animationDuration={2500}
+                                            filter="url(#glow)"
+                                        />
                                     </BarChart>
                                 ) : (
                                     <ComposedChart data={stats.chartData} margin={{ top: 20, right: 30, left: 20, bottom: 100 }}>
                                         <defs>
                                             <linearGradient id="composedTarget" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#6366F1" stopOpacity={0.8}/>
-                                                <stop offset="100%" stopColor="#818CF8" stopOpacity={0.8}/>
+                                                <stop offset="0%" stopColor="#6366F1" stopOpacity={0.9}/>
+                                                <stop offset="100%" stopColor="#818CF8" stopOpacity={0.9}/>
+                                            </linearGradient>
+                                            <linearGradient id="composedRealisasi" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#10B981" stopOpacity={0.9}/>
+                                                <stop offset="100%" stopColor="#34D399" stopOpacity={0.9}/>
                                             </linearGradient>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.1)" />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.1)" vertical={false} />
                                         <XAxis 
                                             dataKey="name" 
                                             angle={-45} 
                                             textAnchor="end" 
                                             interval={0} 
-                                            tick={{ fontSize: 10, fill: '#64748b' }}
+                                            tick={{ fontSize: 9, fontWeight: 500, fill: '#64748b' }}
                                             height={100}
+                                            axisLine={false}
+                                            tickLine={false}
                                         />
                                         <YAxis 
                                             yAxisId="left"
                                             tickFormatter={(val) => `${(val / 1e9).toFixed(1)}M`} 
-                                            tick={{ fontSize: 11, fill: '#64748b' }}
+                                            tick={{ fontSize: 10, fontWeight: 600, fill: '#64748b' }}
+                                            axisLine={false}
+                                            tickLine={false}
                                         />
                                         <YAxis 
                                             yAxisId="right"
                                             orientation="right"
                                             domain={[0, 100]}
                                             tickFormatter={(val) => `${val}%`}
-                                            tick={{ fontSize: 11, fill: '#64748b' }}
+                                            tick={{ fontSize: 10, fontWeight: 600, fill: '#64748b' }}
+                                            axisLine={false}
+                                            tickLine={false}
                                         />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Legend verticalAlign="top" height={36} iconType="circle" />
-                                        <Bar yAxisId="left" dataKey="Target" fill="url(#composedTarget)" name="Target" barSize={20} />
-                                        <Bar yAxisId="left" dataKey="Realisasi" fill="#10B981" name="Realisasi" barSize={20} />
-                                        <Line yAxisId="right" type="monotone" dataKey="persentase" stroke="#F59E0B" name="Persentase (%)" strokeWidth={3} dot={{ r: 4 }} />
+                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} />
+                                        <Legend 
+                                            verticalAlign="top" 
+                                            height={40}
+                                            iconType="circle"
+                                            wrapperStyle={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                                        />
+                                        <Bar yAxisId="left" dataKey="Target" fill="url(#composedTarget)" name="Target" barSize={20} radius={[4, 4, 0, 0]} />
+                                        <Bar yAxisId="left" dataKey="Realisasi" fill="url(#composedRealisasi)" name="Realisasi" barSize={20} radius={[4, 4, 0, 0]} />
+                                        <Line 
+                                            yAxisId="right" 
+                                            type="monotone" 
+                                            dataKey="persentase" 
+                                            stroke="#F59E0B" 
+                                            name="Persentase (%)" 
+                                            strokeWidth={4} 
+                                            dot={{ r: 6, fill: '#F59E0B', strokeWidth: 2, stroke: '#fff' }}
+                                            activeDot={{ r: 8 }}
+                                            animationDuration={3000}
+                                        />
                                     </ComposedChart>
                                 )}
                             </ResponsiveContainer>
@@ -577,49 +872,105 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
                     </div>
                 )}
 
-                {/* Table Section */}
-                <div className="p-6">
+                {/* Table/Card Section */}
+                <div className="p-8">
                     {stats.tableData.length > 0 ? (
                         <>
-                            <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                    <thead className="bg-gray-50 dark:bg-gray-800">
-                                        <tr>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sumber Pendapatan</th>
-                                            <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target Tahunan</th>
-                                            <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Realisasi</th>
-                                            <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">%</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                                        {paginatedData.map((item, index) => (
-                                            <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                                <td className="px-6 py-4 text-sm text-gray-800 dark:text-gray-200 max-w-md break-words">
-                                                    {item.sumberPendapatan}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-right font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-                                                    {formatCurrency(item.totalTarget)}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-right font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                                                    {formatCurrency(item.totalRealisasi)}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-right whitespace-nowrap">
-                                                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
-                                                        item.persentase >= 90 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                                        item.persentase >= 70 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                    }`}>
-                                                        {item.persentase.toFixed(1)}%
-                                                    </span>
-                                                </td>
+                            {viewMode === 'table' ? (
+                                <div className="overflow-x-auto rounded-2xl border border-gray-200/50 dark:border-gray-700/50 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+                                    <table className="min-w-full">
+                                        <thead>
+                                            <tr className="bg-gradient-to-r from-gray-50/80 to-white/80 dark:from-gray-800/80 dark:to-gray-900/80">
+                                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sumber Pendapatan</th>
+                                                <th className="px-6 py-4 text-right text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target Tahunan</th>
+                                                <th className="px-6 py-4 text-right text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Realisasi</th>
+                                                <th className="px-6 py-4 text-right text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">%</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                            {paginatedData.map((item, index) => (
+                                                <tr key={index} className="hover:bg-teal-500/5 transition-colors group">
+                                                    <td className="px-6 py-4 text-sm text-gray-800 dark:text-gray-200 max-w-md break-words">
+                                                        {item.sumberPendapatan}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-right font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                                                        {formatCurrency(item.totalTarget)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-right font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                                                        {formatCurrency(item.totalRealisasi)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-right whitespace-nowrap">
+                                                        <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
+                                                            item.persentase >= 90 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                                            item.persentase >= 70 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                            'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                        }`}>
+                                                            {item.persentase.toFixed(1)}%
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {paginatedData.map((item, index) => (
+                                        <div 
+                                            key={index} 
+                                            className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-2xl p-6 border border-white/50 dark:border-gray-700/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group"
+                                        >
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="flex-1">
+                                                    <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-gray-600 dark:text-gray-400 font-mono mb-2 inline-block">
+                                                        {item.sumberPendapatan.substring(0, 30)}...
+                                                    </span>
+                                                    <h4 className="text-sm font-bold text-gray-800 dark:text-white mt-2">
+                                                        {item.sumberPendapatan.length > 50 
+                                                            ? item.sumberPendapatan.substring(0, 50) + '...' 
+                                                            : item.sumberPendapatan}
+                                                    </h4>
+                                                </div>
+                                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-black ${
+                                                    item.persentase >= 90 ? 'bg-gradient-to-br from-green-500 to-emerald-600' :
+                                                    item.persentase >= 70 ? 'bg-gradient-to-br from-yellow-500 to-amber-600' :
+                                                    'bg-gradient-to-br from-red-500 to-rose-600'
+                                                }`}>
+                                                    {item.persentase.toFixed(0)}%
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-gray-500 dark:text-gray-400">Target:</span>
+                                                    <span className="font-bold text-indigo-600 dark:text-indigo-400">{formatCurrency(item.totalTarget)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-gray-500 dark:text-gray-400">Realisasi:</span>
+                                                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(item.totalRealisasi)}</span>
+                                                </div>
+                                                <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className={`h-full rounded-full ${
+                                                            item.persentase >= 90 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                                                            item.persentase >= 70 ? 'bg-gradient-to-r from-yellow-500 to-amber-500' :
+                                                            'bg-gradient-to-r from-red-500 to-rose-500'
+                                                        }`}
+                                                        style={{ width: `${Math.min(item.persentase, 100)}%` }}
+                                                    ></div>
+                                                </div>
+                                                <div className="flex justify-end">
+                                                    <span className="text-xs text-gray-400">
+                                                        Gap: {formatCurrency(item.totalTarget - item.totalRealisasi)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             {totalPages > 1 && (
-                                <div className="mt-6">
+                                <div className="mt-8">
                                     <Pagination 
                                         currentPage={currentPage} 
                                         totalPages={totalPages} 
@@ -630,15 +981,15 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
                             )}
                         </>
                     ) : (
-                        <div className="text-center py-16 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                            <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                                <Info className="w-10 h-10 text-gray-400" />
+                        <div className="text-center py-20 bg-gray-50/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl">
+                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-full flex items-center justify-center">
+                                <Info className="w-12 h-12 text-gray-400" />
                             </div>
-                            <p className="text-gray-600 dark:text-gray-400 font-medium">
-                                Tidak ada data pendapatan untuk ditampilkan
+                            <p className="text-xl font-bold text-gray-600 dark:text-gray-400 mb-2">
+                                Tidak ada data pendapatan
                             </p>
                             {searchTerm && (
-                                <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                                <p className="text-sm text-gray-500 dark:text-gray-500">
                                     Coba hapus filter pencarian "{searchTerm}"
                                 </p>
                             )}
@@ -646,26 +997,45 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
                     )}
                 </div>
 
-                {/* Footer Notes */}
-                <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-800/50 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
-                        <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 bg-teal-500 rounded-full"></span>
-                            Total {stats.tableData.length} sumber pendapatan
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                            Realisasi: {stats.tableData.length > 0 
-                                ? (stats.tableData.reduce((sum, item) => sum + item.totalRealisasi, 0) / 
-                                   stats.tableData.reduce((sum, item) => sum + item.totalTarget, 0) * 100).toFixed(1) 
-                                : 0}%
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                            Periode: {startMonth} - {endMonth}
-                        </span>
+                {/* Footer Notes - Glassmorphism */}
+                {stats.tableData.length > 0 && (
+                    <div className="px-8 py-5 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-800/50 border-t border-gray-200/50 dark:border-gray-700/50">
+                        <div className="flex flex-wrap gap-6 text-xs">
+                            <span className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full shadow-lg"></div>
+                                <span className="font-medium text-gray-600 dark:text-gray-400">Total {stats.tableData.length} sumber pendapatan</span>
+                            </span>
+                            <span className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full shadow-lg"></div>
+                                <span className="font-medium text-gray-600 dark:text-gray-400">
+                                    Realisasi: {stats.tableData.length > 0 
+                                        ? (stats.tableData.reduce((sum, item) => sum + item.totalRealisasi, 0) / 
+                                           stats.tableData.reduce((sum, item) => sum + item.totalTarget, 0) * 100).toFixed(1) 
+                                        : 0}%
+                                </span>
+                            </span>
+                            <span className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full shadow-lg"></div>
+                                <span className="font-medium text-gray-600 dark:text-gray-400">Periode: {startMonth} - {endMonth}</span>
+                            </span>
+                        </div>
                     </div>
-                </div>
+                )}
+            </div>
+
+            {/* Download Button - Glassmorphism */}
+            <div className="flex justify-end">
+                <button 
+                    onClick={() => {/* handle download */}}
+                    disabled={stats.tableData.length === 0}
+                    className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                >
+                    <Download size={18} className="group-hover:scale-110 transition-transform" />
+                    Download Laporan Excel
+                    <span className="ml-2 px-2 py-1 bg-white/20 rounded-lg text-xs">
+                        {stats.tableData.length} item
+                    </span>
+                </button>
             </div>
         </div>
     );
