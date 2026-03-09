@@ -1,111 +1,170 @@
-import React from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ChevronDown, ChevronUp, TrendingUp, TrendingDown, Target, 
   DollarSign, Info, AlertTriangle, CheckCircle, Download, 
   Filter, Layers, BarChart3, PieChart, Eye, EyeOff, Sparkles, 
   Calendar, Box, ArrowRight, LayoutDashboard, Search, Building2,
-  ChevronLeft, MoreHorizontal
+  ChevronLeft, ChevronRight, MoreHorizontal, Loader2, MessageSquare,
+  Zap, ArrowUpRight
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   Legend, ResponsiveContainer, ComposedChart, Line, Cell 
 } from 'recharts';
 
-// === IMPORT yang benar dari aplikasi yang sudah ada ===
+// === IMPORT sesuai struktur aplikasi Anda ===
 import { db, appId } from '../../utils/firebase';
 import { formatIDR } from '../../utils';
-import { auth } from '../../utils/firebase'; // Import auth instance
+import { auth } from '../../utils/firebase';
 
-// HAPUS inisialisasi Firebase manual
-// HAPUS fungsi formatCurrency (gunakan formatIDR dari utils)
+// --- SUB-COMPONENTS ---
 
-// SectionTitle Component (bisa tetap atau import dari komponen lain)
 const SectionTitle = ({ children }) => (
-  <div className="relative mb-10 group">
-    <h2 className="text-3xl font-black tracking-tighter text-slate-800 dark:text-white transition-all">
-      {children}
-    </h2>
-    <div className="absolute -bottom-3 left-0 h-1.5 w-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full transition-all duration-500 group-hover:w-32"></div>
+  <div className="relative mb-12 group">
+    <div className="flex items-center gap-4">
+      <div className="h-12 w-1.5 bg-gradient-to-b from-indigo-600 via-purple-600 to-transparent rounded-full" />
+      <h2 className="text-4xl font-black tracking-tighter text-slate-800 dark:text-white transition-all duration-500 group-hover:tracking-tight">
+        {children}
+      </h2>
+    </div>
+    <div className="absolute -bottom-4 left-6 h-1 w-24 bg-gradient-to-r from-indigo-600/50 to-transparent rounded-full transition-all duration-700 group-hover:w-48"></div>
   </div>
 );
 
-// GeminiAnalysis Component
-const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, interactivePlaceholder, userRole, userCanUseAi }) => {
-  const [isThinking, setIsThinking] = React.useState(false);
-  const [response, setResponse] = React.useState(null);
+const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, userRole, userCanUseAi }) => {
+  const [isThinking, setIsThinking] = useState(false);
+  const [response, setResponse] = useState(null);
+  const [error, setError] = useState(null);
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
+    if (disabledCondition) return;
     setIsThinking(true);
-    setTimeout(() => {
-      setResponse("Analisis menunjukkan efisiensi penyerapan yang stabil pada sub kegiatan operasional, namun terdapat potensi sisa anggaran signifikan pada pos belanja modal yang perlu dievaluasi kembali untuk kuartal mendatang.");
+    setError(null);
+    
+    const apiKey = ""; // Disediakan oleh environment
+    const prompt = getAnalysisPrompt();
+
+    const fetchWithRetry = async (url, options, retries = 5, backoff = 1000) => {
+      try {
+        const res = await fetch(url, options);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return await res.json();
+      } catch (err) {
+        if (retries > 0) {
+          await new Promise(resolve => setTimeout(resolve, backoff));
+          return fetchWithRetry(url, options, retries - 1, backoff * 2);
+        }
+        throw err;
+      }
+    };
+
+    try {
+      const result = await fetchWithRetry(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            systemInstruction: { 
+              parts: [{ text: `Anda adalah auditor keuangan daerah. Analisis performa sub kegiatan berdasarkan data realisasi. Gunakan bahasa profesional untuk ${userRole}.` }] 
+            }
+          })
+        }
+      );
+
+      const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      setResponse(text || "Gagal mendapatkan analisis.");
+    } catch (err) {
+      setError("Koneksi AI terputus. Silakan coba lagi.");
+    } finally {
       setIsThinking(false);
-    }, 2000);
+    }
   };
 
   return (
-    <div className="relative overflow-hidden bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border border-indigo-200/50 dark:border-indigo-900/30 rounded-[2.5rem] p-8 shadow-2xl shadow-indigo-500/10 mb-10 transition-all duration-500 group">
-      <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl transition-transform group-hover:scale-110"></div>
-      <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6 text-left">
-        <div className="p-4 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl text-white shadow-lg shadow-indigo-500/40">
-          <Sparkles size={28} />
+    <div className="relative overflow-hidden bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/40 dark:border-white/5 rounded-[3rem] p-10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] mb-12 transition-all duration-1000 group">
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
+      
+      <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+        <div className="p-5 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 rounded-2xl text-white shadow-[0_15px_35px_-10px_rgba(79,70,229,0.5)] transform -rotate-2 group-hover:rotate-0 transition-transform duration-500">
+          <Sparkles size={32} />
         </div>
         <div className="flex-1 space-y-1">
-          <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tighter">AI Fiscal Insights</h3>
-          <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest">Didukung oleh Gemini Pro 2.5</p>
+          <p className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-[0.3em] mb-1">Fiscal Intelligence Module</p>
+          <h3 className="font-black text-2xl text-slate-800 dark:text-white tracking-tighter leading-none">AI Fiscal Insights</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Audit prediktif sub kegiatan menggunakan Gemini 2.5 Flash</p>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
+        <div className="flex gap-3 w-full md:w-auto">
           <button 
             onClick={handleAnalyze}
             disabled={disabledCondition || isThinking}
-            className="w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-indigo-500/30 disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95"
+            className={`w-full md:w-auto px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${
+              isThinking || disabledCondition
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-[0_10px_25px_-8px_rgba(79,70,229,0.5)] active:scale-95'
+            }`}
           >
-            {isThinking ? <Loader className="animate-spin" size={18} /> : <MessageSquare size={18} />}
-            {isThinking ? "Menganalisis..." : "Generate Analisis"}
+            {isThinking ? <Loader2 className="animate-spin" size={18} /> : <MessageSquare size={18} />}
+            {isThinking ? "PROCESSING DATA..." : "GENERATE ANALISIS"}
           </button>
         </div>
       </div>
+      
+      {error && (
+        <div className="mt-6 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold animate-in fade-in">
+          {error}
+        </div>
+      )}
+
       {response && (
-        <div className="mt-6 p-6 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-3xl border border-indigo-100 dark:border-indigo-800/50 animate-in fade-in slide-in-from-top-4 text-left font-medium text-sm text-slate-700 dark:text-slate-300 italic">
-          "{response}"
+        <div className="mt-8 relative">
+          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 to-transparent opacity-30 rounded-full"></div>
+          <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-[2rem] border border-indigo-100/50 dark:border-indigo-800/30 text-sm text-slate-700 dark:text-slate-300 italic leading-relaxed pl-10 animate-in fade-in slide-in-from-left-4 duration-1000">
+            "{response}"
+          </div>
         </div>
       )}
     </div>
   );
 };
 
-// Pagination Component
-const Pagination = ({ currentPage, totalPages, onPageChange, theme }) => {
+const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
   const visiblePages = pages.filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1);
 
+  if (totalPages <= 1) return null;
+
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex items-center justify-center gap-3 mt-12">
       <button 
         disabled={currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
-        className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 disabled:opacity-30 hover:bg-slate-50"
+        className="p-3 rounded-2xl bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/30 disabled:opacity-20 hover:bg-indigo-50 transition-all shadow-sm"
       >
         <ChevronLeft size={18} />
       </button>
-      {visiblePages.map((page, i) => (
-        <React.Fragment key={page}>
-          {i > 0 && visiblePages[i - 1] !== page - 1 && <MoreHorizontal className="text-slate-400" size={16} />}
-          <button
-            onClick={() => onPageChange(page)}
-            className={`w-10 h-10 rounded-xl font-black text-xs transition-all ${
-              currentPage === page 
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 scale-110' 
-                : 'bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 hover:border-indigo-500'
-            }`}
-          >
-            {page}
-          </button>
-        </React.Fragment>
-      ))}
+      <div className="flex items-center gap-2 p-1.5 bg-white/30 dark:bg-slate-900/30 backdrop-blur-xl rounded-[1.5rem] border border-slate-200/50 dark:border-slate-700/30 shadow-inner">
+        {visiblePages.map((page, i) => (
+          <React.Fragment key={page}>
+            {i > 0 && visiblePages[i - 1] !== page - 1 && <MoreHorizontal className="text-slate-400 px-1" size={16} />}
+            <button
+              onClick={() => onPageChange(page)}
+              className={`w-11 h-11 rounded-xl font-black text-sm transition-all duration-500 ${
+                currentPage === page 
+                  ? 'bg-gradient-to-br from-indigo-600 to-purple-700 text-white shadow-lg shadow-indigo-500/40 scale-105 z-10' 
+                  : 'text-slate-500 hover:bg-white/50 hover:text-indigo-600'
+              }`}
+            >
+              {page}
+            </button>
+          </React.Fragment>
+        ))}
+      </div>
       <button 
         disabled={currentPage === totalPages}
         onClick={() => onPageChange(currentPage + 1)}
-        className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 disabled:opacity-30 hover:bg-slate-50"
+        className="p-3 rounded-2xl bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/30 disabled:opacity-20 hover:bg-indigo-50 transition-all shadow-sm"
       >
         <ChevronRight size={18} />
       </button>
@@ -113,25 +172,27 @@ const Pagination = ({ currentPage, totalPages, onPageChange, theme }) => {
   );
 };
 
-// Custom Tooltip
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl p-5 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-white/20 dark:border-slate-700/50 min-w-[280px] z-50 animate-in fade-in zoom-in-95 duration-200 text-left">
-        <div className="flex items-center gap-2 mb-3 border-b border-slate-100 dark:border-slate-800 pb-2 text-left">
-          <Box size={16} className="text-indigo-500" />
-          <p className="font-black text-slate-800 dark:text-slate-100 text-[11px] uppercase tracking-tighter truncate max-w-[220px]">
+      <div className="bg-white/80 dark:bg-slate-950/90 backdrop-blur-3xl p-6 rounded-[2rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] border border-white/40 dark:border-white/5 min-w-[320px] z-50 animate-in fade-in zoom-in-95 duration-300 text-left">
+        <div className="flex flex-col gap-1 mb-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <p className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-[0.2em]">Audit Sub Kegiatan</p>
+          <p className="font-black text-base text-slate-800 dark:text-white leading-tight break-words">
             {label}
           </p>
         </div>
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {payload.map((entry, index) => (
-            <div key={`item-${index}`} className="flex justify-between items-center text-[11px]">
-              <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
-                <div className="w-1.5 h-1.5 rounded-full shadow-sm" style={{ backgroundColor: entry.color }}></div>
+            <div key={`item-${index}`} className="flex justify-between items-center group/item transition-all hover:translate-x-1">
+              <span className="flex items-center gap-3 text-slate-600 dark:text-slate-400 font-bold text-xs uppercase tracking-wider">
+                <div className="w-3 h-3 rounded-full shadow-lg" style={{ 
+                  background: `linear-gradient(135deg, ${entry.color}, white)`,
+                  boxShadow: `0 0 15px ${entry.color}44` 
+                }}></div>
                 {entry.name}
               </span>
-              <span className="font-black text-slate-900 dark:text-white tabular-nums">
+              <span className="font-black text-sm text-slate-950 dark:text-white tabular-nums tracking-tighter">
                 {entry.name?.toLowerCase().includes('persen') || entry.name?.toLowerCase().includes('penyerapan')
                   ? `${Number(entry.value).toFixed(1)}%`
                   : formatIDR(entry.value * (entry.unit === 'M' ? 1e9 : 1))}
@@ -148,32 +209,32 @@ const CustomTooltip = ({ active, payload, label }) => {
 // --- MAIN COMPONENT ---
 const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole, userCanUseAi, selectedYear }) => {
   const { anggaran, realisasi, realisasiNonRkud } = data;
-  const [selectedSkpd, setSelectedSkpd] = React.useState('');
-  const [selectedSubUnit, setSelectedSubUnit] = React.useState('Semua Sub Unit');
+  const [selectedSkpd, setSelectedSkpd] = useState('');
+  const [selectedSubUnit, setSelectedSubUnit] = useState('Semua Sub Unit');
   
-  const [subKegiatanStats, setSubKegiatanStats] = React.useState([]);
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [expandedRows, setExpandedRows] = React.useState(new Set());
-  const [viewMode, setViewMode] = React.useState('card'); 
+  const [subKegiatanStats, setSubKegiatanStats] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [expandedRows, setExpandedRows] = useState(new Set());
+  const [viewMode, setViewMode] = useState('card'); 
   
   const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-  const [startMonth, setStartMonth] = React.useState(months[0]);
-  const [endMonth, setEndMonth] = React.useState(months[months.length - 1]);
+  const [startMonth, setStartMonth] = useState(months[0]);
+  const [endMonth, setEndMonth] = useState(months[months.length - 1]);
   const ITEMS_PER_PAGE = 10;
 
-  const skpdList = React.useMemo(() => {
+  const skpdList = useMemo(() => {
     const skpds = new Set((anggaran || []).map(item => item.NamaSKPD).filter(Boolean));
     return Array.from(skpds).sort();
   }, [anggaran]);
   
-  const subUnitList = React.useMemo(() => {
+  const subUnitList = useMemo(() => {
     if (!selectedSkpd) return [];
     const filtered = (anggaran || []).filter(item => item.NamaSKPD === selectedSkpd);
     const subUnits = new Set(filtered.map(item => item.NamaSubUnit).filter(Boolean));
     return Array.from(subUnits).sort();
   }, [anggaran, selectedSkpd]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!selectedSkpd) {
       setSubKegiatanStats([]);
       return;
@@ -280,7 +341,7 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole, userCanUse
 
   }, [selectedSkpd, selectedSubUnit, anggaran, realisasi, realisasiNonRkud, startMonth, endMonth]);
 
-  const summaryStats = React.useMemo(() => {
+  const summaryStats = useMemo(() => {
     if (subKegiatanStats.length === 0) return null;
     
     const totalAnggaran = subKegiatanStats.reduce((sum, item) => sum + item.totalAnggaran, 0);
@@ -301,7 +362,7 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole, userCanUse
     };
   }, [subKegiatanStats]);
 
-  const chartData = React.useMemo(() => {
+  const chartData = useMemo(() => {
     return subKegiatanStats.slice(0, 15).map(item => ({
       name: item.subKegiatan.length > 25 ? item.subKegiatan.substring(0, 25) + '...' : item.subKegiatan,
       fullName: item.subKegiatan,
@@ -326,7 +387,7 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole, userCanUse
     setExpandedRows(newExpandedRows);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
     setExpandedRows(new Set());
     setSelectedSubUnit('Semua Sub Unit');
@@ -359,53 +420,51 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole, userCanUse
   };
 
   const getPerformanceBadge = (persentase) => {
-    if (persentase >= 80) return <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-1"><CheckCircle size={10} /> Tinggi</span>;
-    if (persentase >= 50) return <span className="px-2.5 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-500/20 flex items-center gap-1"><Info size={10} /> Sedang</span>;
-    return <span className="px-2.5 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-rose-500/20 flex items-center gap-1"><AlertTriangle size={10} /> Rendah</span>;
+    if (persentase >= 80) return <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-2"><CheckCircle size={12} /> Kinerja Tinggi</span>;
+    if (persentase >= 50) return <span className="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-500/20 flex items-center gap-2"><Info size={12} /> Kinerja Sedang</span>;
+    return <span className="px-3 py-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-rose-500/20 flex items-center gap-2"><AlertTriangle size={12} /> Kinerja Rendah</span>;
   };
 
-  const getAnalysisPrompt = (customQuery) => {
-    if (customQuery) return `Berdasarkan data sub kegiatan SKPD, berikan analisis untuk: "${customQuery}"`;
+  const getAnalysisPrompt = () => {
     if (!selectedSkpd) return "Pilih SKPD untuk dianalisis.";
-    return `Analis kinerja penyerapan anggaran per Sub Kegiatan untuk SKPD: **${selectedSkpd}** pada tahun ${selectedYear}. Total Anggaran: ${formatIDR(summaryStats?.totalAnggaran)}.`;
+    return `Analis kinerja penyerapan anggaran per Sub Kegiatan untuk SKPD: **${selectedSkpd}** pada tahun ${selectedYear}. Total Anggaran: ${formatIDR(summaryStats?.totalAnggaran)}. Rata-rata penyerapan: ${summaryStats?.rataPenyerapan.toFixed(1)}%. Identifikasi sub kegiatan paling efisien dan yang bermasalah.`;
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-1000 pb-20 text-left">
+    <div className="space-y-12 animate-in fade-in duration-1000 pb-20 text-left bg-slate-50/30 dark:bg-transparent">
       <SectionTitle>Statistik Sub Kegiatan & Rekening</SectionTitle>
       
-      {/* EXECUTIVE HEADER PANEL */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-700 to-indigo-900 rounded-[2.5rem] p-10 text-white shadow-2xl border border-white/10 group">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-40 -mt-40 transition-transform duration-1000 group-hover:scale-110"></div>
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-400/10 rounded-full blur-[80px] -ml-32 -mb-32"></div>
+      {/* EXECUTIVE HEADER PANEL - PREMIUM GLASS */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-slate-900 to-black rounded-[3.5rem] p-12 text-white shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] border border-white/5 group">
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[150px] -mr-96 -mt-96 transition-all duration-1000 group-hover:bg-indigo-500/20"></div>
         
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-10 items-center">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black tracking-[0.2em] uppercase border border-white/10 shadow-lg">
-              <LayoutDashboard size={14} className="text-indigo-200 animate-pulse" /> Performance Analytics Portal
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
+          <div className="lg:col-span-2 space-y-8">
+            <div className="inline-flex items-center gap-3 px-5 py-2 bg-white/10 backdrop-blur-2xl rounded-full text-[11px] font-black tracking-[0.4em] uppercase border border-white/20 shadow-lg animate-pulse">
+              <Zap size={14} className="text-yellow-400" /> Deep Dive Performance Analytics
             </div>
-            <h2 className="text-5xl font-black leading-[0.95] tracking-tighter">
-              Bedah Kinerja <br/>
-              <span className="text-indigo-200 underline decoration-indigo-400 decoration-4 underline-offset-8 italic">Sub Kegiatan</span>.
+            <h2 className="text-4xl lg:text-6xl font-black leading-[0.95] tracking-tighter mb-4">
+              BEDAH KINERJA <br/>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 italic underline decoration-indigo-500/50 decoration-8 underline-offset-8">SUB KEGIATAN</span>.
             </h2>
-            <p className="text-indigo-100/90 text-sm max-w-2xl leading-relaxed font-medium">
-              Eksplorasi mendalam hingga level rekening belanja. Pantau distribusi sumber dana, efektivitas penyerapan per unit, dan identifikasi potensi sisa anggaran secara real-time.
+            <p className="text-slate-400 font-medium max-w-2xl text-lg leading-relaxed">
+              Eksplorasi mendalam hingga level rekening belanja. Pantau distribusi sumber dana, efektivitas penyerapan per unit, dan identifikasi anomali fiskal secara real-time.
             </p>
           </div>
 
           {selectedSkpd && summaryStats && (
-            <div className="flex flex-col gap-4 animate-in slide-in-from-right duration-700">
-              <div className="bg-white/10 backdrop-blur-xl p-5 rounded-[2rem] border border-white/20 shadow-xl">
-                <p className="text-[10px] font-black uppercase text-indigo-200 mb-1 tracking-widest flex items-center gap-2">
-                  <TrendingUp size={14} /> Efektivitas Total
+            <div className="grid grid-cols-1 gap-5 animate-in slide-in-from-right-8 duration-1000">
+              <div className="bg-white/5 backdrop-blur-3xl p-8 rounded-[2.5rem] border border-white/10 transition-all hover:translate-y-[-5px] hover:bg-white/[0.08]">
+                <p className="text-[10px] font-black uppercase text-indigo-400 mb-2 tracking-[0.3em] flex items-center gap-2">
+                  <TrendingUp size={16} /> EFISIENSI AGREGAT
                 </p>
-                <div className="text-3xl font-black">{summaryStats.rataPenyerapan.toFixed(1)}%</div>
+                <div className="text-5xl font-black tracking-tighter">{summaryStats.rataPenyerapan.toFixed(1)}%</div>
               </div>
-              <div className="bg-emerald-500/20 backdrop-blur-xl p-5 rounded-[2rem] border border-emerald-500/20 shadow-xl">
-                <p className="text-[10px] font-black uppercase text-emerald-200 mb-1 tracking-widest flex items-center gap-2">
-                  <Target size={14} /> Realisasi Fiskal
+              <div className="bg-white/5 backdrop-blur-3xl p-8 rounded-[2.5rem] border border-white/10 transition-all hover:translate-y-[-5px] hover:bg-white/[0.08]">
+                <p className="text-[10px] font-black uppercase text-emerald-400 mb-2 tracking-[0.3em] flex items-center gap-2">
+                  <Target size={16} /> REALISASI FISKAL
                 </p>
-                <div className="text-2xl font-black truncate">{formatIDR(summaryStats.totalRealisasi)}</div>
+                <div className="text-3xl font-black truncate tracking-tight">{formatIDR(summaryStats.totalRealisasi)}</div>
               </div>
             </div>
           )}
@@ -416,222 +475,265 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole, userCanUse
         getAnalysisPrompt={getAnalysisPrompt} 
         disabledCondition={!selectedSkpd || subKegiatanStats.length === 0} 
         theme={theme}
-        interactivePlaceholder="Gunakan AI untuk mendeteksi anomali penyerapan..."
         userRole={userRole}
         userCanUseAi={userCanUseAi}
       />
 
       {/* STICKY GLASS FILTER BAR */}
-      <div className="sticky top-6 z-50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border border-white/40 dark:border-slate-800/50 p-6 rounded-[2rem] shadow-2xl shadow-slate-200/50 dark:shadow-none transition-all duration-500">
-        <div className="flex flex-wrap items-center justify-between gap-6">
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="space-y-1.5 text-left">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Perangkat Daerah</label>
-              <div className="relative group">
-                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500 transition-transform group-hover:scale-110" size={18} />
+      <div className="sticky top-6 z-50 bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl border border-white/40 dark:border-white/5 p-8 rounded-[3rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] transition-all duration-700">
+        <div className="flex flex-wrap items-end justify-between gap-8">
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2 text-left group">
+              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">Perangkat Daerah</label>
+              <div className="relative">
+                <Building2 className="absolute left-5 top-1/2 -translate-y-1/2 text-indigo-500 group-hover:scale-110 transition-transform" size={20} />
                 <select 
                   value={selectedSkpd} 
                   onChange={(e) => setSelectedSkpd(e.target.value)}
-                  className="w-full pl-12 pr-6 py-3.5 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black shadow-sm focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all cursor-pointer"
+                  className="w-full pl-14 pr-6 py-4 bg-white/60 dark:bg-gray-950/60 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-2xl text-sm font-black shadow-sm focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all cursor-pointer appearance-none"
                 >
-                  <option value="">🏢 Pilih SKPD</option>
+                  <option value="">🏢 PILIH SKPD / OPD</option>
                   {skpdList.map(skpd => <option key={skpd} value={skpd}>{skpd}</option>)}
                 </select>
+                <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                    <ChevronDown size={18} />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-1.5 text-left">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Sub Unit Kerja</label>
-              <div className="relative group">
-                <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-500" size={18} />
+            <div className="space-y-2 text-left group">
+              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">Sub Unit Kerja</label>
+              <div className="relative">
+                <Layers className="absolute left-5 top-1/2 -translate-y-1/2 text-purple-500" size={20} />
                 <select 
                   value={selectedSubUnit} 
                   onChange={(e) => setSelectedSubUnit(e.target.value)}
                   disabled={!selectedSkpd || subUnitList.length === 0}
-                  className="w-full pl-12 pr-6 py-3.5 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black shadow-sm focus:ring-4 focus:ring-purple-500/20 outline-none transition-all disabled:opacity-30"
+                  className="w-full pl-14 pr-6 py-4 bg-white/60 dark:bg-gray-950/60 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-2xl text-sm font-black shadow-sm focus:ring-4 focus:ring-purple-500/10 outline-none transition-all disabled:opacity-30 appearance-none"
                 >
-                  <option>📋 Semua Sub Unit</option>
+                  <option>📋 SEMUA SUB UNIT</option>
                   {subUnitList.map(unit => <option key={unit} value={unit}>{unit}</option>)}
                 </select>
+                <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                    <ChevronDown size={18} />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-1.5 text-left">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Jendela Waktu</label>
-              <div className="flex items-center bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-1 shadow-sm">
-                <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="flex-1 bg-transparent py-2.5 px-3 text-[11px] font-black outline-none border-none">
+            <div className="space-y-2 text-left">
+              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">Jendela Waktu Audit</label>
+              <div className="flex items-center bg-white/60 dark:bg-gray-950/60 border border-slate-200/50 dark:border-white/10 rounded-2xl p-1.5 shadow-sm">
+                <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="flex-1 bg-transparent py-2.5 px-4 text-[11px] font-black outline-none border-none appearance-none cursor-pointer">
                   {months.map(m => <option key={`s-${m}`} value={m}>{m.substring(0,3)}</option>)}
                 </select>
-                <div className="w-[1px] h-6 bg-slate-200 dark:bg-slate-700"></div>
-                <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="flex-1 bg-transparent py-2.5 px-3 text-[11px] font-black outline-none border-none text-right">
+                <div className="w-[1px] h-6 bg-slate-200 dark:bg-white/10"></div>
+                <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="flex-1 bg-transparent py-2.5 px-4 text-[11px] font-black outline-none border-none text-right appearance-none cursor-pointer">
                   {months.map(m => <option key={`e-${m}`} value={m}>{m.substring(0,3)}</option>)}
                 </select>
               </div>
             </div>
           </div>
 
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner">
+          <div className="flex bg-slate-100/50 dark:bg-white/5 p-2 rounded-[1.5rem] border border-slate-200/50 dark:border-white/10 shadow-inner">
             <button 
               onClick={() => setViewMode('card')} 
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all ${viewMode === 'card' ? 'bg-white dark:bg-slate-700 shadow-md text-indigo-600' : 'opacity-40 hover:opacity-100'}`}
+              className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black tracking-widest transition-all ${viewMode === 'card' ? 'bg-white dark:bg-gray-800 shadow-lg text-indigo-600' : 'opacity-40 hover:opacity-100 uppercase'}`}
             >
-              <LayoutDashboard size={14} /> CARDS
+              <LayoutDashboard size={16} /> CARDS
             </button>
             <button 
               onClick={() => setViewMode('table')} 
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all ${viewMode === 'table' ? 'bg-white dark:bg-slate-700 shadow-md text-purple-600' : 'opacity-40 hover:opacity-100'}`}
+              className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black tracking-widest transition-all ${viewMode === 'table' ? 'bg-white dark:bg-gray-800 shadow-lg text-purple-600' : 'opacity-40 hover:opacity-100 uppercase'}`}
             >
-              <BarChart3 size={14} /> LIST
+              <BarChart3 size={16} /> LIST VIEW
             </button>
           </div>
         </div>
       </div>
 
+      {/* CHART SECTION - APACHE ECHARTS STYLE */}
       {selectedSkpd && chartData.length > 0 && (
-        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border border-white/30 dark:border-white/5 p-10 rounded-[3rem] shadow-2xl transition-all hover:shadow-indigo-500/5 group">
-          <div className="flex items-center justify-between mb-10 text-left">
-            <div className="space-y-1">
-              <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3 tracking-tighter">
-                <div className="w-2 h-8 bg-indigo-500 rounded-full animate-pulse"></div>
+        <div className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-3xl border border-white/50 dark:border-white/5 p-12 rounded-[3.5rem] shadow-[0_60px_100px_-30px_rgba(0,0,0,0.1)] group">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12 text-left">
+            <div className="space-y-2">
+              <h3 className="text-3xl font-black text-slate-800 dark:text-white flex items-center gap-4 tracking-tighter leading-none">
+                <div className="w-2.5 h-10 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-full animate-pulse shadow-[0_0_20px_rgba(99,102,241,0.4)]"></div>
                 Distribusi Anggaran Utama
               </h3>
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-5">Perbandingan Top 15 Sub Kegiatan (Miliar Rp)</p>
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.4em] ml-6">PERBANDINGAN TOP 15 SUB KEGIATAN (MILIAR RP)</p>
             </div>
-            <button onClick={handleDownloadExcel} className="p-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-1 active:scale-95">
-              <Download size={20} />
+            <button onClick={handleDownloadExcel} className="flex items-center gap-3 px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-[0_15px_30px_-10px_rgba(16,185,129,0.5)] transition-all hover:-translate-y-1 active:scale-95">
+              <Download size={20} /> UNDUH DATA EXCEL
             </button>
           </div>
 
-          <div className="h-[500px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 100 }}>
-                <defs>
-                  <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6366F1" stopOpacity={1}/>
-                    <stop offset="100%" stopColor="#435EBE" stopOpacity={1}/>
-                  </linearGradient>
-                  <linearGradient id="realGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10B981" stopOpacity={1}/>
-                    <stop offset="100%" stopColor="#059669" stopOpacity={1}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128, 128, 128, 0.08)" />
-                <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={80} tick={{ fontSize: 9, fontWeight: 900, fill: '#64748b' }} axisLine={false} tickLine={false} dy={15} />
-                <YAxis tickFormatter={(val) => `${val}M`} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <Tooltip cursor={{fill: 'rgba(99, 102, 241, 0.03)', radius: 10}} content={<CustomTooltip />} />
-                <Legend wrapperStyle={{paddingTop: '40px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em'}} iconType="circle" />
-                <Bar dataKey="Anggaran" fill="url(#barGrad)" radius={[10, 10, 0, 0]} barSize={40} animationDuration={2000} />
-                <Bar dataKey="Realisasi" fill="url(#realGrad)" radius={[10, 10, 0, 0]} barSize={30} animationDuration={2500} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="bg-white/40 dark:bg-gray-950/40 backdrop-blur-3xl rounded-[2.5rem] p-10 border border-white/50 dark:border-white/5 shadow-inner">
+            <div className="h-[550px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 120 }} barGap={12}>
+                  <defs>
+                    <linearGradient id="barAnggaran" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4F46E5" stopOpacity={0.85}/>
+                      <stop offset="100%" stopColor="#818CF8" stopOpacity={0.4}/>
+                    </linearGradient>
+                    <linearGradient id="barRealisasi" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10B981" stopOpacity={0.95}/>
+                      <stop offset="100%" stopColor="#059669" stopOpacity={0.5}/>
+                    </linearGradient>
+                    <filter id="shadow">
+                      <feDropShadow dx="0" dy="8" stdDeviation="12" floodOpacity="0.15"/>
+                    </filter>
+                  </defs>
+                  <CartesianGrid strokeDasharray="5 5" vertical={false} stroke="rgba(148, 163, 184, 0.08)" />
+                  <XAxis 
+                    dataKey="name" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    interval={0} 
+                    height={120} 
+                    tick={{ fontSize: 10, fontWeight: 800, fill: '#64748b', letterSpacing: '-0.2px' }} 
+                    axisLine={{ stroke: 'rgba(148, 163, 184, 0.1)', strokeWidth: 2 }} 
+                    tickLine={false} 
+                    dy={15} 
+                  />
+                  <YAxis 
+                    tickFormatter={(val) => `${val}M`} 
+                    tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                  />
+                  <Tooltip 
+                    cursor={{fill: 'rgba(79, 70, 229, 0.03)', radius: 15}} 
+                    content={<CustomTooltip />} 
+                  />
+                  <Legend 
+                    verticalAlign="top" 
+                    align="right"
+                    height={60}
+                    iconType="rect"
+                    iconSize={14}
+                    wrapperStyle={{ paddingTop: '0px', paddingBottom: '30px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px' }} 
+                  />
+                  <Bar dataKey="Anggaran" fill="url(#barAnggaran)" name="Pagu PPA" radius={[12, 12, 4, 4]} barSize={40} filter="url(#shadow)" />
+                  <Bar dataKey="Realisasi" fill="url(#barRealisasi)" name="Realisasi Kas" radius={[12, 12, 4, 4]} barSize={40} filter="url(#shadow)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       )}
 
-      {/* CONTENT LIST / CARDS */}
-      <div className="space-y-6">
+      {/* CONTENT GRID - PREMIUM CARDS */}
+      <div className="space-y-10">
         {!selectedSkpd ? (
-          <div className="py-32 text-center bg-slate-50/50 dark:bg-slate-900/50 rounded-[3rem] border border-dashed border-slate-300 dark:border-slate-700">
-            <Search size={48} className="mx-auto text-slate-300 mb-6 animate-bounce" />
-            <p className="text-xl font-black text-slate-400 tracking-tighter uppercase">Silakan Pilih Perangkat Daerah</p>
-            <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-[0.3em]">Gunakan filter di atas untuk memulai audit data</p>
+          <div className="py-40 text-center bg-white/40 dark:bg-gray-900/40 backdrop-blur-3xl rounded-[4rem] border border-dashed border-slate-300 dark:border-white/10 shadow-xl group">
+            <div className="w-24 h-24 mx-auto mb-8 bg-slate-100 dark:bg-white/5 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 duration-700">
+                <Search size={48} className="text-slate-300 dark:text-slate-600 animate-pulse" />
+            </div>
+            <p className="text-2xl font-black text-slate-400 dark:text-slate-500 tracking-tighter uppercase">Menunggu Input Audit</p>
+            <p className="text-[10px] font-black text-slate-400 mt-4 uppercase tracking-[0.4em] opacity-60">Gunakan filter cerdas di atas untuk memulai analisis</p>
           </div>
         ) : subKegiatanStats.length > 0 ? (
           viewMode === 'card' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
               {paginatedData.map((item, idx) => {
                 const key = `${item.subKegiatan}-${item.kodeSubKegiatan}`;
                 const isExpanded = expandedRows.has(key);
                 return (
-                  <div key={key} className={`group bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 dark:border-slate-700/50 rounded-[2.5rem] overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 ${isExpanded ? 'lg:col-span-2 shadow-indigo-500/10 ring-2 ring-indigo-500/20' : 'shadow-xl'}`}>
-                    <div onClick={() => toggleRow(key)} className="p-8 cursor-pointer relative overflow-hidden text-left">
-                      {isExpanded && <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none transition-opacity duration-1000"><Layers size={200} className="text-indigo-500" /></div>}
+                  <div key={key} className={`group bg-white/40 dark:bg-gray-900/40 backdrop-blur-3xl border border-white/50 dark:border-white/5 rounded-[3rem] overflow-hidden transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] hover:translate-y-[-10px] ${isExpanded ? 'lg:col-span-2 shadow-[0_50px_100px_-20px_rgba(79,70,229,0.2)] ring-2 ring-indigo-500/20' : 'shadow-2xl shadow-slate-200/50 dark:shadow-none'}`}>
+                    <div onClick={() => toggleRow(key)} className="p-10 cursor-pointer relative overflow-hidden text-left">
+                      {isExpanded && <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none transition-opacity duration-1000 rotate-12"><Layers size={250} className="text-indigo-500" /></div>}
                       
-                      <div className="flex flex-col md:flex-row justify-between items-start gap-6 relative z-10">
-                        <div className="flex-1 space-y-3">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <span className="text-[10px] font-black px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-full tracking-widest text-slate-500 font-mono">{item.kodeSubKegiatan}</span>
+                      <div className="flex flex-col md:flex-row justify-between items-start gap-8 relative z-10">
+                        <div className="flex-1 space-y-4">
+                          <div className="flex flex-wrap items-center gap-4">
+                            <span className="text-[10px] font-black px-4 py-2 bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl tracking-[0.2em] text-slate-500 font-mono italic">{item.kodeSubKegiatan}</span>
                             {getPerformanceBadge(item.persentase)}
                           </div>
-                          <h4 className="text-xl font-black text-slate-800 dark:text-white leading-tight tracking-tighter group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          <h4 className="text-2xl font-black text-slate-800 dark:text-white leading-tight tracking-tighter group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-all duration-500">
                             {item.subKegiatan}
                           </h4>
                         </div>
-                        <div className="text-right whitespace-nowrap">
-                          <p className="text-2xl font-black text-slate-800 dark:text-white tracking-tighter leading-none mb-1 tabular-nums">{formatIDR(item.totalAnggaran)}</p>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alokasi Pagu</p>
+                        <div className="text-right whitespace-nowrap bg-slate-900/5 dark:bg-white/5 p-6 rounded-[2rem] border border-white/10">
+                          <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1 opacity-60">ALOKASI PAGU</p>
+                          <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none tabular-nums">{formatIDR(item.totalAnggaran)}</p>
                         </div>
                       </div>
 
-                      <div className="mt-8 space-y-3">
-                        <div className="flex justify-between text-[11px] font-black uppercase tracking-[0.1em]">
-                          <span className="text-emerald-500 flex items-center gap-1.5"><CheckCircle size={14} /> Terpakai: {formatIDR(item.totalRealisasi)}</span>
-                          <span className="text-slate-400">Pencapaian: {item.persentase.toFixed(1)}%</span>
+                      <div className="mt-10 space-y-4">
+                        <div className="flex justify-between text-[11px] font-black uppercase tracking-[0.2em]">
+                          <span className="text-emerald-500 flex items-center gap-2"><CheckCircle size={16} /> REALISASI: {formatIDR(item.totalRealisasi)}</span>
+                          <span className="text-slate-400">EFISIENSI: {item.persentase.toFixed(1)}%</span>
                         </div>
-                        <div className="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden shadow-inner flex border border-slate-200/20">
+                        <div className="w-full bg-slate-100 dark:bg-gray-800 h-4 rounded-full overflow-hidden shadow-inner flex border border-white/10">
                           <div 
-                            className={`h-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(16,185,129,0.3)] ${item.persentase >= 80 ? 'bg-emerald-500' : item.persentase >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                            className={`h-full transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(16,185,129,0.3)] ${item.persentase >= 80 ? 'bg-gradient-to-r from-emerald-500 to-green-600' : item.persentase >= 50 ? 'bg-gradient-to-r from-amber-400 to-amber-600' : 'bg-gradient-to-r from-rose-500 to-rose-700'}`}
                             style={{ width: `${Math.min(item.persentase, 100)}%` }}
                           />
                         </div>
-                        <div className="flex justify-between text-[10px] font-bold text-slate-500 tracking-widest italic pt-2">
-                          <span className="tabular-nums opacity-60 italic font-medium">Sisa: {formatIDR(item.sisaAnggaran)}</span>
-                          <span className="flex items-center gap-1 text-indigo-500 font-black tracking-tighter hover:underline decoration-indigo-500/30 underline-offset-4">
+                        <div className="flex justify-between items-center pt-4">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Sisa Anggaran</span>
+                            <span className="text-sm font-black text-rose-500 tabular-nums italic">{formatIDR(item.sisaAnggaran)}</span>
+                          </div>
+                          <button className="flex items-center gap-3 px-6 py-3 bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-indigo-500/20 hover:bg-indigo-600 hover:text-white transition-all">
                             RINCIAN REKENING 
-                            <ChevronDown size={14} className={`transition-transform duration-700 ${isExpanded ? 'rotate-180' : ''}`} />
-                          </span>
+                            <ChevronDown size={16} className={`transition-transform duration-700 ${isExpanded ? 'rotate-180' : ''}`} />
+                          </button>
                         </div>
                       </div>
                     </div>
 
                     {isExpanded && (
-                      <div className="border-t border-slate-100 dark:border-slate-700 bg-white/40 dark:bg-slate-900/20 p-8 space-y-10 animate-in slide-in-from-top-6 duration-700">
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
-                          {/* Sumber Dana */}
-                          <div className="space-y-5 text-left font-black">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2.5 bg-emerald-500/10 text-emerald-600 rounded-xl shadow-inner"><DollarSign size={20} /></div>
-                              <h5 className="text-sm uppercase tracking-widest italic text-slate-600 dark:text-slate-300">Struktur Pembiayaan</h5>
+                      <div className="border-t border-slate-100/50 dark:border-white/5 bg-slate-900/[0.02] dark:bg-black/20 p-10 space-y-12 animate-in slide-in-from-top-12 duration-1000">
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-16">
+                          {/* Sumber Dana Section */}
+                          <div className="space-y-6 text-left">
+                            <div className="flex items-center gap-4">
+                              <div className="p-3 bg-emerald-500/10 text-emerald-600 rounded-2xl shadow-inner border border-emerald-500/20 font-black tracking-widest"><DollarSign size={24} /></div>
+                              <h5 className="text-lg font-black tracking-tighter text-slate-700 dark:text-slate-300 uppercase">Struktur Pembiayaan</h5>
                             </div>
-                            <div className="grid grid-cols-1 gap-3">
+                            <div className="grid grid-cols-1 gap-4">
                               {item.sumberDanaList.map(sd => (
-                                <div key={sd} className="flex items-center gap-3 px-5 py-4 bg-white/60 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm transition-all hover:scale-[1.02] hover:border-emerald-500/30">
-                                  <div className="w-1.5 h-6 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                                  <span className="text-[11px] font-black text-slate-600 dark:text-slate-300 tracking-tight leading-none uppercase">{sd}</span>
+                                <div key={sd} className="group/sd flex items-center gap-4 px-6 py-5 bg-white/60 dark:bg-gray-800/60 rounded-[1.5rem] border border-slate-100 dark:border-white/5 shadow-sm transition-all hover:translate-x-2 hover:border-emerald-500/30">
+                                  <div className="w-1.5 h-8 bg-emerald-500 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.5)] transition-all group-hover/sd:h-10"></div>
+                                  <span className="text-xs font-black text-slate-600 dark:text-slate-300 tracking-tight leading-tight uppercase italic">{sd}</span>
                                 </div>
                               ))}
                             </div>
                           </div>
 
-                          {/* Rincian Rekening */}
-                          <div className="space-y-5 text-left font-black">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2.5 bg-indigo-500/10 text-indigo-600 rounded-xl shadow-inner"><Layers size={20} /></div>
-                              <h5 className="text-sm uppercase tracking-widest italic text-slate-600 dark:text-slate-300">Breakdown Belanja</h5>
+                          {/* Rincian Rekening Section */}
+                          <div className="space-y-6 text-left font-black">
+                            <div className="flex items-center gap-4">
+                              <div className="p-3 bg-indigo-500/10 text-indigo-600 rounded-2xl shadow-inner border border-indigo-500/20 tracking-widest"><Layers size={24} /></div>
+                              <h5 className="text-lg font-black tracking-tighter text-slate-700 dark:text-slate-300 uppercase">Audit Level Rekening</h5>
                             </div>
-                            <div className="overflow-hidden rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
-                              <table className="min-w-full">
-                                <thead className="bg-slate-50/80 dark:bg-slate-800/80">
-                                  <tr>
-                                    <th className="px-5 py-4 text-left text-[9px] font-black text-slate-400 uppercase tracking-widest">Deskripsi Uraian</th>
-                                    <th className="px-5 py-4 text-right text-[9px] font-black text-slate-400 uppercase tracking-widest">Volume Fiskal</th>
-                                    <th className="px-5 py-4 text-right text-[9px] font-black text-slate-400 uppercase tracking-widest">Serap %</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50/50 dark:divide-slate-800/50">
-                                  {item.rekenings.map(rek => (
-                                    <tr key={rek.rekening} className="hover:bg-indigo-500/5 transition-colors">
-                                      <td className="px-5 py-3.5 text-[11px] font-bold text-slate-600 dark:text-slate-400 max-w-[180px] truncate">{rek.rekening}</td>
-                                      <td className="px-5 py-3.5 text-right text-[11px] font-black text-slate-800 dark:text-white italic tabular-nums">{formatIDR(rek.realisasi)}</td>
-                                      <td className="px-5 py-3.5 text-right font-black">
-                                        <span className={`px-2.5 py-1 rounded-lg text-[10px] tabular-nums shadow-sm ${rek.persentase >= 80 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                          {rek.persentase.toFixed(1)}%
-                                        </span>
-                                      </td>
+                            <div className="overflow-hidden rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-2xl bg-white/40 dark:bg-gray-900/60 backdrop-blur-3xl">
+                              <div className="overflow-x-auto">
+                                <table className="min-w-full border-collapse">
+                                  <thead>
+                                    <tr className="bg-slate-900/5 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
+                                      <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Uraian Belanja</th>
+                                      <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Realisasi</th>
+                                      <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Serap %</th>
                                     </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                                    {item.rekenings.map(rek => (
+                                      <tr key={rek.rekening} className="hover:bg-indigo-500/[0.04] transition-colors group/row">
+                                        <td className="px-8 py-4 text-[11px] font-bold text-slate-600 dark:text-slate-400 max-w-[200px] truncate leading-tight group-hover/row:text-indigo-600 transition-colors uppercase">{rek.rekening}</td>
+                                        <td className="px-8 py-4 text-right text-[11px] font-black text-slate-800 dark:text-white italic tabular-nums">{formatIDR(rek.realisasi)}</td>
+                                        <td className="px-8 py-4 text-right font-black">
+                                          <div className={`inline-flex items-center justify-center min-w-[50px] px-3 py-1.5 rounded-xl text-[10px] tabular-nums shadow-sm border ${rek.persentase >= 80 ? 'bg-emerald-100/50 text-emerald-700 border-emerald-200' : 'bg-amber-100/50 text-amber-700 border-amber-200'}`}>
+                                            {rek.persentase.toFixed(1)}%
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -642,70 +744,105 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole, userCanUse
               })}
             </div>
           ) : (
-            /* LIST VIEW TABLE */
-            <div className="overflow-x-auto rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-2xl bg-white/20 dark:bg-slate-800/20 backdrop-blur-xl text-left">
-              <table className="min-w-full border-separate border-spacing-0">
-                <thead>
-                  <tr className="bg-slate-50/80 dark:bg-slate-900/80">
-                    <th className="px-8 py-6 text-left text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] border-b border-slate-200/50">ID SubKeg</th>
-                    <th className="px-8 py-6 text-left text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] border-b border-slate-200/50">Uraian Pekerjaan / Sub Kegiatan</th>
-                    <th className="px-8 py-6 text-right text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] border-b border-slate-200/50">Pagu Definitif</th>
-                    <th className="px-8 py-6 text-right text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] border-b border-slate-200/50">Audit Serap</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {paginatedData.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-indigo-500/5 transition-colors group cursor-pointer" onClick={() => toggleRow(`${item.subKegiatan}-${item.kodeSubKegiatan}`)}>
-                      <td className="px-8 py-5 text-[10px] font-black text-slate-400 font-mono tracking-widest">{item.kodeSubKegiatan}</td>
-                      <td className="px-8 py-5 text-sm font-black text-slate-800 dark:text-white max-w-sm tracking-tighter leading-tight group-hover:text-indigo-600 transition-colors uppercase">{item.subKegiatan}</td>
-                      <td className="px-8 py-5 text-right font-black text-indigo-600 dark:text-indigo-400 tabular-nums italic text-sm">{formatIDR(item.totalAnggaran)}</td>
-                      <td className="px-8 py-5 text-right">
-                        <div className="flex flex-col items-end gap-1.5">
-                          <div className={`px-3 py-1 rounded-xl text-[11px] font-black shadow-sm ${item.persentase >= 80 ? 'bg-emerald-100 text-emerald-700' : item.persentase >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
-                            {item.persentase.toFixed(1)}%
-                          </div>
-                          <div className="w-20 bg-slate-100 dark:bg-slate-700 h-1 rounded-full overflow-hidden flex shadow-inner">
-                            <div className={`h-full ${item.persentase >= 80 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-amber-500'}`} style={{ width: `${Math.min(item.persentase, 100)}%` }} />
-                          </div>
-                        </div>
-                      </td>
+            /* LIST VIEW TABLE - MODERN MINIMALIST */
+            <div className="overflow-hidden rounded-[3.5rem] border border-slate-200/50 dark:border-white/5 shadow-2xl bg-white/40 dark:bg-gray-900/40 backdrop-blur-3xl transition-all hover:shadow-[0_80px_120px_-30px_rgba(0,0,0,0.15)]">
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse">
+                  <thead>
+                    <tr className="bg-slate-900/5 dark:bg-white/5 text-left border-b border-gray-100 dark:border-white/10">
+                      <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Kode Anggaran</th>
+                      <th className="px-10 py-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Sub Kegiatan / Uraian</th>
+                      <th className="px-10 py-8 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Pagu PPA</th>
+                      <th className="px-10 py-8 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Penyerapan</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                    {paginatedData.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-indigo-500/[0.04] transition-all group cursor-pointer duration-300" onClick={() => toggleRow(`${item.subKegiatan}-${item.kodeSubKegiatan}`)}>
+                        <td className="px-10 py-7 text-[10px] font-black text-slate-400 font-mono tracking-widest italic opacity-60">{item.kodeSubKegiatan}</td>
+                        <td className="px-10 py-7 text-sm font-black text-slate-800 dark:text-white max-w-sm tracking-tighter leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-all uppercase">{item.subKegiatan}</td>
+                        <td className="px-10 py-7 text-right font-black text-indigo-600 dark:text-indigo-400 tabular-nums italic text-base tracking-tighter">{formatIDR(item.totalAnggaran)}</td>
+                        <td className="px-10 py-7 text-right">
+                          <div className="flex flex-col items-end gap-2.5">
+                            <div className={`px-4 py-1.5 rounded-xl text-[11px] font-black tracking-widest shadow-sm border ${item.persentase >= 80 ? 'bg-emerald-500 text-white border-emerald-600' : item.persentase >= 50 ? 'bg-amber-400 text-amber-950 border-amber-500' : 'bg-rose-500 text-white border-rose-600'}`}>
+                              {item.persentase.toFixed(1)}%
+                            </div>
+                            <div className="w-24 bg-slate-100 dark:bg-gray-800 h-1.5 rounded-full overflow-hidden flex shadow-inner border border-white/5">
+                              <div className={`h-full transition-all duration-1000 ${item.persentase >= 80 ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)]' : 'bg-amber-500'}`} style={{ width: `${Math.min(item.persentase, 100)}%` }} />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )
         ) : (
-          <div className="py-32 text-center bg-slate-50/50 dark:bg-slate-900/50 rounded-[3rem] border border-slate-200 dark:border-slate-800 animate-pulse">
-            <Info size={40} className="mx-auto text-slate-300 mb-4" />
-            <p className="font-black text-slate-400 uppercase tracking-[0.3em] text-xs italic">Data unit kerja sedang dikonfigurasi...</p>
+          <div className="py-40 text-center bg-white/40 dark:bg-gray-900/40 backdrop-blur-3xl rounded-[4rem] border border-dashed border-slate-300 dark:border-white/10 animate-pulse">
+            <Info size={48} className="mx-auto text-slate-300 dark:text-slate-700 mb-6" />
+            <p className="font-black text-slate-400 uppercase tracking-[0.4em] text-xs italic">Menyiapkan Database Performa Unit...</p>
           </div>
         )}
 
         {totalPages > 1 && (
-          <div className="pt-10 flex justify-center animate-in slide-in-from-bottom-5 duration-700">
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} theme={theme} />
+          <div className="pt-12 flex justify-center animate-in slide-in-from-bottom-8 duration-1000">
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
           </div>
         )}
       </div>
 
-      {/* FOOTER LEGEND */}
+      {/* FOOTER METRICS PANEL */}
       {selectedSkpd && summaryStats && (
-        <div className="flex flex-wrap items-center justify-center gap-10 py-12 border-t border-slate-200 dark:border-slate-800 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 italic">
-          <div className="flex items-center gap-2.5 group cursor-default">
-            <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/40 group-hover:scale-125 transition-transform duration-300"></div> {summaryStats.totalItems} UNIT SUB KEGIATAN
-          </div>
-          <div className="flex items-center gap-2.5 group cursor-default">
-            <div className="w-3 h-3 rounded-full bg-indigo-600 shadow-lg shadow-indigo-500/40 group-hover:scale-125 transition-transform duration-300"></div> {summaryStats.totalRekening} ITEM TRANSAKSI
-          </div>
-          <div className="flex items-center gap-2.5 group cursor-default">
-            <div className="w-3 h-3 rounded-full bg-purple-600 shadow-lg shadow-purple-500/40 group-hover:scale-125 transition-transform duration-300"></div> {summaryStats.totalSumberDana} SUMBER PEMBIAYAAN
-          </div>
-          <div className="flex items-center gap-2.5 text-indigo-400 opacity-80 animate-pulse">
-            <Info size={14} /> KLIK KARTU UNTUK AUDIT REKENING
-          </div>
+        <div className="mt-20 p-10 bg-gradient-to-r from-indigo-900 to-slate-900 rounded-[3rem] border border-white/10 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]">
+            <div className="flex flex-wrap items-center justify-between gap-12">
+                <div className="flex flex-wrap items-center gap-12">
+                    {[
+                        { label: 'Cakupan Sub Kegiatan', value: summaryStats.totalItems, color: 'emerald', icon: Layers },
+                        { label: 'Populasi Transaksi', value: summaryStats.totalRekening, color: 'indigo', icon: BarChart3 },
+                        { label: 'Basis Pembiayaan', value: summaryStats.totalSumberDana, color: 'purple', icon: DollarSign }
+                    ].map((stat, i) => (
+                        <div key={i} className="flex flex-col gap-2 group cursor-default">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-2 group-hover:text-white transition-colors">
+                                <stat.icon size={12} className={`text-${stat.color}-400`} /> {stat.label}
+                            </p>
+                            <div className="flex items-center gap-4">
+                                <div className={`w-3 h-3 rounded-full bg-${stat.color}-500 shadow-[0_0_15px_#6366F1]`}></div>
+                                <p className="text-3xl font-black text-white leading-none tracking-tighter">{stat.value}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="flex items-center gap-4 px-8 py-4 bg-white/5 rounded-2xl border border-white/10 group cursor-pointer hover:bg-white/10 transition-all">
+                     <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                         <Info size={20} className="text-indigo-400 animate-pulse" />
+                     </div>
+                     <p className="text-[10px] font-black text-indigo-200 tracking-[0.2em] uppercase leading-tight">
+                        Klik Kartu untuk <br/> Audit Rekening
+                     </p>
+                     <ArrowUpRight size={20} className="text-indigo-500 ml-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                </div>
+            </div>
         </div>
       )}
+      
+      <style>{`
+        .shadow-inner {
+            box-shadow: inset 0 2px 8px 0 rgba(0, 0, 0, 0.05);
+        }
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .animate-progress-glow {
+            animation: pulse-soft 2s infinite ease-in-out;
+        }
+        select option {
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+      `}</style>
     </div>
   );
 };
