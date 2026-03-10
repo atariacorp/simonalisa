@@ -32,40 +32,6 @@ const SectionTitle = ({ children }) => (
   </div>
 );
 
-
-  return (
-    <div className="relative overflow-hidden bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border border-purple-200/50 dark:border-purple-900/30 rounded-[2.5rem] p-8 shadow-2xl shadow-purple-500/10 mb-10 transition-all duration-500">
-      <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl"></div>
-      <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6">
-        <div className="p-4 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl text-white shadow-lg shadow-purple-500/40 transform -rotate-2">
-          <Sparkles size={28} />
-        </div>
-        <div className="flex-1 space-y-1 text-left">
-          <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tighter">Performance Intelligence</h3>
-          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Analisis Kinerja Strategis AI</p>
-        </div>
-        <div className="w-full md:w-auto flex gap-2">
-          <button 
-            onClick={handleAnalyze}
-            disabled={disabledCondition || isAnalyzing}
-            className="w-full md:w-auto px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-purple-500/30 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {isAnalyzing ? <Loader className="animate-spin" size={18} /> : <MessageSquare size={18} />}
-            Mulai Analisis
-          </button>
-        </div>
-      </div>
-      {result && (
-        <div className="mt-6 p-6 bg-purple-50/50 dark:bg-purple-900/20 rounded-3xl border border-purple-100 dark:border-purple-800/50 animate-in fade-in slide-in-from-top-4 duration-500 text-left">
-          <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium italic">
-            <span className="font-black text-purple-600 not-italic mr-2 tracking-tighter">INSIGHT:</span> {result}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
-
 // --- Komponen Grafik Kombinasi (STYLE UPDATED) ---
 const CombinationChart = ({ data, yearA, yearB, analysisType }) => {
   const COLORS = ['#435EBE', '#10B981', '#F59E0B', '#6366F1', '#EC4899', '#8B5CF6'];

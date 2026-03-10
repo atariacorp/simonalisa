@@ -13,8 +13,8 @@ import {
 // Import yang benar dari aplikasi yang sudah ada
 import { db, appId } from '../../utils/firebase';
 import { formatIDR } from '../../utils';
-import { auth } from '../../utils/firebase'; // Import auth instance
-import GeminiAnalysis from '../components/GitAnalysis';
+import { auth } from '../../utils/firebase';
+import GeminiAnalysis from '../components/GeminiAnalysis';
 
 // SectionTitle Component
 const SectionTitle = ({ children }) => (
@@ -342,18 +342,18 @@ const AnalisisLintasTahunView = ({ data = {}, theme, selectedYear, userRole }) =
     }, [dataFirst, dataSecond, dataThird, yearFirst, yearSecond, yearThird, selectedSkpdBelanja, selectedSkpdPendapatan, startMonth, endMonth]);
 
     const getAnalysisPrompt = (query, allData) => {
-    // Jika user mengirim query khusus
-    if (query && query.trim() !== '') {
-        return `Berdasarkan data perbandingan 3 tahun (${yearFirst}, ${yearSecond}, ${yearThird}), jawab pertanyaan ini: ${query}`;
-    }
-    
-    // Analisis default
-    if (!comparisonData || comparisonData.length === 0) return "Data tidak cukup untuk dianalisis.";
-    
-    const period = startMonth === endMonth ? startMonth : `periode ${startMonth} - ${endMonth}`;
-    const totalAgg = totalAggregate || { totalAnggaran: 0, totalRealisasiBelanja: 0 };
-    
-    return `ANALISIS LINTAS TAHUN APBD
+        // Jika user mengirim query khusus
+        if (query && query.trim() !== '') {
+            return `Berdasarkan data perbandingan 3 tahun (${yearFirst}, ${yearSecond}, ${yearThird}), jawab pertanyaan ini: ${query}`;
+        }
+        
+        // Analisis default
+        if (!comparisonData || comparisonData.length === 0) return "Data tidak cukup untuk dianalisis.";
+        
+        const period = startMonth === endMonth ? startMonth : `periode ${startMonth} - ${endMonth}`;
+        const totalAgg = totalAggregate || { totalAnggaran: 0, totalRealisasiBelanja: 0 };
+        
+        return `ANALISIS LINTAS TAHUN APBD
 PERIODE: ${yearFirst} - ${yearSecond} - ${yearThird}
 RENTANG ANALISIS: ${period}
 
@@ -379,7 +379,7 @@ BERIKAN ANALISIS MENDALAM MENGENAI:
 4. Peringatan Dini: Poin-poin yang perlu diwaspadai untuk perencanaan tahun depan.
 
 Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
-};
+    };
 
     const ComparisonCard = ({ title, valueFirst, valueSecond, valueThird, yearFirst, yearSecond, yearThird, icon: Icon }) => {
         const change1to2 = valueSecond - valueFirst;
@@ -391,44 +391,61 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
         const isIncrease2to3 = change2to3 > 0;
 
         return (
-            <div className="relative group overflow-hidden bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 dark:border-slate-700/50 p-6 rounded-[2rem] shadow-xl transition-all duration-500 hover:shadow-2xl hover:-translate-y-2">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 group-hover:rotate-12 transition-all duration-700">
-                    {Icon && <Icon size={64} className="text-indigo-500" />}
-                </div>
-                <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400 mb-3">{title}</h4>
+            <div className="relative group overflow-hidden bg-white/30 dark:bg-slate-800/30 backdrop-blur-2xl border border-white/40 dark:border-slate-700/50 p-8 rounded-[2.5rem] shadow-2xl transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.3)] hover:-translate-y-2">
+                {/* Background Glow Effect */}
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-indigo-500/10 group-hover:via-purple-500/10 group-hover:to-pink-500/10 transition-all duration-1000"></div>
                 
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                    <div className="text-center">
-                        <p className="text-xs font-bold text-slate-400">{yearFirst}</p>
-                        <p className="text-sm font-black text-slate-800 dark:text-white truncate">{formatIDR(valueFirst)}</p>
-                    </div>
-                    <div className="text-center border-l border-r border-slate-200 dark:border-slate-700">
-                        <p className="text-xs font-bold text-slate-400">{yearSecond}</p>
-                        <p className="text-sm font-black text-indigo-600 dark:text-indigo-400 truncate">{formatIDR(valueSecond)}</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-xs font-bold text-slate-400">{yearThird}</p>
-                        <p className="text-sm font-black text-purple-600 dark:text-purple-400 truncate">{formatIDR(valueThird)}</p>
-                    </div>
+                {/* Decorative Icon */}
+                <div className="absolute top-4 right-4 p-3 opacity-10 group-hover:opacity-20 group-hover:scale-125 group-hover:rotate-12 transition-all duration-700">
+                    {Icon && <Icon size={80} className="text-indigo-500" />}
                 </div>
                 
-                <div className="flex justify-between items-center">
-                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black ${
-                        isIncrease1to2 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400'
+                <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400 mb-4 relative z-10">{title}</h4>
+                
+                {/* 3 Year Values with Modern Design */}
+                <div className="grid grid-cols-3 gap-3 mb-6 relative z-10">
+                    {[
+                        { year: yearFirst, value: valueFirst, color: 'text-slate-800 dark:text-white' },
+                        { year: yearSecond, value: valueSecond, color: 'text-indigo-600 dark:text-indigo-400' },
+                        { year: yearThird, value: valueThird, color: 'text-purple-600 dark:text-purple-400' }
+                    ].map((item, idx) => (
+                        <div key={idx} className="text-center group/card">
+                            <p className="text-xs font-black text-slate-400 mb-1">{item.year}</p>
+                            <p className={`text-sm md:text-base font-black ${item.color} truncate tabular-nums`}>
+                                {formatIDR(item.value)}
+                            </p>
+                            {idx > 0 && (
+                                <div className="mt-2 h-1 w-full bg-gradient-to-r from-transparent via-slate-300/30 to-transparent"></div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+                
+                {/* Growth Indicators with ECharts Style */}
+                <div className="flex justify-between items-center relative z-10">
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black tracking-wider transition-all ${
+                        isIncrease1to2 
+                            ? 'bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                            : 'bg-gradient-to-r from-rose-500/10 to-rose-500/5 text-rose-600 dark:text-rose-400 border border-rose-500/20'
                     }`}>
-                        {isIncrease1to2 ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
-                        <span>{Math.abs(percentageChange1to2).toFixed(1)}%</span>
+                        {isIncrease1to2 ? <ArrowUpRight size={14} className="animate-bounce" /> : <ArrowDownRight size={14} className="animate-bounce" />}
+                        <span className="font-black">{Math.abs(percentageChange1to2).toFixed(1)}%</span>
                         <span className="ml-1 text-[8px] opacity-60">{yearFirst}→{yearSecond}</span>
                     </div>
                     
-                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black ${
-                        isIncrease2to3 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400'
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black tracking-wider transition-all ${
+                        isIncrease2to3 
+                            ? 'bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                            : 'bg-gradient-to-r from-rose-500/10 to-rose-500/5 text-rose-600 dark:text-rose-400 border border-rose-500/20'
                     }`}>
-                        {isIncrease2to3 ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
-                        <span>{Math.abs(percentageChange2to3).toFixed(1)}%</span>
+                        {isIncrease2to3 ? <ArrowUpRight size={14} className="animate-bounce" /> : <ArrowDownRight size={14} className="animate-bounce" />}
+                        <span className="font-black">{Math.abs(percentageChange2to3).toFixed(1)}%</span>
                         <span className="ml-1 text-[8px] opacity-60">{yearSecond}→{yearThird}</span>
                     </div>
                 </div>
+                
+                {/* Subtle Shadow Line */}
+                <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent"></div>
             </div>
         );
     };
@@ -438,49 +455,71 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
             <SectionTitle>Analisis 3 Tahun: {yearFirst} • {yearSecond} • {yearThird}</SectionTitle>
             
             {/* PREMIUM EXECUTIVE DASHBOARD HEADER - 3 YEAR FOCUS */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-700 to-indigo-900 rounded-[3rem] p-10 text-white shadow-2xl shadow-indigo-500/20 border border-white/10 group">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-40 -mt-40 transition-transform duration-1000 group-hover:scale-110"></div>
-                <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-400/10 rounded-full blur-[80px] -ml-32 -mb-32"></div>
+            <div className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-purple-900 to-indigo-900 rounded-[3.5rem] p-10 text-white shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] border border-white/5 group mb-8">
+                {/* Decorative Elements - Enhanced */}
+                <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[150px] -mr-96 -mt-96 transition-all duration-1000 group-hover:bg-indigo-500/20"></div>
+                <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[120px] -ml-80 -mb-80"></div>
+                <div className="absolute top-20 left-40 w-40 h-40 bg-yellow-500/5 rounded-full blur-[60px]"></div>
+                
+                {/* Animated Floating Particles */}
+                <div className="absolute inset-0 overflow-hidden">
+                    {[...Array(20)].map((_, i) => (
+                        <div
+                            key={i}
+                            className="absolute rounded-full bg-white/5 animate-float"
+                            style={{
+                                width: `${Math.random() * 6 + 2}px`,
+                                height: `${Math.random() * 6 + 2}px`,
+                                left: `${Math.random() * 100}%`,
+                                top: `${Math.random() * 100}%`,
+                                animationDelay: `${Math.random() * 10}s`,
+                                animationDuration: `${Math.random() * 20 + 10}s`
+                            }}
+                        />
+                    ))}
+                </div>
                 
                 <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-10 items-center">
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black tracking-[0.2em] uppercase border border-white/10 shadow-lg shadow-black/10">
-                            <Layers size={14} className="animate-pulse" /> 3 YEAR COMPARATIVE ANALYSIS
+                    <div className="lg:col-span-2 space-y-8">
+                        <div className="inline-flex items-center gap-3 px-5 py-2 bg-white/10 backdrop-blur-2xl rounded-full text-[11px] font-black tracking-[0.4em] uppercase border border-white/20 shadow-lg animate-pulse">
+                            <Sparkles size={14} className="text-yellow-400" /> TRI-ANNUAL COMPARATIVE ANALYSIS
                         </div>
-                        <h2 className="text-5xl font-black leading-[0.95] tracking-tighter">
+                        <h2 className="text-4xl lg:text-6xl font-black leading-[0.95] tracking-tighter">
                             Tri-Annual Fiscal <br/>
-                            <span className="text-indigo-200">Performance Tracker</span>.
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 underline decoration-indigo-500/30 decoration-8 underline-offset-8">
+                                Performance Tracker
+                            </span>
                         </h2>
-                        <p className="text-indigo-100/90 text-sm max-w-2xl leading-relaxed font-medium">
+                        <p className="text-indigo-100/90 text-base max-w-2xl leading-relaxed font-medium">
                             Visualisasi komparatif lintas tiga tahun fiskal ({yearFirst}, {yearSecond}, {yearThird}). 
                             Analisis mendalam untuk mengidentifikasi tren jangka menengah, pola musiman, 
                             dan akselerasi kebijakan dengan presisi tinggi melalui integrasi big data.
                         </p>
                         
-                        {/* Quick Stats */}
-                        <div className="flex gap-6 pt-4">
-                            <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-2xl border border-white/20">
-                                <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Total 3 Tahun</p>
-                                <p className="text-xl font-black">{formatIDR(totalAggregate?.totalAnggaran || 0)}</p>
+                        {/* Quick Stats with Glassmorphism */}
+                        <div className="flex flex-wrap gap-6 pt-4">
+                            <div className="bg-white/5 backdrop-blur-2xl px-6 py-4 rounded-2xl border border-white/10 hover:bg-white/10 transition-all cursor-default">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-1">Total 3 Tahun</p>
+                                <p className="text-2xl font-black text-white">{formatIDR(totalAggregate?.totalAnggaran || 0)}</p>
                             </div>
-                            <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-2xl border border-white/20">
-                                <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Rata-rata/Thn</p>
-                                <p className="text-xl font-black">{formatIDR(totalAggregate?.averageRealisasiBelanja || 0)}</p>
+                            <div className="bg-white/5 backdrop-blur-2xl px-6 py-4 rounded-2xl border border-white/10 hover:bg-white/10 transition-all cursor-default">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-1">Rata-rata/Thn</p>
+                                <p className="text-2xl font-black text-white">{formatIDR(totalAggregate?.averageRealisasiBelanja || 0)}</p>
                             </div>
                         </div>
                     </div>
                     <div className="hidden lg:flex flex-col gap-4">
-                        <div className="bg-white/10 backdrop-blur-xl p-5 rounded-[2rem] border border-white/20 shadow-xl group/card hover:bg-white/20 transition-all duration-300 cursor-default">
-                            <div className="flex items-center gap-3 text-[10px] font-black uppercase text-indigo-200 mb-2 tracking-widest">
-                                <Clock size={16} /> Periode Analisis
+                        <div className="bg-white/5 backdrop-blur-3xl p-6 rounded-[2rem] border border-white/10 transition-all hover:bg-white/10 cursor-default">
+                            <div className="flex items-center gap-3 text-[10px] font-black uppercase text-indigo-300 mb-2 tracking-widest">
+                                <Clock size={16} className="text-indigo-400" /> Periode Analisis
                             </div>
-                            <div className="text-lg font-black">{startMonth} — {endMonth}</div>
+                            <div className="text-2xl font-black text-white">{startMonth} — {endMonth}</div>
                         </div>
-                        <div className="bg-white/10 backdrop-blur-xl p-5 rounded-[2rem] border border-white/20 shadow-xl group/card hover:bg-white/20 transition-all duration-300 cursor-default">
-                            <div className="flex items-center gap-3 text-[10px] font-black uppercase text-indigo-200 mb-2 tracking-widest">
-                                <Activity size={16} /> Cakupan Data
+                        <div className="bg-white/5 backdrop-blur-3xl p-6 rounded-[2rem] border border-white/10 transition-all hover:bg-white/10 cursor-default">
+                            <div className="flex items-center gap-3 text-[10px] font-black uppercase text-indigo-300 mb-2 tracking-widest">
+                                <Activity size={16} className="text-indigo-400" /> Cakupan Data
                             </div>
-                            <div className="text-lg font-black">3 Tahun • Full SKPD</div>
+                            <div className="text-2xl font-black text-white">3 Tahun • Full SKPD</div>
                         </div>
                     </div>
                 </div>
@@ -534,23 +573,23 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                 <div className="flex justify-end mt-4 gap-2">
                     <button 
                         onClick={() => setActiveChart('bar')}
-                        className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+                        className={`px-6 py-3 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
                             activeChart === 'bar' 
-                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' 
+                                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30' 
                                 : 'bg-white/50 text-slate-600 hover:bg-white/80'
                         }`}
                     >
-                        <BarChart3 size={14} /> Bar Chart
+                        <BarChart3 size={16} /> Bar Chart
                     </button>
                     <button 
                         onClick={() => setActiveChart('area')}
-                        className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+                        className={`px-6 py-3 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
                             activeChart === 'area' 
-                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' 
+                                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30' 
                                 : 'bg-white/50 text-slate-600 hover:bg-white/80'
                         }`}
                     >
-                        <LineChart size={14} /> Area Chart
+                        <LineChart size={16} /> Area Chart
                     </button>
                 </div>
             </div>
@@ -558,10 +597,10 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-32 gap-6">
                     <div className="relative">
-                      <div className="w-20 h-20 border-[6px] border-indigo-100 border-t-indigo-600 rounded-full animate-spin shadow-2xl shadow-indigo-500/20"></div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Loader size={24} className="text-indigo-600" />
-                      </div>
+                        <div className="w-20 h-20 border-[6px] border-indigo-100 border-t-indigo-600 rounded-full animate-spin shadow-2xl shadow-indigo-500/20"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <Loader size={24} className="text-indigo-600" />
+                        </div>
                     </div>
                     <p className="text-xs font-black uppercase tracking-[0.4em] text-slate-400 animate-pulse italic">Memproses analisis 3 tahun...</p>
                 </div>
@@ -575,58 +614,58 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
             ) : comparisonData && comparisonData.length > 0 && (
                 <div className="space-y-12">
                     {/* AI Analysis Section dengan Toggle */}
-<div className="relative">
-  <div className="flex justify-end mb-2">
-    <button
-      onClick={() => setShowAnalysis(!showAnalysis)}
-      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
-    >
-      {showAnalysis ? (
-        <>🗂️ Sembunyikan Analisis AI</>
-      ) : (
-        <>🤖 Tampilkan Analisis AI</>
-      )}
-    </button>
-  </div>
-  
-  {/* Indikator Data */}
-  {showAnalysis && comparisonData && comparisonData.length > 0 && (
-    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
-      <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-      </span>
-      <span>Analisis 3 Tahun: {yearFirst} • {yearSecond} • {yearThird} | Periode: {startMonth} - {endMonth}</span>
-    </div>
-  )}
-  
-  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
-  {showAnalysis && (
-    <div className="transform transition-all duration-700 hover:scale-[1.01]">
-      <GeminiAnalysis 
-        getAnalysisPrompt={getAnalysisPrompt} 
-        disabledCondition={!comparisonData} 
-        userCanUseAi={userRole !== 'viewer'}
-        allData={{
-          yearFirst,
-          yearSecond,
-          yearThird,
-          startMonth,
-          endMonth,
-          comparisonData,
-          growthRates,
-          totalAggregate
-        }}
-      />
-    </div>
-  )}
-</div>
+                    <div className="relative">
+                        <div className="flex justify-end mb-2">
+                            <button
+                                onClick={() => setShowAnalysis(!showAnalysis)}
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+                            >
+                                {showAnalysis ? (
+                                    <>🗂️ Sembunyikan Analisis AI</>
+                                ) : (
+                                    <>🤖 Tampilkan Analisis AI</>
+                                )}
+                            </button>
+                        </div>
+                        
+                        {/* Indikator Data */}
+                        {showAnalysis && comparisonData && comparisonData.length > 0 && (
+                            <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                                </span>
+                                <span>Analisis 3 Tahun: {yearFirst} • {yearSecond} • {yearThird} | Periode: {startMonth} - {endMonth}</span>
+                            </div>
+                        )}
+                        
+                        {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+                        {showAnalysis && (
+                            <div className="transform transition-all duration-700 hover:scale-[1.01]">
+                                <GeminiAnalysis 
+                                    getAnalysisPrompt={getAnalysisPrompt} 
+                                    disabledCondition={!comparisonData} 
+                                    userCanUseAi={userRole !== 'viewer'}
+                                    allData={{
+                                        yearFirst,
+                                        yearSecond,
+                                        yearThird,
+                                        startMonth,
+                                        endMonth,
+                                        comparisonData,
+                                        growthRates,
+                                        totalAggregate
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </div>
                     
                     {/* GROWTH RATES BANNER */}
                     {growthRates && growthRates.length > 0 && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {growthRates.map((rate, idx) => (
-                                <div key={idx} className="bg-gradient-to-r from-indigo-50/80 to-purple-50/80 dark:from-indigo-900/20 dark:to-purple-900/20 backdrop-blur-xl border border-indigo-200/50 dark:border-indigo-800/30 p-5 rounded-[2rem] shadow-xl">
+                                <div key={idx} className="bg-gradient-to-r from-indigo-50/80 to-purple-50/80 dark:from-indigo-900/20 dark:to-purple-900/20 backdrop-blur-xl border border-indigo-200/50 dark:border-indigo-800/30 p-5 rounded-[2rem] shadow-xl hover:shadow-2xl transition-all">
                                     <p className="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 mb-3">{rate.period}</p>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
@@ -692,94 +731,132 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                     </div>
                     
                     {/* MAIN COMPARISON CHART - 3 TAHUN */}
-                    <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-2xl border border-white/40 dark:border-slate-700/50 p-10 rounded-[3rem] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.05)]">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+                    <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-2xl border border-white/50 dark:border-slate-700/50 p-8 rounded-[3rem] shadow-2xl">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                             <div className="space-y-1">
-                              <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3 tracking-tighter">
-                                  <div className="w-2 h-8 bg-indigo-500 rounded-full"></div>
-                                  Tri-Annual Fiscal Comparison
-                              </h3>
-                              <p className="text-xs font-bold text-slate-500 tracking-widest uppercase ml-5">Perbandingan Nilai Absolut 3 Tahun Fiskal</p>
+                                <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3 tracking-tighter">
+                                    <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-full animate-pulse"></div>
+                                    Tri-Annual Fiscal Comparison
+                                </h3>
+                                <p className="text-xs font-black text-slate-500 tracking-widest uppercase ml-5">Perbandingan Nilai Absolut 3 Tahun Fiskal</p>
                             </div>
-                            <div className="flex gap-6">
-                                <div className="flex items-center gap-3 text-[10px] font-black uppercase text-slate-500 px-4 py-2 bg-indigo-50 dark:bg-slate-700 rounded-xl">
-                                    <div className="w-3 h-3 bg-indigo-600 rounded-full shadow-lg shadow-indigo-500/40"></div> {yearFirst}
-                                </div>
-                                <div className="flex items-center gap-3 text-[10px] font-black uppercase text-slate-500 px-4 py-2 bg-purple-50 dark:bg-slate-700 rounded-xl">
-                                    <div className="w-3 h-3 bg-purple-500 rounded-full shadow-lg shadow-purple-500/40"></div> {yearSecond}
-                                </div>
-                                <div className="flex items-center gap-3 text-[10px] font-black uppercase text-slate-500 px-4 py-2 bg-amber-50 dark:bg-slate-700 rounded-xl">
-                                    <div className="w-3 h-3 bg-amber-500 rounded-full shadow-lg shadow-amber-500/40"></div> {yearThird}
-                                </div>
+                            <div className="flex gap-4">
+                                <button 
+                                    onClick={() => setActiveChart('bar')}
+                                    className={`px-6 py-3 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+                                        activeChart === 'bar' 
+                                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30' 
+                                            : 'bg-white/50 text-slate-600 hover:bg-white/80'
+                                    }`}
+                                >
+                                    <BarChart3 size={16} /> Bar Chart
+                                </button>
+                                <button 
+                                    onClick={() => setActiveChart('area')}
+                                    className={`px-6 py-3 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+                                        activeChart === 'area' 
+                                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30' 
+                                            : 'bg-white/50 text-slate-600 hover:bg-white/80'
+                                    }`}
+                                >
+                                    <LineChart size={16} /> Area Chart
+                                </button>
                             </div>
                         </div>
                         
                         <div className="h-[500px]">
-                            {activeChart === 'bar' ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={comparisonData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }} barGap={8} barSize={40}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128, 128, 128, 0.08)" />
+                            <ResponsiveContainer width="100%" height="100%">
+                                {activeChart === 'bar' ? (
+                                    <BarChart data={comparisonData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }} barGap={12}>
+                                        <defs>
+                                            <linearGradient id="barGradientFirst" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#435EBE" stopOpacity={0.9}/>
+                                                <stop offset="100%" stopColor="#435EBE" stopOpacity={0.4}/>
+                                            </linearGradient>
+                                            <linearGradient id="barGradientSecond" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#A855F7" stopOpacity={0.9}/>
+                                                <stop offset="100%" stopColor="#A855F7" stopOpacity={0.4}/>
+                                            </linearGradient>
+                                            <linearGradient id="barGradientThird" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.9}/>
+                                                <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.4}/>
+                                            </linearGradient>
+                                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                                <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+                                                <feMerge>
+                                                    <feMergeNode in="coloredBlur"/>
+                                                    <feMergeNode in="SourceGraphic"/>
+                                                </feMerge>
+                                            </filter>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(128, 128, 128, 0.08)" />
                                         <XAxis 
                                             dataKey="name" 
                                             axisLine={false} 
                                             tickLine={false} 
-                                            tick={{ fontSize: 10, fontWeight: 800, fill: '#64748b' }} 
-                                            dy={15} 
+                                            tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }} 
+                                            dy={10} 
                                         />
                                         <YAxis 
                                             axisLine={false} 
                                             tickLine={false} 
                                             tickFormatter={(val) => `${(val / 1e9).toFixed(1)}M`} 
-                                            tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} 
+                                            tick={{ fontSize: 11, fontWeight: 600, fill: '#94a3b8' }} 
                                         />
                                         <Tooltip 
-                                            cursor={{fill: 'rgba(99, 102, 241, 0.03)', radius: 10}}
+                                            cursor={{fill: 'rgba(99, 102, 241, 0.03)', radius: 8}}
                                             contentStyle={{ 
-                                                borderRadius: '2rem', 
+                                                borderRadius: '1.5rem', 
                                                 border: 'none', 
-                                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', 
-                                                backgroundColor: 'rgba(255,255,255,0.98)', 
+                                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', 
+                                                backgroundColor: 'rgba(255,255,255,0.95)', 
                                                 backdropFilter: 'blur(10px)',
-                                                padding: '1.5rem'
+                                                padding: '1rem 1.5rem'
                                             }}
-                                            itemStyle={{fontWeight: 900, fontSize: '12px'}}
-                                            formatter={(val) => [formatIDR(val), 'Jumlah']}
+                                            formatter={(val, name) => {
+                                                const year = name === yearFirst ? yearFirst : name === yearSecond ? yearSecond : yearThird;
+                                                return [formatIDR(val), year];
+                                            }}
                                         />
-                                        <Bar dataKey={yearFirst} fill="#435EBE" radius={[12, 12, 4, 4]} animationDuration={2000} animationBegin={200} />
-                                        <Bar dataKey={yearSecond} fill="#A855F7" radius={[12, 12, 4, 4]} animationDuration={2000} animationBegin={400} />
-                                        <Bar dataKey={yearThird} fill="#F59E0B" radius={[12, 12, 4, 4]} animationDuration={2000} animationBegin={600} />
+                                        <Legend 
+                                            verticalAlign="top" 
+                                            align="right"
+                                            height={50}
+                                            iconType="circle"
+                                            iconSize={10}
+                                            wrapperStyle={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', paddingBottom: '20px' }} 
+                                        />
+                                        <Bar dataKey={yearFirst} fill="url(#barGradientFirst)" name={String(yearFirst)} radius={[8, 8, 4, 4]} barSize={45} filter="url(#glow)" />
+                                        <Bar dataKey={yearSecond} fill="url(#barGradientSecond)" name={String(yearSecond)} radius={[8, 8, 4, 4]} barSize={45} filter="url(#glow)" />
+                                        <Bar dataKey={yearThird} fill="url(#barGradientThird)" name={String(yearThird)} radius={[8, 8, 4, 4]} barSize={45} filter="url(#glow)" />
                                     </BarChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <ResponsiveContainer width="100%" height="100%">
+                                ) : (
                                     <AreaChart data={comparisonData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                                         <defs>
-                                            <linearGradient id="colorFirst" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#435EBE" stopOpacity={0.3}/>
+                                            <linearGradient id="areaGradientFirst" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#435EBE" stopOpacity={0.3}/>
                                                 <stop offset="95%" stopColor="#435EBE" stopOpacity={0}/>
                                             </linearGradient>
-                                            <linearGradient id="colorSecond" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#A855F7" stopOpacity={0.3}/>
+                                            <linearGradient id="areaGradientSecond" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#A855F7" stopOpacity={0.3}/>
                                                 <stop offset="95%" stopColor="#A855F7" stopOpacity={0}/>
                                             </linearGradient>
-                                            <linearGradient id="colorThird" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.3}/>
+                                            <linearGradient id="areaGradientThird" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.3}/>
                                                 <stop offset="95%" stopColor="#F59E0B" stopOpacity={0}/>
                                             </linearGradient>
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128, 128, 128, 0.08)" />
-                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 800 }} />
+                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }} />
                                         <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `${(val / 1e9).toFixed(1)}M`} />
-                                        <Tooltip 
-                                            contentStyle={{ borderRadius: '1.5rem', border: 'none', backdropFilter: 'blur(10px)' }}
-                                            formatter={(val) => formatIDR(val)}
-                                        />
-                                        <Area type="monotone" dataKey={yearFirst} stroke="#435EBE" strokeWidth={3} fill="url(#colorFirst)" />
-                                        <Area type="monotone" dataKey={yearSecond} stroke="#A855F7" strokeWidth={3} fill="url(#colorSecond)" />
-                                        <Area type="monotone" dataKey={yearThird} stroke="#F59E0B" strokeWidth={3} fill="url(#colorThird)" />
+                                        <Tooltip contentStyle={{ borderRadius: '1.5rem', border: 'none', backdropFilter: 'blur(10px)' }} />
+                                        <Legend verticalAlign="top" align="right" height={50} iconType="circle" />
+                                        <Area type="monotone" dataKey={yearFirst} stroke="#435EBE" strokeWidth={3} fill="url(#areaGradientFirst)" name={String(yearFirst)} />
+                                        <Area type="monotone" dataKey={yearSecond} stroke="#A855F7" strokeWidth={3} fill="url(#areaGradientSecond)" name={String(yearSecond)} />
+                                        <Area type="monotone" dataKey={yearThird} stroke="#F59E0B" strokeWidth={3} fill="url(#areaGradientThird)" name={String(yearThird)} />
                                     </AreaChart>
-                                </ResponsiveContainer>
-                            )}
+                                )}
+                            </ResponsiveContainer>
                         </div>
                     </div>
                     
@@ -793,8 +870,8 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                                     <Building2 size={32} />
                                 </div>
                                 <div className="space-y-0.5">
-                                  <h3 className="font-black text-slate-800 dark:text-white text-2xl tracking-tighter italic leading-none">Analisis Belanja 3 Tahun</h3>
-                                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Perangkat Daerah • {yearFirst}-{yearThird}</p>
+                                    <h3 className="font-black text-slate-800 dark:text-white text-2xl tracking-tighter italic leading-none">Analisis Belanja 3 Tahun</h3>
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Perangkat Daerah • {yearFirst}-{yearThird}</p>
                                 </div>
                             </div>
                             
@@ -887,8 +964,8 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                                     <Wallet size={32} />
                                 </div>
                                 <div className="space-y-0.5">
-                                  <h3 className="font-black text-slate-800 dark:text-white text-2xl tracking-tighter italic leading-none">Analisis PAD 3 Tahun</h3>
-                                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Penghasil Daerah • {yearFirst}-{yearThird}</p>
+                                    <h3 className="font-black text-slate-800 dark:text-white text-2xl tracking-tighter italic leading-none">Analisis PAD 3 Tahun</h3>
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Penghasil Daerah • {yearFirst}-{yearThird}</p>
                                 </div>
                             </div>
                             
@@ -999,6 +1076,25 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                     </div>
                 </div>
             )}
+            
+            <style>{`
+                @keyframes float {
+                    0%, 100% { transform: translateY(0) translateX(0); }
+                    25% { transform: translateY(-10px) translateX(5px); }
+                    50% { transform: translateY(-5px) translateX(-5px); }
+                    75% { transform: translateY(-15px) translateX(3px); }
+                }
+                .animate-float {
+                    animation: float linear infinite;
+                }
+                @keyframes pulse-glow {
+                    0%, 100% { opacity: 0.5; }
+                    50% { opacity: 1; }
+                }
+                .animate-pulse-glow {
+                    animation: pulse-glow 3s ease-in-out infinite;
+                }
+            `}</style>
         </div>
     );
 };
