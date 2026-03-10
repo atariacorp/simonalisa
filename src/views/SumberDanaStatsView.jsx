@@ -45,7 +45,7 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
     const [chartView, setChartView] = React.useState('pie'); // 'pie' atau 'bar'
     const [showSummary, setShowSummary] = React.useState(true);
     const [expandedRows, setExpandedRows] = React.useState(new Set());
-    
+    const [showAnalysis, setShowAnalysis] = React.useState(true);
     const ITEMS_PER_PAGE = 10;
 
     // Warna untuk visualisasi
@@ -265,48 +265,57 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
         window.XLSX.writeFile(workbook, filename);
     };
     
-    const getAnalysisPrompt = (customQuery) => {
-        if (customQuery) return `Berdasarkan data, analisis: "${customQuery}"`;
-        
-        const focus = selectedSkpd === 'Semua SKPD' ? 'keseluruhan APBD' : `SKPD ${selectedSkpd}`;
-        const subActivityFocus = selectedSubKegiatan !== 'Semua Sub Kegiatan' ? `pada Sub Kegiatan: "${selectedSubKegiatan}"` : '';
-        
-        // Find top performers
-        const topPerformers = filteredData
-            .filter(d => d.anggaran > 100000000)
-            .sort((a, b) => b.persentase - a.persentase)
-            .slice(0, 3)
-            .map(d => `- **${d.subKegiatan}** (${d.sumberDana}): ${d.persentase.toFixed(1)}% (Rp ${formatCurrency(d.realisasi)} dari Rp ${formatCurrency(d.anggaran)})`)
-            .join('\n');
-        
-        // Find low absorption items to highlight issues
-        const issues = filteredData
-            .filter(d => d.anggaran > 100000000 && d.persentase < 40)
-            .slice(0, 3)
-            .map(d => `- **${d.subKegiatan}** (${d.sumberDana}): ${d.persentase.toFixed(1)}% (Sisa: ${formatCurrency(d.sisaAnggaran)})`)
-            .join('\n');
+    const getAnalysisPrompt = (query, allData) => {
+    // Jika user mengirim query khusus
+    if (query && query.trim() !== '') {
+        return `Berdasarkan data statistik sumber dana, jawab pertanyaan ini: ${query}`;
+    }
+    
+    // Analisis default
+    if (filteredData.length === 0) return "Data tidak cukup untuk dianalisis.";
+    
+    const focus = selectedSkpd === 'Semua SKPD' ? 'keseluruhan APBD' : `SKPD ${selectedSkpd}`;
+    const subActivityFocus = selectedSubKegiatan !== 'Semua Sub Kegiatan' ? `pada Sub Kegiatan: "${selectedSubKegiatan}"` : '';
+    
+    // Find top performers
+    const topPerformers = filteredData
+        .filter(d => d.anggaran > 100000000)
+        .sort((a, b) => b.persentase - a.persentase)
+        .slice(0, 3)
+        .map(d => `- **${d.subKegiatan}** (${d.sumberDana}): ${d.persentase.toFixed(1)}% (Rp ${formatCurrency(d.realisasi)} dari Rp ${formatCurrency(d.anggaran)})`)
+        .join('\n');
+    
+    // Find low absorption items to highlight issues
+    const issues = filteredData
+        .filter(d => d.anggaran > 100000000 && d.persentase < 40)
+        .slice(0, 3)
+        .map(d => `- **${d.subKegiatan}** (${d.sumberDana}): ${d.persentase.toFixed(1)}% (Sisa: ${formatCurrency(d.sisaAnggaran)})`)
+        .join('\n');
 
-        return `
-            Anda adalah seorang analis keuangan daerah ahli. Lakukan analisis mendalam mengenai efektivitas penggunaan Sumber Dana untuk **${focus}** ${subActivityFocus} pada tahun ${selectedYear}.
-            
-            ### RINGKASAN EKSEKUTIF
-            - **Total Anggaran Terfilter**: ${formatCurrency(summaryStats.totalAnggaran)}
-            - **Total Realisasi**: ${formatCurrency(summaryStats.totalRealisasi)} (${summaryStats.rataPenyerapan.toFixed(2)}%)
-            - **Sisa Anggaran**: ${formatCurrency(summaryStats.totalSisa)}
-            - **Distribusi Kinerja**: Tinggi (≥80%): ${summaryStats.highPerformer} | Sedang (50-79%): ${summaryStats.mediumPerformer} | Rendah (<50%): ${summaryStats.lowPerformer}
-            
-            ### KINERJA TERTINGGI
-            ${topPerformers || '- Tidak ada data dengan anggaran > 100 Juta'}
-            
-            ### PERLU PERHATIAN (Penyerapan <40%)
-            ${issues || '- Tidak ada data dengan penyerapan rendah'}
-            
-            Fokuskan analisis pada:
-            1.  **Kesesuaian Alokasi**: Apakah alokasi sumber dana (DAU, DAK, dll) sudah sesuai dengan karakteristik sub kegiatan?
-            2.  **Identifikasi Hambatan**: Analisis penyebab rendahnya penyerapan pada item-item yang perlu perhatian.
-            3.  **Rekomendasi Strategis**: Berikan rekomendasi konkret untuk percepatan penyerapan sisa anggaran dan optimalisasi penggunaan sumber dana di masa mendatang.
-        `;
-    };
+    return `ANALISIS STATISTIK SUMBER DANA
+TAHUN: ${selectedYear}
+FOKUS ANALISIS: ${focus} ${subActivityFocus}
+
+DATA RINGKAS:
+- Total Anggaran: ${formatCurrency(summaryStats.totalAnggaran)}
+- Total Realisasi: ${formatCurrency(summaryStats.totalRealisasi)} (${summaryStats.rataPenyerapan.toFixed(2)}%)
+- Sisa Anggaran: ${formatCurrency(summaryStats.totalSisa)}
+- Distribusi Kinerja: Tinggi (≥80%): ${summaryStats.highPerformer} | Sedang (50-79%): ${summaryStats.mediumPerformer} | Rendah (<50%): ${summaryStats.lowPerformer}
+
+KINERJA TERTINGGI:
+${topPerformers || '- Tidak ada data dengan anggaran > 100 Juta'}
+
+PERLU PERHATIAN (Penyerapan <40%):
+${issues || '- Tidak ada data dengan penyerapan rendah'}
+
+BERIKAN ANALISIS MENDALAM MENGENAI:
+1. Kesesuaian Alokasi: Apakah alokasi sumber dana (DAU, DAK, dll) sudah sesuai dengan karakteristik sub kegiatan?
+2. Identifikasi Hambatan: Analisis penyebab rendahnya penyerapan pada item-item yang perlu perhatian.
+3. Rekomendasi Strategis: 3 langkah konkret untuk percepatan penyerapan sisa anggaran.
+4. Peringatan Dini: Poin penting untuk rapat pimpinan terkait optimalisasi sumber dana.
+
+Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
+};
 
     return (
         <div className="space-y-6">
@@ -369,13 +378,48 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
                 </div>
             </div>
 
-            <GeminiAnalysis 
-                getAnalysisPrompt={getAnalysisPrompt} 
-                disabledCondition={statsData.length === 0} 
-                theme={theme}
-                interactivePlaceholder="Analisis penyerapan DAK pada kegiatan fisik..."
-                userRole={userRole}
-            />
+            {/* AI Analysis Section dengan Toggle */}
+<div className="relative">
+  <div className="flex justify-end mb-2">
+    <button
+      onClick={() => setShowAnalysis(!showAnalysis)}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+    >
+      {showAnalysis ? (
+        <>🗂️ Sembunyikan Analisis AI</>
+      ) : (
+        <>🤖 Tampilkan Analisis AI</>
+      )}
+    </button>
+  </div>
+  
+  {/* Indikator Data */}
+  {showAnalysis && filteredData.length > 0 && (
+    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+      </span>
+      <span>Data: {filteredData.length} item | SKPD: {selectedSkpd} | Serapan: {summaryStats.rataPenyerapan.toFixed(1)}%</span>
+    </div>
+  )}
+  
+  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+  {showAnalysis && (
+    <GeminiAnalysis 
+      getAnalysisPrompt={getAnalysisPrompt} 
+      disabledCondition={statsData.length === 0} 
+      userCanUseAi={userRole !== 'viewer'}
+      allData={{
+        selectedSkpd,
+        selectedSubKegiatan,
+        selectedSumberDana,
+        summaryStats,
+        filteredData: filteredData.slice(0, 10)
+      }}
+    />
+  )}
+</div>
             
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
                 {/* Filter Section */}

@@ -32,7 +32,7 @@ const LaporanTematikView = ({ data, theme, namaPemda, userRole, selectedYear }) 
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'pagu', direction: 'desc' });
     const [performanceStats, setPerformanceStats] = useState({ green: 0, yellow: 0, red: 0 });
-    
+    const [showAnalysis, setShowAnalysis] = useState(true);
     const ITEMS_PER_PAGE = 15;
 
     const tematikOptions = {
@@ -251,33 +251,43 @@ const LaporanTematikView = ({ data, theme, namaPemda, userRole, selectedYear }) 
     const currentTagConfig = tematikOptions[selectedTematik];
     
     // --- UPDATED: Enhanced AI Prompt with New Stats ---
-    const getAnalysisPrompt = (customQuery) => {
-        if (customQuery) {
-            return `Berdasarkan data laporan tematik untuk "${currentTagConfig.title}", berikan analisis untuk permintaan berikut: "${customQuery}"`;
-        }
-        if (reportData.length === 0) return "Data tidak cukup untuk analisis.";
-        
-        const top5 = reportData.slice(0, 5).map(item => `- **${item.subKegiatan}** (${item.skpd}): Pagu ${formatCurrency(item.pagu)}, Realisasi ${formatCurrency(item.realisasi)} (${item.persentase.toFixed(2)}%)`).join('\n');
-        
-        return `
-            Anda adalah seorang analis kebijakan publik senior untuk ${namaPemda || 'Pemerintah Daerah'}. 
-            Lakukan analisis strategis terhadap alokasi dan realisasi anggaran untuk tema prioritas: **${currentTagConfig.title}** pada tahun ${selectedYear}.
+const getAnalysisPrompt = (query, allData) => {
+    // Jika user mengirim query khusus
+    if (query && query.trim() !== '') {
+        return `Berdasarkan data laporan tematik untuk "${currentTagConfig.title}" tahun ${selectedYear}, jawab pertanyaan ini: ${query}`;
+    }
+    
+    // Analisis default
+    if (reportData.length === 0) return "Data tidak cukup untuk dianalisis.";
+    
+    const totalPagu = summaryData.pagu;
+    const totalRealisasi = summaryData.realisasi;
+    const persenSerapan = totalPagu > 0 ? (totalRealisasi / totalPagu) * 100 : 0;
+    const top5 = reportData.slice(0, 5).map(item => 
+        `- **${item.subKegiatan}** (${item.skpd}): Pagu ${formatCurrency(item.pagu)}, Realisasi ${formatCurrency(item.realisasi)} (${item.persentase.toFixed(2)}%)`
+    ).join('\n');
+    
+    return `ANALISIS LAPORAN TEMATIK: ${currentTagConfig.title.toUpperCase()}
+TAHUN: ${selectedYear}
+PEMDA: ${namaPemda || 'Pemerintah Daerah'}
 
-            ### Ringkasan Eksekutif:
-            - **Total Anggaran Teridentifikasi**: ${formatCurrency(summaryData.pagu)}
-            - **Total Realisasi Terdistribusi**: ${formatCurrency(summaryData.realisasi)}
-            - **Tingkat Penyerapan Keseluruhan**: ${(summaryData.pagu > 0 ? (summaryData.realisasi / summaryData.pagu) * 100 : 0).toFixed(2)}%
-            - **Distribusi Kinerja SKPD**: ${performanceStats.green} kegiatan berkinerja baik (>80%), ${performanceStats.yellow} sedang (50-80%), dan ${performanceStats.red} berkinerja kurang (<50%).
+DATA RINGKAS:
+- Total Pagu Teridentifikasi: ${formatCurrency(totalPagu)}
+- Total Realisasi Terserap: ${formatCurrency(totalRealisasi)}
+- Persentase Serapan: ${persenSerapan.toFixed(2)}%
+- Distribusi Kinerja: ${performanceStats.green} Baik (>80%), ${performanceStats.yellow} Sedang (50-80%), ${performanceStats.red} Rendah (<50%)
 
-            ### 5 Sub Kegiatan dengan Alokasi Terbesar:
-            ${top5}
+SUB KEGIATAN DENGAN ALOKASI TERBESAR:
+${top5}
 
-            Berikan analisis mengenai:
-            1.  **Evaluasi Postur Anggaran**: Apakah prioritas alokasi (Top 5) sudah selaras dan terdistribusi efektif untuk mendukung capaian indikator makro tema ini?
-            2.  **Analisis Anomali & Bottleneck**: Berdasarkan sebaran kinerja, identifikasi kemungkinan penyebab ${performanceStats.red} kegiatan yang serapannya lambat.
-            3.  **Rekomendasi Taktis**: Berikan 3 rekomendasi *actionable* yang spesifik untuk mempercepat realisasi anggaran ini dalam waktu dekat.
-        `;
-    };
+BERIKAN ANALISIS MENDALAM MENGENAI:
+1. Evaluasi Postur Anggaran: Apakah prioritas alokasi sudah selaras dengan tujuan tematik ${currentTagConfig.title}?
+2. Identifikasi Masalah: Analisis penyebab ${performanceStats.red} kegiatan dengan serapan rendah.
+3. Rekomendasi Strategis: 3 langkah konkret untuk mempercepat realisasi.
+4. Peringatan Dini: Poin-poin yang perlu diwaspadai untuk sisa tahun anggaran.
+
+Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
+};
 
     // Helper for visual indicators
     const getProgressColor = (percent) => {
@@ -315,13 +325,48 @@ const LaporanTematikView = ({ data, theme, namaPemda, userRole, selectedYear }) 
         <div className="space-y-6 animate-fade-in font-sans">
             <SectionTitle>Analisis Laporan Tematik</SectionTitle>
             
-            <GeminiAnalysis 
-                getAnalysisPrompt={getAnalysisPrompt}
-                disabledCondition={reportData.length === 0}
-                theme={theme}
-                userRole={userRole}
-                interactivePlaceholder={`Analisis AI untuk ${currentTagConfig.title}...`}
-            />
+            {/* AI Analysis Section dengan Toggle */}
+<div className="relative">
+  <div className="flex justify-end mb-2">
+    <button
+      onClick={() => setShowAnalysis(!showAnalysis)}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+    >
+      {showAnalysis ? (
+        <>🗂️ Sembunyikan Analisis AI</>
+      ) : (
+        <>🤖 Tampilkan Analisis AI</>
+      )}
+    </button>
+  </div>
+  
+  {/* Indikator Data */}
+  {showAnalysis && reportData.length > 0 && (
+    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+      </span>
+      <span>Tema: {currentTagConfig.title} | Data: {reportData.length} kegiatan | Serapan: {(summaryData.pagu > 0 ? (summaryData.realisasi / summaryData.pagu) * 100 : 0).toFixed(1)}%</span>
+    </div>
+  )}
+  
+  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+  {showAnalysis && (
+    <GeminiAnalysis 
+      getAnalysisPrompt={getAnalysisPrompt} 
+      disabledCondition={reportData.length === 0} 
+      userCanUseAi={userRole !== 'viewer'}
+      allData={{
+        selectedTematik,
+        currentTagConfig,
+        summaryData,
+        performanceStats,
+        reportData: reportData.slice(0, 10)
+      }}
+    />
+  )}
+</div>
 
             {/* --- CONTROLS SECTION (GLASSMORPHISM) --- */}
             <div className={`${glassCard} p-4 flex flex-col md:flex-row gap-4 justify-between items-center relative z-20`}>

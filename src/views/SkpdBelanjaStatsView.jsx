@@ -18,6 +18,7 @@ const formatCurrency = (value) => {
         maximumFractionDigits: 0,
     }).format(value);
 };
+import GeminiAnalysis from './components/GeminiAnalysis';
 
 // Pindahkan array months ke luar komponen untuk mencegah infinite loop (re-render re-allocation)
 const MONTHS_ARRAY = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -76,112 +77,6 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     );
 };
 
-const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition }) => {
-    const [analysis, setAnalysis] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-
-    const generateAnalysis = async () => {
-        if (disabledCondition) return;
-        
-        setLoading(true);
-        setError(null);
-        const apiKey = ""; // Environment provides key
-        const prompt = getAnalysisPrompt("Berikan analisis eksekutif mengenai penyerapan anggaran ini.");
-
-        const fetchWithRetry = async (url, options, retries = 5, backoff = 1000) => {
-            try {
-                const response = await fetch(url, options);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                return await response.json();
-            } catch (err) {
-                if (retries > 0) {
-                    await new Promise(resolve => setTimeout(resolve, backoff));
-                    return fetchWithRetry(url, options, retries - 1, backoff * 2);
-                }
-                throw err;
-            }
-        };
-
-        try {
-            const result = await fetchWithRetry(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        systemInstruction: { 
-                            parts: [{ text: `Anda adalah analis keuangan publik profesional. Berikan analisis singkat, padat, dan strategis dalam bahasa Indonesia yang berfokus pada evaluasi kinerja penyerapan anggaran pemerintah daerah.` }] 
-                        }
-                    })
-                }
-            );
-
-            const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-            setAnalysis(text || "Gagal menghasilkan analisis.");
-        } catch (err) {
-            setError("Gagal menghubungi layanan AI. Silakan coba lagi nanti.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-indigo-900/20 p-6 rounded-3xl border border-blue-100 dark:border-indigo-900/50 mb-8 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                    <div className="bg-blue-100 dark:bg-blue-900/50 p-2 rounded-xl">
-                        <Bot className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                        AI Insight: Analisis Kinerja
-                        <Sparkles className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                    </h3>
-                </div>
-                <button
-                    onClick={generateAnalysis}
-                    disabled={loading || disabledCondition}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
-                        loading || disabledCondition 
-                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500' 
-                            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg active:scale-95'
-                    }`}
-                >
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                    {analysis ? 'Perbarui Analisis' : 'Mulai Analisis AI'}
-                </button>
-            </div>
-
-            {error && (
-                <div className="flex items-center gap-2 p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-xl mb-4 text-sm font-medium border border-red-200 dark:border-red-800">
-                    <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-                    {error}
-                </div>
-            )}
-
-            {analysis ? (
-                <div className="prose prose-blue dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap bg-white/60 dark:bg-gray-800/60 p-5 rounded-2xl backdrop-blur-sm border border-white/40 dark:border-gray-700/50">
-                    {analysis}
-                </div>
-            ) : (
-                !loading && (
-                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 ml-1">
-                        Klik tombol di atas untuk mendapatkan analisis otomatis mengenai performa realisasi anggaran per SKPD saat ini.
-                    </p>
-                )
-            )}
-            
-            {loading && (
-                <div className="flex flex-col items-center justify-center py-8 gap-3">
-                    <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                    <p className="text-blue-600 dark:text-blue-400 font-medium animate-pulse">Menghimpun data dan menganalisis tren kinerja...</p>
-                </div>
-            )}
-        </div>
-    );
-};
-
 // --- MAIN VIEW COMPONENT ---
 
 const SkpdBelanjaStatsView = ({ data = {}, theme, namaPemda, selectedYear }) => {
@@ -195,7 +90,8 @@ const SkpdBelanjaStatsView = ({ data = {}, theme, namaPemda, selectedYear }) => 
     
     const [startMonth, setStartMonth] = useState(MONTHS_ARRAY[0]);
     const [endMonth, setEndMonth] = useState(MONTHS_ARRAY[MONTHS_ARRAY.length - 1]);
-    
+    const [showAnalysis, setShowAnalysis] = useState(true);
+
     const ITEMS_PER_PAGE = 12;
 
     const COLORS = {
@@ -355,19 +251,43 @@ const SkpdBelanjaStatsView = ({ data = {}, theme, namaPemda, selectedYear }) => 
         }));
     };
 
-    const getAnalysisPrompt = (customQuery) => {
-        if (!totalStats) return "Data tidak cukup untuk analisis.";
-        const period = startMonth === endMonth ? startMonth : `periode ${startMonth} - ${endMonth}`;
-        
-        return `
-            Sebagai analis kinerja pemerintah daerah, berikan evaluasi penyerapan anggaran untuk ${period}.
-            Total Pagu: ${formatCurrency(totalStats.totalAnggaran)}.
-            Total Realisasi: ${formatCurrency(totalStats.totalRealisasi)} (${totalStats.rataRataPersentase.toFixed(2)}%).
-            SKPD Kinerja Tinggi: ${totalStats.highPerformers}, Sedang: ${totalStats.mediumPerformers}, Rendah: ${totalStats.lowPerformers}.
-            Fokuskan pada langkah strategis untuk SKPD dengan serapan rendah. 
-            Pertanyaan spesifik: ${customQuery}
-        `;
-    };
+    const getAnalysisPrompt = (query, allData) => {
+    // Jika user mengirim query khusus
+    if (query && query.trim() !== '') {
+        return `Berdasarkan data realisasi belanja SKPD, jawab pertanyaan ini: ${query}`;
+    }
+    
+    // Analisis default
+    if (!totalStats) return "Data tidak cukup untuk dianalisis.";
+    
+    const period = startMonth === endMonth ? startMonth : `periode ${startMonth} - ${endMonth}`;
+    const top5 = totalStats.top5 || [];
+    const bottom5 = totalStats.bottom5 || [];
+    
+    return `ANALISIS REALISASI BELANJA SKPD
+TAHUN: ${selectedYear}
+PERIODE: ${period}
+
+DATA RINGKAS:
+- Total Pagu Anggaran: ${formatCurrency(totalStats.totalAnggaran)}
+- Total Realisasi: ${formatCurrency(totalStats.totalRealisasi)} (${totalStats.rataRataPersentase.toFixed(2)}%)
+- Sisa Anggaran: ${formatCurrency(totalStats.totalSisa)}
+- Distribusi Kinerja: Tinggi (${totalStats.highPerformers}), Sedang (${totalStats.mediumPerformers}), Rendah (${totalStats.lowPerformers})
+
+SKPD DENGAN KINERJA TERTINGGI:
+${top5.map((item, i) => `${i+1}. ${item.skpd}: ${item.persentase.toFixed(2)}% (Pagu: ${formatCurrency(item.totalAnggaran)}, Realisasi: ${formatCurrency(item.totalRealisasi)})`).join('\n')}
+
+SKPD DENGAN KINERJA TERENDAH:
+${bottom5.map((item, i) => `${i+1}. ${item.skpd}: ${item.persentase.toFixed(2)}%`).join('\n')}
+
+BERIKAN ANALISIS MENDALAM MENGENAI:
+1. Evaluasi Kinerja: Identifikasi SKPD dengan kinerja optimal dan yang bermasalah.
+2. Identifikasi Masalah: Analisis penyebab rendahnya penyerapan pada SKPD dengan kinerja rendah.
+3. Rekomendasi Strategis: 3 langkah konkret untuk meningkatkan kinerja penyerapan.
+4. Peringatan Dini: Poin penting untuk rapat pimpinan terkait percepatan realisasi.
+
+Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
+};
 
     const getPerformanceBadge = (category) => {
         if (category === 'high') {
@@ -427,7 +347,48 @@ const SkpdBelanjaStatsView = ({ data = {}, theme, namaPemda, selectedYear }) => 
                 </div>
             </div>
 
-            <GeminiAnalysis getAnalysisPrompt={getAnalysisPrompt} disabledCondition={skpdStats.length === 0} />
+            {/* AI Analysis Section dengan Toggle */}
+<div className="relative">
+  <div className="flex justify-end mb-2">
+    <button
+      onClick={() => setShowAnalysis(!showAnalysis)}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+    >
+      {showAnalysis ? (
+        <>🗂️ Sembunyikan Analisis AI</>
+      ) : (
+        <>🤖 Tampilkan Analisis AI</>
+      )}
+    </button>
+  </div>
+  
+  {/* Indikator Data */}
+  {showAnalysis && skpdStats.length > 0 && totalStats && (
+    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+      </span>
+      <span>Total SKPD: {skpdStats.length} | Rata-rata: {totalStats.rataRataPersentase.toFixed(1)}% | Periode: {startMonth} - {endMonth}</span>
+    </div>
+  )}
+  
+  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+  {showAnalysis && (
+    <GeminiAnalysis 
+      getAnalysisPrompt={getAnalysisPrompt} 
+      disabledCondition={skpdStats.length === 0} 
+      userCanUseAi={true}
+      allData={{
+        totalStats,
+        startMonth,
+        endMonth,
+        selectedYear,
+        viewMode
+      }}
+    />
+  )}
+</div>
             
             <div className="bg-white dark:bg-gray-800 p-4 md:p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700">
                 {/* FILTER & CONTROLS SECTION */}

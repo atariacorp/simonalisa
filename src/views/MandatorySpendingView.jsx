@@ -14,6 +14,7 @@ import {
 // ==============================================================================
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from './utils/firebase'; 
+import GeminiAnalysis from './components/GeminiAnalysis';
 
 // --- UTILITIES ---
 const formatCurrency = (value) => {
@@ -79,118 +80,6 @@ const TabButton = ({ title, isActive, onClick, icon }) => (
         {icon} {title}
     </button>
 );
-
-const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, userCanUseAi }) => {
-    const [analysis, setAnalysis] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-
-    const generateAnalysis = async () => {
-        if (disabledCondition) return;
-        
-        setLoading(true);
-        setError(null);
-        const apiKey = ""; // Disediakan oleh environment
-        const prompt = getAnalysisPrompt("");
-
-        const fetchWithRetry = async (url, options, retries = 5, backoff = 1000) => {
-            try {
-                const response = await fetch(url, options);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                return await response.json();
-            } catch (err) {
-                if (retries > 0) {
-                    await new Promise(resolve => setTimeout(resolve, backoff));
-                    return fetchWithRetry(url, options, retries - 1, backoff * 2);
-                }
-                throw err;
-            }
-        };
-
-        try {
-            const result = await fetchWithRetry(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        systemInstruction: { 
-                            parts: [{ text: `Anda adalah auditor ahli keuangan daerah. Berikan analisis singkat, padat, dan strategis dalam bahasa Indonesia mengenai kepatuhan Mandatory Spending daerah sesuai UU 1/2022, PP 12/2019, dan PMDN 77/2020.` }] 
-                        }
-                    })
-                }
-            );
-
-            const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-            setAnalysis(text || "Gagal menghasilkan analisis.");
-        } catch (err) {
-            setError("Gagal menghubungi layanan AI. Silakan coba lagi nanti.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-indigo-900/20 p-6 md:p-8 rounded-3xl border border-indigo-100 dark:border-indigo-800/50 mb-8 shadow-sm h-full flex flex-col">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-4">
-                    <div className="bg-indigo-600 p-3 rounded-2xl shadow-indigo-500/30 shadow-lg shrink-0">
-                        <Bot className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-xl text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                            AI Insight: Evaluasi Kepatuhan
-                            <Sparkles className="w-5 h-5 text-yellow-500 fill-yellow-500 shrink-0" />
-                        </h3>
-                        <p className="text-sm text-indigo-700 dark:text-indigo-400">Analisis cerdas kewajiban belanja daerah</p>
-                    </div>
-                </div>
-                <button
-                    onClick={generateAnalysis}
-                    disabled={loading || disabledCondition || (userCanUseAi === false)}
-                    className={`flex shrink-0 items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
-                        loading || disabledCondition || (userCanUseAi === false)
-                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500' 
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-xl hover:-translate-y-0.5 active:scale-95'
-                    }`}
-                >
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
-                    {analysis ? 'Analisis Ulang' : 'Mulai Analisis AI'}
-                </button>
-            </div>
-
-            {error && (
-                <div className="flex items-center gap-3 p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-2xl mb-4 text-sm font-medium border border-red-200 dark:border-red-800">
-                    <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-                    {error}
-                </div>
-            )}
-
-            {analysis ? (
-                <div className="prose prose-indigo dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap bg-white/70 dark:bg-gray-800/70 p-6 rounded-2xl backdrop-blur-md border border-white/50 dark:border-gray-700/50 shadow-inner flex-grow">
-                    {analysis}
-                </div>
-            ) : (
-                !loading && (
-                    <div className="bg-white/50 dark:bg-gray-800/50 p-6 rounded-2xl border border-dashed border-indigo-200 dark:border-indigo-800/50 text-center flex-grow flex flex-col justify-center">
-                        <Info className="w-8 h-8 text-indigo-400 mx-auto mb-2 opacity-50" />
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">
-                            Klik tombol di atas untuk memerintahkan AI mengevaluasi batas persentase anggaran secara otomatis.
-                        </p>
-                    </div>
-                )
-            )}
-            
-            {loading && (
-                <div className="flex flex-col items-center justify-center py-12 gap-4 flex-grow">
-                    <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
-                    <p className="text-indigo-600 dark:text-indigo-400 font-bold animate-pulse text-center">Meninjau persentase terhadap regulasi UU No. 1 Tahun 2022...</p>
-                </div>
-            )}
-        </div>
-    );
-};
 
 const CustomBarTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -336,13 +225,50 @@ const ModernAnalysisCard = ({ title, data, threshold, type, getAnalysisPrompt, n
                     </div>
                 </div>
 
-                {/* Gemini AI Analysis Container */}
+                {/* AI Analysis Section dengan Toggle */}
                 <div className="lg:col-span-2 h-full">
-                    <GeminiAnalysis 
-                        getAnalysisPrompt={(q) => getAnalysisPrompt(type, data, q, namaPemda, selectedYear)} 
-                        disabledCondition={data.totalAPBD === 0} 
-                        userCanUseAi={userCanUseAi}
-                    />
+                    <div className="relative h-full flex flex-col">
+                        <div className="flex justify-end mb-2">
+                            <button
+                                onClick={() => setShowAnalysis(!showAnalysis)}
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+                            >
+                                {showAnalysis ? (
+                                    <>🗂️ Sembunyikan Analisis AI</>
+                                ) : (
+                                    <>🤖 Tampilkan Analisis AI</>
+                                )}
+                            </button>
+                        </div>
+                        
+                        {/* Indikator Data */}
+                        {showAnalysis && data && data.totalAPBD > 0 && (
+                            <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                                </span>
+                                <span>{title} | Alokasi: {formatCurrency(data.totalAPBD)} | Capaian: {data.percentage?.toFixed(2)}%</span>
+                            </div>
+                        )}
+                        
+                        {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+                        {showAnalysis && (
+                            <GeminiAnalysis 
+                                getAnalysisPrompt={(query) => getAnalysisPrompt(type, data, query, namaPemda, selectedYear)} 
+                                disabledCondition={!data || data.totalAPBD === 0} 
+                                userCanUseAi={userCanUseAi}
+                                allData={{
+                                    type,
+                                    title,
+                                    data,
+                                    threshold,
+                                    namaPemda,
+                                    selectedYear
+                                }}
+                            />
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -437,7 +363,7 @@ const ModernAnalysisCard = ({ title, data, threshold, type, getAnalysisPrompt, n
 const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear, userCanUseAi }) => {
     const { anggaran, realisasi, realisasiNonRkud } = data; 
     const [activeTab, setActiveTab] = useState('pegawai');
-    
+    const [showAnalysis, setShowAnalysis] = useState(true);
     const [refPendidikan, setRefPendidikan] = useState([]);
     const [refInfrastruktur, setRefInfrastruktur] = useState([]);
 
@@ -841,16 +767,18 @@ const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear, userCanUs
                         <div className="relative">
                             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-2xl pointer-events-none"></div>
                             <ModernAnalysisCard
-                                title="Belanja Pegawai"
-                                data={analysisData.pegawai}
-                                threshold={30}
-                                type="pegawai"
-                                getAnalysisPrompt={getAnalysisPrompt}
-                                namaPemda={namaPemda}
-                                selectedYear={selectedYear}
-                                userCanUseAi={userCanUseAi}
-                                regulationText="UU No. 1 Tahun 2022 Pasal 146 menetapkan batas maksimal Belanja Pegawai daerah adalah 30% (tiga puluh persen) dari total belanja APBD (di luar tunjangan guru yang dialokasikan melalui TKD) guna menjaga ruang fiskal pembangunan."
-                            />
+    title="Belanja Pegawai"
+    data={analysisData.pegawai}
+    threshold={30}
+    type="pegawai"
+    getAnalysisPrompt={getAnalysisPrompt}
+    namaPemda={namaPemda}
+    selectedYear={selectedYear}
+    userCanUseAi={userCanUseAi}
+    regulationText="UU No. 1 Tahun 2022 Pasal 146 menetapkan batas maksimal Belanja Pegawai daerah adalah 30%..."
+    showAnalysis={showAnalysis}
+    setShowAnalysis={setShowAnalysis}
+/>
                         </div>
                     </div>
                 );

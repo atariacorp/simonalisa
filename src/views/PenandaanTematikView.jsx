@@ -4,6 +4,7 @@ import Pagination from './components/Pagination';
 import { Upload, Search } from 'lucide-react';
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { db } from './utils/firebase';
+import GeminiAnalysis from './components/GeminiAnalysis';
 
 // NEW: PenandaanTematikView Component
 const PenandaanTematikView = ({ theme, userRole, selectedYear, onUpload }) => {
@@ -17,6 +18,7 @@ const PenandaanTematikView = ({ theme, userRole, selectedYear, onUpload }) => {
     const [searchTerm, setSearchTerm] = React.useState('');
     const [currentPage, setCurrentPage] = React.useState(1);
     const ITEMS_PER_PAGE = 15;
+    const [showAnalysis, setShowAnalysis] = React.useState(true);
 
     const tematikOptions = {
         spm: { 
@@ -156,6 +158,42 @@ const PenandaanTematikView = ({ theme, userRole, selectedYear, onUpload }) => {
                 .finally(() => setIsUploading(false));
         };
 
+        // ===== TAMBAHKAN FUNGSI INI =====
+const getAnalysisPrompt = (query, allData) => {
+    // Jika user mengirim query khusus
+    if (query && query.trim() !== '') {
+        return `Berdasarkan data penandaan tematik ${currentConfig.title}, jawab pertanyaan ini: ${query}`;
+    }
+    
+    // Analisis default
+    if (data.length === 0) return "Data tidak cukup untuk dianalisis.";
+    
+    const totalItems = data.length;
+    const uniqueCodes = new Set(data.map(item => item[currentConfig.previewHeaders[0]])).size;
+    const sampleData = data.slice(0, 5);
+    
+    return `ANALISIS PENANDAAN TEMATIK
+TAHUN: ${selectedYear}
+JENIS PENANDAAN: ${currentConfig.title}
+
+DATA RINGKAS:
+- Total Item Referensi: ${totalItems}
+- Total Kode Unik: ${uniqueCodes}
+- Prefiks Kode: ${currentConfig.codePrefix}
+- Kolom Referensi: ${currentConfig.previewHeaders.join(', ')}
+
+CONTOH DATA (5 ITEM PERTAMA):
+${sampleData.map((item, i) => `- ${item[currentConfig.previewHeaders[0]]}: ${item[currentConfig.previewHeaders[1]]}`).join('\n')}
+
+BERIKAN ANALISIS MENDALAM MENGENAI:
+1. Kualitas Data: Apakah data referensi ini sudah lengkap dan siap digunakan?
+2. Cakupan Penandaan: Identifikasi pola kode yang muncul dan implikasinya.
+3. Rekomendasi: Saran untuk optimalisasi penggunaan data referensi ini.
+
+Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
+};
+// ===== END TAMBAHAN =====
+
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
@@ -176,6 +214,47 @@ const PenandaanTematikView = ({ theme, userRole, selectedYear, onUpload }) => {
     return (
         <div className="space-y-6">
             <SectionTitle>Penandaan Tematik</SectionTitle>
+            {/* AI Analysis Section dengan Toggle */}
+        <div className="relative">
+            <div className="flex justify-end mb-2">
+                <button
+                    onClick={() => setShowAnalysis(!showAnalysis)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+                >
+                    {showAnalysis ? (
+                        <>🗂️ Sembunyikan Analisis AI</>
+                    ) : (
+                        <>🤖 Tampilkan Analisis AI</>
+                    )}
+                </button>
+            </div>
+            
+            {/* Indikator Data */}
+            {showAnalysis && data.length > 0 && (
+                <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+                    <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                    </span>
+                    <span>Jenis: {currentConfig.title} | Total Data: {data.length} item</span>
+                </div>
+            )}
+            
+            {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+            {showAnalysis && (
+                <GeminiAnalysis 
+                    getAnalysisPrompt={getAnalysisPrompt} 
+                    disabledCondition={data.length === 0} 
+                    userCanUseAi={userRole === 'admin'}
+                    allData={{
+                        data: data.slice(0, 10),
+                        totalItems: data.length,
+                        selectedTematik,
+                        config: currentConfig
+                    }}
+                />
+            )}
+        </div>
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
                 <div className="max-w-md mb-6">
                     <label htmlFor="tematik-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pilih Jenis Penandaan Tematik:</label>

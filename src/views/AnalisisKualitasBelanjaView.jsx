@@ -7,6 +7,7 @@ import {
     TrendingUp, Award, AlertTriangle, CheckCircle, Info, 
     Bot, Sparkles, Loader2, RefreshCw, LayoutGrid, Lightbulb 
 } from 'lucide-react';
+import GeminiAnalysis from '../components/GeminiAnalysis';
 
 // --- UTILITIES & CONSTANTS ---
 const formatCurrency = (value) => {
@@ -36,118 +37,6 @@ const SectionTitle = ({ children }) => (
         {children}
     </h2>
 );
-
-const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, userCanUseAi }) => {
-    const [analysis, setAnalysis] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-
-    const generateAnalysis = async () => {
-        if (disabledCondition) return;
-        
-        setLoading(true);
-        setError(null);
-        const apiKey = ""; // Environment provides key
-        const prompt = getAnalysisPrompt("");
-
-        const fetchWithRetry = async (url, options, retries = 5, backoff = 1000) => {
-            try {
-                const response = await fetch(url, options);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                return await response.json();
-            } catch (err) {
-                if (retries > 0) {
-                    await new Promise(resolve => setTimeout(resolve, backoff));
-                    return fetchWithRetry(url, options, retries - 1, backoff * 2);
-                }
-                throw err;
-            }
-        };
-
-        try {
-            const result = await fetchWithRetry(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        systemInstruction: { 
-                            parts: [{ text: `Anda adalah analis keuangan publik profesional. Berikan analisis singkat, padat, dan strategis dalam bahasa Indonesia yang berfokus pada evaluasi kualitas dan komposisi belanja daerah. Format dengan poin-poin tebal yang rapi.` }] 
-                        }
-                    })
-                }
-            );
-
-            const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-            setAnalysis(text || "Gagal menghasilkan analisis.");
-        } catch (err) {
-            setError("Gagal menghubungi layanan AI. Silakan coba lagi nanti.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 p-6 md:p-8 rounded-3xl border border-teal-100 dark:border-teal-800/50 mb-8 shadow-sm">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-4">
-                    <div className="bg-teal-600 p-3 rounded-2xl shadow-teal-500/30 shadow-lg">
-                        <Bot className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-xl text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                            AI Insight: Analisis Kualitas Belanja
-                            <Sparkles className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                        </h3>
-                        <p className="text-sm text-teal-700 dark:text-teal-400">Ringkasan cerdas komposisi anggaran berdasarkan data terkini</p>
-                    </div>
-                </div>
-                <button
-                    onClick={generateAnalysis}
-                    disabled={loading || disabledCondition || (userCanUseAi === false)}
-                    className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
-                        loading || disabledCondition || (userCanUseAi === false)
-                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500' 
-                            : 'bg-teal-600 text-white hover:bg-teal-700 shadow-md hover:shadow-xl hover:-translate-y-0.5 active:scale-95'
-                    }`}
-                >
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
-                    {analysis ? 'Analisis Ulang' : 'Mulai Analisis AI'}
-                </button>
-            </div>
-
-            {error && (
-                <div className="flex items-center gap-3 p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-2xl mb-4 text-sm font-medium border border-red-200 dark:border-red-800">
-                    <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-                    {error}
-                </div>
-            )}
-
-            {analysis ? (
-                <div className="prose prose-teal dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap bg-white/70 dark:bg-gray-800/70 p-6 rounded-2xl backdrop-blur-md border border-white/50 dark:border-gray-700/50 shadow-inner">
-                    {analysis}
-                </div>
-            ) : (
-                !loading && (
-                    <div className="bg-white/50 dark:bg-gray-800/50 p-6 rounded-2xl border border-dashed border-teal-200 dark:border-teal-800/50 text-center">
-                        <Info className="w-8 h-8 text-teal-400 mx-auto mb-2 opacity-50" />
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">
-                            Belum ada analisis yang dibuat. Tekan tombol di atas untuk memerintahkan AI menganalisis komposisi belanja otomatis.
-                        </p>
-                    </div>
-                )
-            )}
-            
-            {loading && (
-                <div className="flex flex-col items-center justify-center py-12 gap-4">
-                    <Loader2 className="w-10 h-10 text-teal-500 animate-spin" />
-                    <p className="text-teal-600 dark:text-teal-400 font-bold animate-pulse">Sedang mengevaluasi rasio belanja modal dan operasional...</p>
-                </div>
-            )}
-        </div>
-    );
-};
 
 // --- CUSTOM TOOLTIPS ---
 const CustomDonutTooltip = ({ active, payload }) => {
@@ -227,6 +116,7 @@ const AnalisisKualitasBelanjaView = ({ data, theme, selectedYear, userCanUseAi }
     const [endMonth, setEndMonth] = useState(MONTHS_ARRAY[MONTHS_ARRAY.length - 1]);
     const [activePaguIndex, setActivePaguIndex] = useState(-1);
     const [activeRealisasiIndex, setActiveRealisasiIndex] = useState(-1);
+    const [showAnalysis, setShowAnalysis] = useState(true);
 
     const skpdList = useMemo(() => {
         const skpds = new Set((anggaran || []).map(item => item.NamaSKPD).filter(Boolean));
@@ -380,34 +270,50 @@ const AnalisisKualitasBelanjaView = ({ data, theme, selectedYear, userCanUseAi }
 
     }, [anggaran, realisasi, realisasiNonRkud, selectedSkpd, startMonth, endMonth]);
 
-    const getAnalysisPrompt = (customQuery) => {
-        if (customQuery) {
-            return `Berdasarkan data kualitas belanja, berikan analisis untuk: "${customQuery}"`;
-        }
-        if (qualityStats.totalPagu === 0) return "Data anggaran tidak cukup untuk analisis.";
-        
-        const { totalPagu, totalRealisasi, belanjaModal, belanjaOperasi, rasioModal, rasioOperasi } = qualityStats;
-        const period = startMonth === endMonth ? startMonth : `periode ${startMonth} - ${endMonth}`;
+// Ganti fungsi getAnalysisPrompt yang ada (sekitar baris 390-420) dengan ini:
+const getAnalysisPrompt = (query, allData) => {
+    // Jika user mengirim query khusus
+    if (query && query.trim() !== '') {
+        return `Berdasarkan data kualitas belanja, jawab pertanyaan ini: ${query}`;
+    }
+    
+    // Analisis default
+    if (qualityStats.totalPagu === 0) return "Data anggaran tidak cukup untuk dianalisis.";
+    
+    const { totalPagu, totalRealisasi, belanjaModal, belanjaOperasi, rasioModal, rasioOperasi } = qualityStats;
+    const period = startMonth === endMonth ? startMonth : `periode ${startMonth} - ${endMonth}`;
 
-        return `
-            Anda adalah seorang analis kebijakan fiskal. Lakukan analisis kualitas belanja untuk **${selectedSkpd}** pada **${period}** tahun ${selectedYear}.
-            
-            ### Komposisi Anggaran (Pagu)
-            - **Total Anggaran Belanja**: ${formatCurrency(totalPagu)}
-            - **Belanja Modal**: ${formatCurrency(belanjaModal.pagu)} (${rasioModal.toFixed(2)}%) - Idealnya >30%
-            - **Belanja Operasi**: ${formatCurrency(belanjaOperasi.pagu)} (${rasioOperasi.toFixed(2)}%)
-            
-            ### Komposisi Realisasi (${period})
-            - **Total Realisasi Belanja**: ${formatCurrency(totalRealisasi)}
-            - **Realisasi Belanja Modal**: ${formatCurrency(belanjaModal.realisasi)} (Penyerapan: ${belanjaModal.penyerapan.toFixed(2)}%)
-            - **Realisasi Belanja Operasi**: ${formatCurrency(belanjaOperasi.realisasi)}
-            
-            Berikan analisis mendalam mengenai:
-            1.  **Kualitas Alokasi Anggaran**: Apakah rasio belanja modal (${rasioModal.toFixed(2)}%) sudah ideal? (Target ideal >30% untuk pembangunan jangka panjang).
-            2.  **Kualitas Eksekusi Anggaran**: Bandingkan tingkat penyerapan antara belanja modal (${belanjaModal.penyerapan.toFixed(2)}%) dengan total penyerapan (${((totalRealisasi/totalPagu)*100).toFixed(2)}%). Apakah ada kendala dalam merealisasikan belanja modal?
-            3.  **Rekomendasi Strategis**: Berikan rekomendasi konkret untuk meningkatkan kualitas belanja di masa depan.
-        `;
-    };
+    // Gunakan data dari allData jika tersedia, atau dari qualityStats
+    const dataToUse = allData || qualityStats;
+
+    return `ANALISIS KUALITAS BELANJA DAERAH
+TAHUN: ${selectedYear}
+SKPD: ${selectedSkpd}
+PERIODE: ${period}
+
+DATA RINGKAS:
+- Total Pagu Anggaran: ${formatCurrency(totalPagu)}
+- Total Realisasi: ${formatCurrency(totalRealisasi)} (${totalPagu > 0 ? ((totalRealisasi/totalPagu)*100).toFixed(2) : 0}%)
+- Skor Kualitas: ${qualityStats.skorKualitas}/100
+
+KOMPOSISI PAGU:
+${qualityStats.tableData.map(item => `- ${item.name}: ${formatCurrency(item.pagu)} (${item.persenPagu.toFixed(2)}%)`).join('\n')}
+
+KOMPOSISI REALISASI (${period}):
+${qualityStats.tableData.map(item => `- ${item.name}: ${formatCurrency(item.realisasi)} (Penyerapan: ${item.penyerapan.toFixed(2)}%)`).join('\n')}
+
+RASIO BELANJA MODAL: ${rasioModal.toFixed(2)}% (Target ideal >30%)
+RASIO BELANJA OPERASI: ${rasioOperasi.toFixed(2)}%
+PENYERAPAN BELANJA MODAL: ${belanjaModal.penyerapan.toFixed(2)}%
+
+BERIKAN ANALISIS MENDALAM MENGENAI:
+1. Kualitas Alokasi Anggaran: Apakah rasio belanja modal (${rasioModal.toFixed(2)}%) sudah ideal?
+2. Kualitas Eksekusi Anggaran: Bandingkan penyerapan belanja modal (${belanjaModal.penyerapan.toFixed(2)}%) dengan total penyerapan (${totalPagu > 0 ? ((totalRealisasi/totalPagu)*100).toFixed(2) : 0}%).
+3. Rekomendasi Strategis: 3 langkah konkret untuk meningkatkan kualitas belanja.
+4. Peringatan Dini: Identifikasi kategori belanja dengan masalah.
+
+Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
+};
     
     const getScoreColor = (score) => {
         if (score >= 80) return 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400';
@@ -594,6 +500,53 @@ const AnalisisKualitasBelanjaView = ({ data, theme, selectedYear, userCanUseAi }
                                 </div>
                             </div>
                         </div>
+
+                        {/* AI Analysis Section dengan Toggle */}
+<div className="relative">
+  <div className="flex justify-end mb-2">
+    <button
+      onClick={() => setShowAnalysis(!showAnalysis)}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+    >
+      {showAnalysis ? (
+        <>🗂️ Sembunyikan Analisis AI</>
+      ) : (
+        <>🤖 Tampilkan Analisis AI</>
+      )}
+    </button>
+  </div>
+  
+  {/* Indikator Data */}
+  {showAnalysis && qualityStats.totalPagu > 0 && (
+    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+      </span>
+      <span>Data: {selectedSkpd} | Periode: {startMonth} - {endMonth}</span>
+    </div>
+  )}
+  
+  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+  {showAnalysis && (
+    <GeminiAnalysis 
+      getAnalysisPrompt={getAnalysisPrompt} 
+      disabledCondition={qualityStats.totalPagu === 0} 
+      userCanUseAi={userCanUseAi}
+      allData={{
+        selectedSkpd,
+        startMonth,
+        endMonth,
+        totalPagu: qualityStats.totalPagu,
+        totalRealisasi: qualityStats.totalRealisasi,
+        skorKualitas: qualityStats.skorKualitas,
+        rasioModal: qualityStats.rasioModal,
+        belanjaModalPenyerapan: qualityStats.belanjaModal?.penyerapan,
+        tableData: qualityStats.tableData
+      }}
+    />
+  )}
+</div>
 
                         {/* Donut Charts (Modern ECharts Style) */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">

@@ -320,6 +320,7 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
   const { anggaran, pendapatan, penerimaanPembiayaan, pengeluaranPembiayaan, realisasi, realisasiPendapatan, realisasiNonRkud } = data;
   const [activeTab, setActiveTab] = useState('overview');
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [showAnalysis, setShowAnalysis] = useState(true);
   
   if (!anggaran || !pendapatan || !realisasi || !realisasiPendapatan) {
     return (
@@ -488,49 +489,58 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
   }, [pendapatan]);
 
   const getDashboardAnalysisPrompt = (query, allData) => {
-  // Kita ambil data dari argumen allData, bukan variabel luar agar lebih konsisten
-  const { totalPendapatan, totalRealisasiPendapatan, totalAnggaran, totalGabunganBelanja } = allData;
+  // Data sudah diterima dari props allData
+  const { 
+    totalPendapatan, 
+    totalRealisasiPendapatan, 
+    totalAnggaran, 
+    totalGabunganBelanja,
+    totalRealisasiBelanja,
+    totalRealisasiNonRKUD 
+  } = allData;
   
-  return `
-    ROLE: Auditor Ahli Keuangan Daerah (SIMONALISA).
-    PEMDA: ${namaPemda || 'Pemerintah Daerah'}
-    TAHUN: ${selectedYear}
+  const persenPendapatan = totalPendapatan > 0 ? ((totalRealisasiPendapatan / totalPendapatan) * 100).toFixed(2) : 0;
+  const persenBelanja = totalAnggaran > 0 ? ((totalGabunganBelanja / totalAnggaran) * 100).toFixed(2) : 0;
+  const sisaAnggaran = totalAnggaran - totalGabunganBelanja;
+  
+  // Jika user mengirim query khusus
+  if (query && query.trim() !== '') {
+    return `Jawab pertanyaan ini berdasarkan data APBD ${namaPemda || 'Pemerintah Daerah'} tahun ${selectedYear}:
     
-    DATA RINGKAS:
-    - Pendapatan: Target ${formatCurrency(totalPendapatan)}, Realisasi ${formatCurrency(totalRealisasiPendapatan)}
-    - Belanja: Pagu ${formatCurrency(totalAnggaran)}, Realisasi ${formatCurrency(totalGabunganBelanja)}
+    DATA TERKINI:
+    - Pendapatan: Target ${formatCurrency(totalPendapatan)} | Realisasi ${formatCurrency(totalRealisasiPendapatan)} (${persenPendapatan}%)
+    - Belanja: Pagu ${formatCurrency(totalAnggaran)} | Realisasi ${formatCurrency(totalGabunganBelanja)} (${persenBelanja}%)
+    - Sisa Anggaran: ${formatCurrency(sisaAnggaran)}
     
-    USER_QUERY: ${query || "Berikan ringkasan eksekutif dan peringatan dini."}
+    PERTANYAAN: ${query}
+    
+    Berikan jawaban yang spesifik, profesional, dan berdasarkan data di atas.`;
+  }
+  
+  // Analisis default (tanpa query)
+  return `ANALISIS EKSEKUTIF APBD ${namaPemda || 'Pemerintah Daerah'} TAHUN ${selectedYear}
 
-    INSTRUKSI:
-    1. Berikan analisis dalam format Markdown yang tajam.
-    2. Identifikasi 1 masalah paling kritis (Peringatan Utama).
-    3. Sebutkan risiko utama & rekomendasi konkret.
-    4. Langsung ke inti analisis, tanpa basa-basi pembuka.
-  `;
+DATA RINGKAS:
+┌────────────────────────────┬─────────────────┬─────────────────┬──────────┐
+│ Komponen                   │ Target/Pagu     │ Realisasi       │ % Capaian│
+├────────────────────────────┼─────────────────┼─────────────────┼──────────┤
+│ Pendapatan Daerah          │ ${formatCurrency(totalPendapatan)} │ ${formatCurrency(totalRealisasiPendapatan)} │ ${persenPendapatan}%     │
+│ Belanja Daerah             │ ${formatCurrency(totalAnggaran)} │ ${formatCurrency(totalGabunganBelanja)} │ ${persenBelanja}%     │
+│ Sisa Anggaran (SiLPA)      │ -               │ ${formatCurrency(sisaAnggaran)} │ -        │
+└────────────────────────────┴─────────────────┴─────────────────┴──────────┘
+
+RINCIAN BELANJA:
+- Realisasi RKUD: ${formatCurrency(totalRealisasiBelanja)} (${totalAnggaran > 0 ? ((totalRealisasiBelanja/totalAnggaran)*100).toFixed(2) : 0}%)
+- Realisasi Non RKUD: ${formatCurrency(totalRealisasiNonRKUD)} (${totalAnggaran > 0 ? ((totalRealisasiNonRKUD/totalAnggaran)*100).toFixed(2) : 0}%)
+
+BERIKAN ANALISIS MENDALAM MENGENAI:
+1. Peringatan Utama (Early Warning): Identifikasi 1-2 risiko fiskal paling kritis berdasarkan data di atas.
+2. Evaluasi Kinerja: Apakah realisasi pendapatan dan belanja sesuai dengan target?
+3. Rekomendasi Strategis: 3 langkah konkret yang harus diambil oleh Kepala Daerah/Sekda.
+4. Catatan Tambahan: Poin penting lainnya untuk rapat pimpinan.
+
+Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
 };
-  
-  const apbdChartData = [
-      { name: 'Pendapatan Daerah', Target: totalPendapatan, Realisasi: totalRealisasiPendapatan },
-      { name: 'Belanja Daerah', Target: totalAnggaran, Realisasi: totalGabunganBelanja },
-      { name: 'Penerimaan Pembiayaan', Target: totalPenerimaanPembiayaan, Realisasi: 0 },
-      { name: 'Pengeluaran Pembiayaan', Target: totalPengeluaranPembiayaan, Realisasi: 0 },
-  ];
-  
-  // Custom Colors inspired by ECharts modern palette
-  const ECHART_COLORS = [
-    '#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', 
-    '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc', '#059669', 
-    '#D97706', '#DC2626', '#2563EB', '#7C3AED', '#DB2777'
-  ];
-
-  // Custom Active Shape for PieChart (Hover Effect)
-  const onPieEnter = (_, index) => {
-    setActiveIndex(index);
-  };
-  const onPieLeave = () => {
-    setActiveIndex(-1);
-  };
 
   const renderActiveShape = (props) => {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
@@ -603,21 +613,51 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
           </div>
         </div>
 
-        {/* Cari baris ini di sekitar 514 */}
-<GeminiAnalysis 
-    getAnalysisPrompt={getDashboardAnalysisPrompt} 
-    disabledCondition={totalAnggaran === 0 && totalPendapatan === 0} 
-    userCanUseAi={userCanUseAi}
-    // TAMBAHKAN INI agar data bisa dibaca oleh fungsi prompt
-    allData={{
-        totalPendapatan,
-        totalRealisasiPendapatan,
-        totalAnggaran,
-        totalGabunganBelanja,
-        totalRealisasiBelanja,
-        totalRealisasiNonRKUD
-    }}
-/>
+        {/* AI Analysis Section dengan Toggle */}
+<div className="relative">
+  <div className="flex justify-end mb-2">
+    <button
+      onClick={() => setShowAnalysis(!showAnalysis)}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+    >
+      {showAnalysis ? (
+        <>🗂️ Sembunyikan Analisis AI</>
+      ) : (
+        <>🤖 Tampilkan Analisis AI</>
+      )}
+    </button>
+  </div>
+  
+  {/* Indikator Data Terbaru */}
+  {lastUpdate && showAnalysis && (
+    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+      </span>
+      <span>Data diperbarui: {new Date(lastUpdate).toLocaleString('id-ID', {
+        day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      })} WIB</span>
+    </div>
+  )}
+  
+  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+  {showAnalysis && (
+    <GeminiAnalysis 
+        getAnalysisPrompt={getDashboardAnalysisPrompt} 
+        disabledCondition={totalAnggaran === 0 && totalPendapatan === 0} 
+        userCanUseAi={userCanUseAi}
+        allData={{
+            totalPendapatan,
+            totalRealisasiPendapatan,
+            totalAnggaran,
+            totalGabunganBelanja,
+            totalRealisasiBelanja,
+            totalRealisasiNonRKUD
+        }}
+    />
+  )}
+</div>
 
         {/* TAB NAVIGASI */}
         <div className="flex justify-center md:justify-start mb-8">

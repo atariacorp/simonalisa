@@ -55,6 +55,7 @@ const ProsesPenandaanView = ({ data, theme, userRole, selectedYear }) => {
         byTag: {}
     });
 
+    const [showAnalysis, setShowAnalysis] = React.useState(true);
     // Warna untuk visualisasi
     const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6B7280'];
 
@@ -287,34 +288,46 @@ const ProsesPenandaanView = ({ data, theme, userRole, selectedYear }) => {
     };
 
     // Gemini Analysis Prompt
-    const getAnalysisPrompt = (customQuery) => {
-        if (customQuery) {
-            return `Berdasarkan data penandaan anggaran, berikan analisis untuk: "${customQuery}"`;
-        }
-        
-        const topTags = tagChartData.slice(0, 3).map(t => 
-            `- **${t.name}**: Rp ${(t.anggaran/1e9).toFixed(2)} Miliar (${t.persentase.toFixed(2)}% terserap)`
-        ).join('\n');
-        
-        return `
-            Anda adalah seorang analis kebijakan anggaran. Lakukan analisis terhadap hasil penandaan anggaran tahun ${selectedYear}.
-            
-            ### RINGKASAN EKSEKUTIF
-            - **Total Item Ditandai**: ${summaryStats.totalTagged} item anggaran
-            - **Total Anggaran Tertandai**: ${formatCurrency(summaryStats.totalAnggaran)}
-            - **Total Realisasi**: ${formatCurrency(summaryStats.totalRealisasi)}
-            - **Rata-rata Penyerapan**: ${summaryStats.rataPenyerapan.toFixed(2)}%
-            - **Jenis Penandaan Aktif**: ${tagChartData.length} kategori
-            
-            ### 3 PENANDAAN DENGAN ALOKASI TERBESAR
-            ${topTags}
-            
-            Berikan analisis mendalam mengenai:
-            1.  **Efektivitas Penandaan**: Apakah penandaan yang dibuat sudah mencerminkan prioritas anggaran yang tepat?
-            2.  **Kinerja Per Tag**: Identifikasi tag mana yang memiliki penyerapan tinggi dan rendah. Apa implikasinya?
-            3.  **Rekomendasi Strategis**: Saran untuk optimalisasi alokasi anggaran berdasarkan pola penandaan yang ada.
-        `;
-    };
+const getAnalysisPrompt = (query, allData) => {
+    // Jika user mengirim query khusus
+    if (query && query.trim() !== '') {
+        return `Berdasarkan data penandaan anggaran, jawab pertanyaan ini: ${query}`;
+    }
+    
+    // Analisis default
+    if (taggedItemsWithRealisasi.length === 0) return "Data tidak cukup untuk dianalisis.";
+    
+    const topTags = tagChartData.slice(0, 3).map(t => 
+        `- **${t.name}**: Rp ${(t.anggaran/1e9).toFixed(2)} Miliar (${t.persentase.toFixed(2)}% terserap)`
+    ).join('\n');
+    
+    const lowTags = tagChartData.slice(-3).filter(t => t.persentase < 50).map(t => 
+        `- **${t.name}**: ${t.persentase.toFixed(2)}% (Rp ${(t.anggaran/1e9).toFixed(2)} Miliar)`
+    ).join('\n');
+    
+    return `ANALISIS PENANDAAN ANGGARAN
+TAHUN: ${selectedYear}
+
+RINGKASAN EKSEKUTIF:
+- Total Item Ditandai: ${summaryStats.totalTagged} item anggaran
+- Total Anggaran Tertandai: ${formatCurrency(summaryStats.totalAnggaran)}
+- Total Realisasi: ${formatCurrency(summaryStats.totalRealisasi)} (${summaryStats.rataPenyerapan.toFixed(2)}%)
+- Kategori Penandaan Aktif: ${tagChartData.length} kategori
+
+PENANDAAN DENGAN ALOKASI TERBESAR:
+${topTags}
+
+PENANDAAN DENGAN KINERJA RENDAH (<50%):
+${lowTags || '- Tidak ada data dengan kinerja rendah'}
+
+BERIKAN ANALISIS MENDALAM MENGENAI:
+1. Efektivitas Penandaan: Apakah penandaan yang dibuat sudah mencerminkan prioritas anggaran yang tepat?
+2. Kinerja Per Tag: Identifikasi tag mana yang memiliki penyerapan tinggi dan rendah. Apa implikasinya?
+3. Rekomendasi Strategis: 3 langkah konkret untuk optimalisasi alokasi anggaran berdasarkan pola penandaan.
+4. Peringatan Dini: Poin penting untuk rapat pimpinan terkait penandaan anggaran.
+
+Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
+};
 
     return (
         <div className="space-y-6">
@@ -360,14 +373,47 @@ const ProsesPenandaanView = ({ data, theme, userRole, selectedYear }) => {
                 </div>
             </div>
 
-            {/* Gemini Analysis */}
-            <GeminiAnalysis 
-                getAnalysisPrompt={getAnalysisPrompt}
-                disabledCondition={taggedItemsWithRealisasi.length === 0}
-                theme={theme}
-                interactivePlaceholder="Analisis pola penandaan anggaran..."
-                userCanUseAi={userRole === 'admin'}
-            />
+            {/* AI Analysis Section dengan Toggle */}
+<div className="relative">
+  <div className="flex justify-end mb-2">
+    <button
+      onClick={() => setShowAnalysis(!showAnalysis)}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+    >
+      {showAnalysis ? (
+        <>🗂️ Sembunyikan Analisis AI</>
+      ) : (
+        <>🤖 Tampilkan Analisis AI</>
+      )}
+    </button>
+  </div>
+  
+  {/* Indikator Data */}
+  {showAnalysis && taggedItemsWithRealisasi.length > 0 && (
+    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+      </span>
+      <span>Total Item: {summaryStats.totalTagged} | Anggaran: {formatCurrency(summaryStats.totalAnggaran)} | Serapan: {summaryStats.rataPenyerapan.toFixed(1)}%</span>
+    </div>
+  )}
+  
+  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+  {showAnalysis && (
+    <GeminiAnalysis 
+      getAnalysisPrompt={getAnalysisPrompt} 
+      disabledCondition={taggedItemsWithRealisasi.length === 0} 
+      userCanUseAi={userRole === 'admin'}
+      allData={{
+        summaryStats,
+        tagChartData,
+        selectedYear,
+        filterByTag
+      }}
+    />
+  )}
+</div>
 
             {/* Chart Section - Distribusi Tag */}
             {tagChartData.length > 0 && (

@@ -54,6 +54,7 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
     const [sortOrder, setSortOrder] = React.useState('desc');
     const [viewMode, setViewMode] = React.useState('table'); // 'table' atau 'card'
     const [showExecutiveInfo, setShowExecutiveInfo] = React.useState(true);
+    const [showAnalysis, setShowAnalysis] = React.useState(true);
     
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     const [startMonth, setStartMonth] = React.useState(months[0]);
@@ -281,48 +282,55 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
         }
     };
 
-    const getAnalysisPrompt = (customQuery) => {
-        if (customQuery) {
-            return `Berdasarkan data statistik pendapatan, berikan analisis untuk permintaan berikut: "${customQuery}"`;
-        }
-        
-        const topSources = stats.tableData.slice(0, 5).map(s => {
-            const persen = s.persentase.toFixed(2);
-            const status = s.persentase >= 90 ? '✓' : s.persentase >= 70 ? '⚠️' : '🔴';
-            return `- ${status} **${s.sumberPendapatan}**: Target ${formatCurrency(s.totalTarget)}, Realisasi ${formatCurrency(s.totalRealisasi)} (${persen}%)`;
-        }).join('\n');
-        
-        const lowSources = stats.tableData.slice(-3).reverse().map(s => {
-            const persen = s.persentase.toFixed(2);
-            return `- **${s.sumberPendapatan}**: ${persen}%`;
-        }).join('\n');
-        
-        const period = startMonth === endMonth ? startMonth : `periode ${startMonth} - ${endMonth}`;
-        const filterContext = searchTerm ? `dengan filter kata kunci "${searchTerm}"` : '';
-        
-        return `
-            Anda adalah seorang analis keuangan ahli untuk ${namaPemda || 'pemerintah daerah'} tahun ${selectedYear}. 
-            Lakukan analisis terhadap kinerja pendapatan ${selectedSkpd === 'Semua SKPD' ? 'Daerah' : selectedSkpd} pada **${period}** ${filterContext}.
-            
-            ### RINGKASAN EKSEKUTIF
-            - **Total Target Pendapatan**: ${formatCurrency(projectionData?.totalTarget || 0)}
-            - **Realisasi s/d ${projectionMonth}**: ${formatCurrency(projectionData?.realisasiHinggaSaatIni || 0)}
-            - **Proyeksi Akhir Tahun**: ${formatCurrency(projectionData?.proyeksiAkhirTahun || 0)} (${projectionData?.persenProyeksi.toFixed(2)}%)
-            - **Bulan dengan Data**: ${projectionData?.monthsPassed || 0} bulan
-            - **Sisa Bulan**: ${projectionData?.monthsRemaining || 0} bulan
-            
-            ### 5 SUMBER PENDAPATAN DENGAN NILAI TERTINGGI:
-            ${topSources}
-            
-            ### SUMBER PENDAPATAN DENGAN KINERJA TERENDAH:
-            ${lowSources}
-            
-            Berikan analisis mendalam mengenai:
-            1.  **Kinerja Pencapaian Target**: Sumber pendapatan mana yang mencapai target dengan baik dan mana yang perlu perhatian khusus.
-            2.  **Risiko Pendapatan**: Berdasarkan proyeksi, apakah ada risiko pendapatan tidak mencapai target? (${projectionData?.riskCategory === 'kritis' ? 'Risiko tinggi' : projectionData?.riskCategory === 'waspada' ? 'Perlu waspada' : 'Aman'})
-            3.  **Rekomendasi Strategis**: Berikan 3 rekomendasi konkret untuk optimalisasi pendapatan di sisa tahun anggaran dan perencanaan tahun depan.
-        `;
-    };
+    const getAnalysisPrompt = (query, allData) => {
+    // Jika user mengirim query khusus
+    if (query && query.trim() !== '') {
+        return `Berdasarkan data pendapatan SKPD, jawab pertanyaan ini: ${query}`;
+    }
+    
+    // Analisis default
+    if (stats.tableData.length === 0) return "Data tidak cukup untuk dianalisis.";
+    
+    const totalTarget = executiveSummary?.totalTarget || 0;
+    const totalRealisasi = executiveSummary?.totalRealisasi || 0;
+    const rataRataPersentase = executiveSummary?.rataRataPersentase || 0;
+    
+    const top5 = stats.tableData.slice(0, 5);
+    const low5 = stats.tableData.filter(item => item.persentase < 50).slice(0, 3);
+    
+    const period = startMonth === endMonth ? startMonth : `${startMonth} - ${endMonth}`;
+    const filterContext = searchTerm ? `dengan filter "${searchTerm}"` : '';
+    
+    return `ANALISIS PENDAPATAN SKPD
+TAHUN: ${selectedYear}
+SKPD: ${selectedSkpd === 'Semua SKPD' ? 'Semua SKPD' : selectedSkpd}
+PERIODE: ${period} ${filterContext}
+
+DATA RINGKAS:
+- Total Target Pendapatan: ${formatCurrency(totalTarget)}
+- Total Realisasi: ${formatCurrency(totalRealisasi)} (${rataRataPersentase.toFixed(2)}%)
+- Sisa Target: ${formatCurrency(executiveSummary?.totalGap || 0)}
+- Distribusi Kinerja: Tinggi (${executiveSummary?.highPerformer || 0}), Sedang (${executiveSummary?.mediumPerformer || 0}), Rendah (${executiveSummary?.lowPerformer || 0})
+
+PROYEKSI AKHIR TAHUN:
+- Realisasi s/d ${projectionMonth}: ${formatCurrency(projectionData?.realisasiHinggaSaatIni || 0)}
+- Proyeksi Akhir Tahun: ${formatCurrency(projectionData?.proyeksiAkhirTahun || 0)} (${projectionData?.persenProyeksi.toFixed(2)}%)
+- Status Risiko: ${projectionData?.riskCategory === 'kritis' ? '⚠️ KRITIS' : projectionData?.riskCategory === 'waspada' ? '⚡ WASPADA' : '✅ AMAN'}
+
+SUMBER PENDAPATAN DENGAN KINERJA TERTINGGI:
+${top5.map((item, i) => `${i+1}. ${item.sumberPendapatan}: ${item.persentase.toFixed(2)}% (Target: ${formatCurrency(item.totalTarget)}, Realisasi: ${formatCurrency(item.totalRealisasi)})`).join('\n')}
+
+SUMBER PENDAPATAN DENGAN KINERJA RENDAH (<50%):
+${low5.length > 0 ? low5.map((item, i) => `${i+1}. ${item.sumberPendapatan}: ${item.persentase.toFixed(2)}%`).join('\n') : '- Tidak ada data dengan kinerja rendah'}
+
+BERIKAN ANALISIS MENDALAM MENGENAI:
+1. Kinerja Pencapaian Target: Identifikasi sumber pendapatan dengan kinerja optimal dan yang bermasalah.
+2. Risiko Pendapatan: Analisis risiko berdasarkan proyeksi akhir tahun (${projectionData?.riskCategory}).
+3. Rekomendasi Strategis: 3 langkah konkret untuk optimalisasi pendapatan di sisa tahun.
+4. Peringatan Dini: Poin penting untuk rapat pimpinan.
+
+Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
+};
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700 pb-10">
@@ -549,14 +557,50 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
                 </button>
             )}
 
-            {/* Gemini Analysis */}
-            <GeminiAnalysis 
-                getAnalysisPrompt={getAnalysisPrompt} 
-                disabledCondition={stats.tableData.length === 0} 
-                theme={theme}
-                interactivePlaceholder="Analisis target pendapatan dari retribusi..."
-                userRole={userRole}
-            />
+            {/* AI Analysis Section dengan Toggle */}
+<div className="relative">
+  <div className="flex justify-end mb-2">
+    <button
+      onClick={() => setShowAnalysis(!showAnalysis)}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+    >
+      {showAnalysis ? (
+        <>🗂️ Sembunyikan Analisis AI</>
+      ) : (
+        <>🤖 Tampilkan Analisis AI</>
+      )}
+    </button>
+  </div>
+  
+  {/* Indikator Data */}
+  {showAnalysis && stats.tableData.length > 0 && (
+    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+      </span>
+      <span>SKPD: {selectedSkpd} | Total Sumber: {stats.tableData.length} | Serapan: {executiveSummary?.rataRataPersentase.toFixed(1)}%</span>
+    </div>
+  )}
+  
+  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+  {showAnalysis && (
+    <GeminiAnalysis 
+      getAnalysisPrompt={getAnalysisPrompt} 
+      disabledCondition={stats.tableData.length === 0} 
+      userCanUseAi={userRole !== 'viewer'}
+      allData={{
+        selectedSkpd,
+        startMonth,
+        endMonth,
+        projectionMonth,
+        executiveSummary,
+        projectionData,
+        topItems: stats.tableData.slice(0, 5)
+      }}
+    />
+  )}
+</div>
 
             {/* Projection Card dengan Glassmorphism */}
             {projectionData && showProjection && (

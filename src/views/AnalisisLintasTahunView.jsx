@@ -14,6 +14,7 @@ import {
 import { db, appId } from '../../utils/firebase';
 import { formatIDR } from '../../utils';
 import { auth } from '../../utils/firebase'; // Import auth instance
+import GeminiAnalysis from '../components/GitAnalysis';
 
 // SectionTitle Component
 const SectionTitle = ({ children }) => (
@@ -24,68 +25,6 @@ const SectionTitle = ({ children }) => (
     <div className="absolute -bottom-2 left-0 h-1.5 w-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full transition-all group-hover:w-24"></div>
   </div>
 );
-
-// GeminiAnalysis Component
-const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, interactivePlaceholder }) => {
-  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
-  const [result, setResult] = React.useState(null);
-
-  const handleAnalyze = () => {
-    setIsAnalyzing(true);
-    // Simulasi delay analisis untuk efek visual
-    setTimeout(() => {
-      setResult("Berdasarkan data perbandingan 3 tahun, terlihat akselerasi signifikan pada tahun 2024 dengan pertumbuhan 15.3%, namun terjadi perlambatan di Q1 2025. Sektor infrastruktur dan pendidikan menjadi kontributor utama dengan rata-rata pertumbuhan 18.7% selama periode tersebut.");
-      setIsAnalyzing(false);
-    }, 2000);
-  };
-
-  return (
-    <div className="relative overflow-hidden bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border border-indigo-200/50 dark:border-indigo-900/30 rounded-[2.5rem] p-8 shadow-2xl shadow-indigo-500/10 mb-10 transition-all duration-500 hover:shadow-indigo-500/20">
-      <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
-      <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl"></div>
-      
-      <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6">
-        <div className="p-4 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl text-white shadow-lg shadow-indigo-500/40 transform -rotate-3 group-hover:rotate-0 transition-transform">
-          <Sparkles size={28} />
-        </div>
-        <div className="flex-1 space-y-1">
-          <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tighter flex items-center gap-2">
-            Tri-Annual Intelligence Analysis <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-[10px] rounded-full">3 YEAR COMPARISON</span>
-          </h3>
-          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Asisten Analisis Fiskal AI dengan perspektif 3 tahunan</p>
-        </div>
-        <div className="w-full md:w-auto flex gap-2">
-          <div className="flex-1 relative">
-             <input 
-              disabled={disabledCondition || isAnalyzing}
-              placeholder={interactivePlaceholder}
-              className="w-full md:w-80 px-5 py-3 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all placeholder:text-slate-400"
-            />
-          </div>
-          <button 
-            onClick={handleAnalyze}
-            disabled={disabledCondition || isAnalyzing}
-            className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-indigo-500/30 active:scale-95 disabled:opacity-50 flex items-center gap-2"
-          >
-            {isAnalyzing ? <Loader className="animate-spin" size={18} /> : <MessageSquare size={18} />}
-            Analisis 3 Tahun
-          </button>
-        </div>
-      </div>
-
-      {result && (
-        <div className="mt-6 p-6 bg-gradient-to-r from-indigo-50/80 to-purple-50/80 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-3xl border border-indigo-100 dark:border-indigo-800/50 animate-in fade-in slide-in-from-top-4 duration-500 backdrop-blur-sm">
-           <div className="flex items-start gap-3">
-              <div className="mt-1 p-1 bg-indigo-600 rounded-full text-white"><ShieldCheck size={12}/></div>
-              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-                {result}
-              </p>
-           </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 // --- MAIN VIEW COMPONENT WITH 3-YEAR COMPARISON ---
 const AnalisisLintasTahunView = ({ data = {}, theme, selectedYear, userRole }) => {
@@ -101,7 +40,8 @@ const AnalisisLintasTahunView = ({ data = {}, theme, selectedYear, userRole }) =
     const [yearThird, setYearThird] = React.useState(2025);
     const [startMonth, setStartMonth] = React.useState(months[0]);
     const [endMonth, setEndMonth] = React.useState(months[months.length - 1]);
-    
+    const [showAnalysis, setShowAnalysis] = React.useState(true);
+
     // Data untuk tiga tahun
     const [dataFirst, setDataFirst] = React.useState(null);
     const [dataSecond, setDataSecond] = React.useState(null);
@@ -401,18 +341,45 @@ const AnalisisLintasTahunView = ({ data = {}, theme, selectedYear, userRole }) =
         };
     }, [dataFirst, dataSecond, dataThird, yearFirst, yearSecond, yearThird, selectedSkpdBelanja, selectedSkpdPendapatan, startMonth, endMonth]);
 
-    const getAnalysisPrompt = (customQuery) => {
-        if (customQuery) {
-            return `Analisis perbandingan 3 tahun (${yearFirst}, ${yearSecond}, ${yearThird}): "${customQuery}"`;
-        }
-        if (!comparisonData || comparisonData.length === 0) return "Data tidak cukup.";
-        const period = startMonth === endMonth ? startMonth : `periode ${startMonth} - ${endMonth}`;
-        let prompt = `Bandingkan APBD 3 tahun (${yearFirst} vs ${yearSecond} vs ${yearThird}) periode ${period}.\n`;
-        comparisonData.forEach(item => {
-            prompt += `- ${item.name}: ${yearFirst} (${formatIDR(item[yearFirst])}), ${yearSecond} (${formatIDR(item[yearSecond])}), ${yearThird} (${formatIDR(item[yearThird])})\n`;
-        });
-        return prompt;
-    };
+    const getAnalysisPrompt = (query, allData) => {
+    // Jika user mengirim query khusus
+    if (query && query.trim() !== '') {
+        return `Berdasarkan data perbandingan 3 tahun (${yearFirst}, ${yearSecond}, ${yearThird}), jawab pertanyaan ini: ${query}`;
+    }
+    
+    // Analisis default
+    if (!comparisonData || comparisonData.length === 0) return "Data tidak cukup untuk dianalisis.";
+    
+    const period = startMonth === endMonth ? startMonth : `periode ${startMonth} - ${endMonth}`;
+    const totalAgg = totalAggregate || { totalAnggaran: 0, totalRealisasiBelanja: 0 };
+    
+    return `ANALISIS LINTAS TAHUN APBD
+PERIODE: ${yearFirst} - ${yearSecond} - ${yearThird}
+RENTANG ANALISIS: ${period}
+
+DATA RINGKAS 3 TAHUN:
+${comparisonData.map(item => {
+    return `- ${item.name}: ${yearFirst} (${formatIDR(item[yearFirst])}), ${yearSecond} (${formatIDR(item[yearSecond])}), ${yearThird} (${formatIDR(item[yearThird])})`;
+}).join('\n')}
+
+PERTUMBUHAN TAHUNAN:
+${growthRates?.map(rate => {
+    return `- ${rate.period}: Anggaran ${rate.anggaran}%, Pendapatan ${rate.pendapatan}%, Realisasi Belanja ${rate.realisasiBelanja}%`;
+}).join('\n') || '- Data pertumbuhan tidak tersedia'}
+
+TOTAL 3 TAHUN:
+- Total Anggaran: ${formatIDR(totalAgg.totalAnggaran)}
+- Total Realisasi Belanja: ${formatIDR(totalAgg.totalRealisasiBelanja)}
+- Rata-rata Realisasi per Tahun: ${formatIDR(totalAgg.averageRealisasiBelanja || 0)}
+
+BERIKAN ANALISIS MENDALAM MENGENAI:
+1. Tren 3 Tahunan: Identifikasi pola pertumbuhan atau penurunan yang signifikan.
+2. Perbandingan Kinerja: Bandingkan realisasi belanja vs pendapatan antar tahun.
+3. Rekomendasi Strategis: 3 langkah konkret berdasarkan tren yang teridentifikasi.
+4. Peringatan Dini: Poin-poin yang perlu diwaspadai untuk perencanaan tahun depan.
+
+Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
+};
 
     const ComparisonCard = ({ title, valueFirst, valueSecond, valueThird, yearFirst, yearSecond, yearThird, icon: Icon }) => {
         const change1to2 = valueSecond - valueFirst;
@@ -607,15 +574,53 @@ const AnalisisLintasTahunView = ({ data = {}, theme, selectedYear, userRole }) =
                 </div>
             ) : comparisonData && comparisonData.length > 0 && (
                 <div className="space-y-12">
-                    {/* GEMINI INTELLIGENCE PANEL */}
-                    <div className="transform transition-all duration-700 hover:scale-[1.01]">
-                        <GeminiAnalysis 
-                            getAnalysisPrompt={getAnalysisPrompt} 
-                            disabledCondition={!comparisonData} 
-                            theme={theme}
-                            interactivePlaceholder="Analisis tren 3 tahun terakhir..."
-                        />
-                    </div>
+                    {/* AI Analysis Section dengan Toggle */}
+<div className="relative">
+  <div className="flex justify-end mb-2">
+    <button
+      onClick={() => setShowAnalysis(!showAnalysis)}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+    >
+      {showAnalysis ? (
+        <>🗂️ Sembunyikan Analisis AI</>
+      ) : (
+        <>🤖 Tampilkan Analisis AI</>
+      )}
+    </button>
+  </div>
+  
+  {/* Indikator Data */}
+  {showAnalysis && comparisonData && comparisonData.length > 0 && (
+    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+      </span>
+      <span>Analisis 3 Tahun: {yearFirst} • {yearSecond} • {yearThird} | Periode: {startMonth} - {endMonth}</span>
+    </div>
+  )}
+  
+  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+  {showAnalysis && (
+    <div className="transform transition-all duration-700 hover:scale-[1.01]">
+      <GeminiAnalysis 
+        getAnalysisPrompt={getAnalysisPrompt} 
+        disabledCondition={!comparisonData} 
+        userCanUseAi={userRole !== 'viewer'}
+        allData={{
+          yearFirst,
+          yearSecond,
+          yearThird,
+          startMonth,
+          endMonth,
+          comparisonData,
+          growthRates,
+          totalAggregate
+        }}
+      />
+    </div>
+  )}
+</div>
                     
                     {/* GROWTH RATES BANNER */}
                     {growthRates && growthRates.length > 0 && (

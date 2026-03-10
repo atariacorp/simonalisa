@@ -41,6 +41,10 @@ import {
   Zap
 } from 'lucide-react';
 
+// ===== TAMBAHKAN INI =====
+import GeminiAnalysis from '../components/GeminiAnalysis';
+// ===== END TAMBAHAN =====
+
 // --- UTILITIES ---
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('id-ID', {
@@ -148,159 +152,6 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, selectedYear, userRole }) => {
-  const [analysis, setAnalysis] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [showAnalysis, setShowAnalysis] = useState(true);
-
-  const generateAnalysis = async () => {
-    if (disabledCondition) return;
-    
-    setLoading(true);
-    setError(null);
-    const apiKey = ""; 
-    const prompt = getAnalysisPrompt("Berikan analisis mendalam mengenai potensi SiLPA tahun berjalan berdasarkan data yang ada, identifikasi SKPD berisiko tinggi, dan berikan rekomendasi mitigasi.");
-
-    const fetchWithRetry = async (url, options, retries = 5, backoff = 1000) => {
-      try {
-        const response = await fetch(url, options);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        return await response.json();
-      } catch (err) {
-        if (retries > 0) {
-          await new Promise(resolve => setTimeout(resolve, backoff));
-          return fetchWithRetry(url, options, retries - 1, backoff * 2);
-        }
-        throw err;
-      }
-    };
-
-    try {
-      const result = await fetchWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            systemInstruction: { 
-              parts: [{ text: `Anda adalah pakar keuangan daerah di Indonesia. Analisis data berdasarkan PP 12/2019. Gunakan bahasa yang profesional namun mudah dimengerti oleh ${userRole}.` }] 
-            }
-          })
-        }
-      );
-
-      const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-      setAnalysis(text || "Gagal menghasilkan analisis.");
-    } catch (err) {
-      setError("Gagal menghubungi AI. Silakan coba lagi nanti.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!showAnalysis) {
-    return (
-      <button
-        onClick={() => setShowAnalysis(true)}
-        className="mb-10 px-8 py-4 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-800 text-white rounded-[1.5rem] font-black text-sm flex items-center gap-3 shadow-[0_15px_30px_-10px_rgba(79,70,229,0.5)] hover:shadow-[0_20px_40px_-10px_rgba(79,70,229,0.6)] transition-all active:scale-95 group"
-      >
-        <div className="p-1.5 bg-white/20 rounded-lg group-hover:rotate-12 transition-transform">
-          <Bot size={20} />
-        </div> 
-        AKTIFKAN INTELEGENSIA BUATAN
-      </button>
-    );
-  }
-
-  return (
-    <div className="relative overflow-hidden bg-white/40 dark:bg-gray-900/40 backdrop-blur-3xl border border-white/40 dark:border-white/5 rounded-[3rem] p-10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] mb-12 transition-all duration-1000 group">
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2 transition-all duration-1000 group-hover:bg-indigo-500/10"></div>
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2"></div>
-      
-      <div className="relative z-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-          <div className="flex items-center gap-5">
-            <div className="p-4 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 rounded-2xl text-white shadow-[0_10px_25px_-5px_rgba(79,70,229,0.5)] transform -rotate-2 group-hover:rotate-0 transition-transform duration-500">
-              <Bot className="w-8 h-8" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-[0.3em] mb-1">Advanced Reasoning Module</p>
-              <h3 className="font-black text-2xl text-gray-900 dark:text-white flex items-center gap-3 tracking-tighter leading-none">
-                AI Strategic Insight
-                <div className="flex gap-1">
-                    <Sparkles className="w-4 h-4 text-yellow-500 fill-yellow-500 animate-pulse" />
-                    <Zap className="w-4 h-4 text-indigo-400 fill-indigo-400 animate-bounce delay-75" />
-                </div>
-              </h3>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowAnalysis(false)}
-              className="p-3 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-white/20 shadow-sm"
-              title="Sembunyikan"
-            >
-              <EyeOff size={18} className="text-gray-500" />
-            </button>
-            <button
-              onClick={generateAnalysis}
-              disabled={loading || disabledCondition}
-              className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
-                loading || disabledCondition 
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-50' 
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-[0_10px_25px_-8px_rgba(79,70,229,0.5)] hover:shadow-[0_15px_35px_-8px_rgba(79,70,229,0.6)] active:scale-95'
-              }`}
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              {analysis ? 'Re-Generate Analysis' : 'Initialize Analysis'}
-            </button>
-          </div>
-        </div>
-
-        {error && (
-          <div className="flex items-center gap-4 p-5 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-2xl mb-6 text-sm font-bold animate-in fade-in slide-in-from-top-2">
-            <AlertCircle className="w-6 h-6 flex-shrink-0" />
-            {error}
-          </div>
-        )}
-
-        {analysis ? (
-          <div className="relative">
-            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 to-transparent opacity-30 rounded-full"></div>
-            <div className="prose prose-indigo dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap pl-8 text-base font-medium animate-in fade-in slide-in-from-left-4 duration-1000">
-              {analysis}
-            </div>
-          </div>
-        ) : (
-          !loading && (
-            <div className="p-8 bg-indigo-50/50 dark:bg-indigo-950/20 backdrop-blur-md rounded-[2rem] border border-dashed border-indigo-200 dark:border-indigo-900/50 transition-all group-hover:border-indigo-400">
-              <p className="text-gray-500 dark:text-gray-400 italic text-sm text-center leading-loose">
-                Sistem siap melakukan analisis prediktif. <br/>
-                <span className="font-black text-indigo-600 dark:text-indigo-400 not-italic uppercase tracking-widest text-[10px]">Klik tombol di atas untuk memulai pemrosesan data.</span>
-              </p>
-            </div>
-          )
-        )}
-        
-        {loading && (
-          <div className="flex flex-col items-center py-16 gap-6 bg-white/20 dark:bg-black/20 backdrop-blur-3xl rounded-[2.5rem] border border-white/30 dark:border-white/5 animate-pulse">
-            <div className="relative">
-                <Loader2 className="w-16 h-16 text-indigo-500 animate-spin" />
-                <div className="absolute inset-0 bg-indigo-400 blur-3xl opacity-20 animate-pulse"></div>
-            </div>
-            <div className="text-center space-y-2">
-                <p className="text-indigo-600 dark:text-indigo-400 text-xl font-black tracking-tighter uppercase">Menjalankan Algoritma Proyeksi</p>
-                <p className="text-gray-500 dark:text-gray-400 text-xs font-bold tracking-[0.3em] animate-bounce">MENGANALISIS RISIKO SILPA DAERAH...</p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
 // --- MAIN VIEW COMPONENT ---
 
 const AnalisisPotensiSiLPAView = ({ data = {}, theme, selectedYear, userRole }) => {
@@ -310,12 +161,11 @@ const AnalisisPotensiSiLPAView = ({ data = {}, theme, selectedYear, userRole }) 
         realisasiNonRkud = {} 
     } = data;
 
-// TEMPATKAN INI DI BARIS PERTAMA SETELAH const AnalisisPotensiSiLPAView = ({ data, theme, selectedYear, userRole }) => {
-console.log('🔥🔥🔥 INI VERSI BARU - HARUSNYA MUNCUL DI CONSOLE 🔥🔥🔥');
-alert('🚨🚨🚨 INI VERSI BARU DENGAN EXECUTIVE DASHBOARD!');
+    // ===== TAMBAHKAN STATE UNTUK TOGGLE ANALISIS =====
+    const [showAnalysis, setShowAnalysis] = useState(true);
+    // ===== END TAMBAHAN =====
 
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-
     const COLORS = {
         anggaran: '#6366F1',
         realisasi: '#10B981',
@@ -430,14 +280,45 @@ alert('🚨🚨🚨 INI VERSI BARU DENGAN EXECUTIVE DASHBOARD!');
         setCurrentPage(1);
     }, [searchTerm, riskLevel]);
 
-    const getAnalysisPrompt = (customQuery) => {
-        return `Data Potensi SiLPA untuk tahun ${selectedYear}: 
-        Total Pagu: ${formatCurrency(silpaData.totals.totalAnggaran)}, 
-        Estimasi SiLPA: ${formatCurrency(silpaData.totals.potensiSiLPA)} (${((silpaData.totals.potensiSiLPA / silpaData.totals.totalAnggaran) * 100).toFixed(2)}%).
-        Bulan berjalan: ${projectionMonth}.
-        SKPD Teratas dengan SiLPA: ${silpaData.chartData.slice(0, 3).map(d => `${d.skpd}: ${d.persenSiLPA.toFixed(1)}%`).join(', ')}.
-        Pertanyaan: ${customQuery}`;
-    };
+    const getAnalysisPrompt = (query, allData) => {
+    // Jika user mengirim query khusus
+    if (query && query.trim() !== '') {
+        return `Berdasarkan data potensi SiLPA tahun ${selectedYear}, jawab pertanyaan ini: ${query}`;
+    }
+    
+    // Analisis default
+    if (!silpaData.tableData || silpaData.tableData.length === 0) {
+        return "Data tidak cukup untuk dianalisis.";
+    }
+    
+    const top5 = silpaData.tableData.slice(0, 5);
+    const totalAnggaran = silpaData.totals.totalAnggaran;
+    const totalPotensiSiLPA = silpaData.totals.potensiSiLPA;
+    const persenSiLPA = totalAnggaran > 0 ? ((totalPotensiSiLPA / totalAnggaran) * 100).toFixed(2) : 0;
+    
+    return `ANALISIS POTENSI SILPA DAERAH
+TAHUN: ${selectedYear}
+BULAN PROYEKSI: ${projectionMonth}
+PERIODE ANALISIS: ${startMonth} - ${endMonth}
+
+DATA RINGKAS:
+- Total Pagu Anggaran: ${formatCurrency(totalAnggaran)}
+- Estimasi Potensi SiLPA: ${formatCurrency(totalPotensiSiLPA)} (${persenSiLPA}%)
+- Total SKPD Dianalisis: ${silpaData.tableData.length} SKPD
+- Bulan dengan Data: ${silpaData.monthsPassed} bulan
+- Sisa Bulan: ${silpaData.monthsRemaining} bulan
+
+SKPD DENGAN POTENSI SILPA TERTINGGI:
+${top5.map((item, i) => `${i+1}. ${item.skpd}: ${formatCurrency(item.potensiSiLPA)} (${item.persenSiLPA.toFixed(2)}%)`).join('\n')}
+
+BERIKAN ANALISIS MENDALAM MENGENAI:
+1. Peringatan Utama: Identifikasi 3 SKPD dengan risiko SiLPA tertinggi.
+2. Evaluasi Proyeksi: Apakah estimasi SiLPA ${persenSiLPA}% tergolong wajar atau perlu perhatian khusus?
+3. Rekomendasi Strategis: 3 langkah konkret untuk memitigasi potensi SiLPA.
+4. Catatan Tambahan: Poin penting untuk rapat pimpinan terkait percepatan realisasi.
+
+Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
+};
 
     const handleDownloadExcel = () => {
         if (!silpaData.tableData || silpaData.tableData.length === 0) return;
@@ -591,13 +472,53 @@ alert('🚨🚨🚨 INI VERSI BARU DENGAN EXECUTIVE DASHBOARD!');
                 </button>
             )}
 
-            <GeminiAnalysis 
-                getAnalysisPrompt={getAnalysisPrompt}
-                disabledCondition={!silpaData.tableData || silpaData.tableData.length === 0}
-                theme={theme}
-                selectedYear={selectedYear}
-                userRole={userRole}
-            />
+            {/* AI Analysis Section dengan Toggle */}
+<div className="relative">
+  <div className="flex justify-end mb-2">
+    <button
+      onClick={() => setShowAnalysis(!showAnalysis)}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+    >
+      {showAnalysis ? (
+        <>🗂️ Sembunyikan Analisis AI</>
+      ) : (
+        <>🤖 Tampilkan Analisis AI</>
+      )}
+    </button>
+  </div>
+  
+  {/* Indikator Data */}
+  {showAnalysis && silpaData.tableData && silpaData.tableData.length > 0 && (
+    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+      </span>
+      <span>Data: {silpaData.tableData.length} SKPD | Proyeksi: {projectionMonth} | Risiko: {riskLevel}</span>
+    </div>
+  )}
+  
+  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+  {showAnalysis && (
+    <GeminiAnalysis 
+      getAnalysisPrompt={getAnalysisPrompt} 
+      disabledCondition={!silpaData.tableData || silpaData.tableData.length === 0} 
+      userCanUseAi={userRole !== 'viewer'}
+      allData={{
+        selectedYear,
+        projectionMonth,
+        startMonth,
+        endMonth,
+        totalAnggaran: silpaData.totals.totalAnggaran,
+        totalPotensiSiLPA: silpaData.totals.potensiSiLPA,
+        monthsPassed: silpaData.monthsPassed,
+        monthsRemaining: silpaData.monthsRemaining,
+        totalSKPD: silpaData.tableData.length,
+        topSKPD: silpaData.tableData.slice(0, 5)
+      }}
+    />
+  )}
+</div>
             
             <div className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-3xl rounded-[3.5rem] shadow-[0_60px_100px_-30px_rgba(0,0,0,0.1)] border border-white/50 dark:border-white/5 overflow-hidden transition-all duration-700 hover:shadow-[0_80px_120px_-30px_rgba(0,0,0,0.15)]">
                 {/* Controls & Summary */}

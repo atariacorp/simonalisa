@@ -15,9 +15,8 @@ import {
 import { db, appId } from '../../utils/firebase';
 import { formatIDR } from '../../utils';
 import { auth } from '../../utils/firebase'; // Import auth instance
+import GeminiAnalysis from '../components/GeminiAnalysis';
 
-// HAPUS inisialisasi Firebase manual
-// HAPUS fungsi formatCurrency (gunakan formatIDR dari utils)
 
 // SectionTitle Component
 const SectionTitle = ({ children }) => (
@@ -28,52 +27,6 @@ const SectionTitle = ({ children }) => (
     <div className="absolute -bottom-3 left-0 h-1.5 w-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full transition-all duration-500 group-hover:w-32"></div>
   </div>
 );
-
-// GeminiAnalysis Component
-const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, interactivePlaceholder, userCanUseAi }) => {
-  const [isThinking, setIsThinking] = React.useState(false);
-  const [response, setResponse] = React.useState(null);
-
-  const handleAnalyze = () => {
-    setIsThinking(true);
-    setTimeout(() => {
-      setResponse("Analisis mendalam mendeteksi konsentrasi sisa anggaran pada rekening belanja barang dan jasa di tiga SKPD utama. Disarankan untuk meninjau jadwal pengadaan agar penyerapan dapat dioptimalkan sebelum penutupan tahun anggaran.");
-      setIsThinking(false);
-    }, 2000);
-  };
-
-  if (!userCanUseAi) return null;
-
-  return (
-    <div className="relative overflow-hidden bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border border-indigo-200/50 dark:border-indigo-900/30 rounded-[2.5rem] p-8 shadow-2xl shadow-indigo-500/10 mb-10 transition-all duration-500 group">
-      <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl transition-transform group-hover:scale-110"></div>
-      <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6 text-left">
-        <div className="p-4 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl text-white shadow-lg shadow-indigo-500/40">
-          <Sparkles size={28} />
-        </div>
-        <div className="flex-1 space-y-1">
-          <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tighter">AI Fiscal Insights</h3>
-          <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest">Analisis Rekening Berbasis Kecerdasan Buatan</p>
-        </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <button 
-            onClick={handleAnalyze}
-            disabled={disabledCondition || isThinking}
-            className="w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-indigo-500/30 disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95"
-          >
-            {isThinking ? <Loader className="animate-spin" size={18} /> : <MessageSquare size={18} />}
-            {isThinking ? "Menganalisis..." : "Generate Analisis"}
-          </button>
-        </div>
-      </div>
-      {response && (
-        <div className="mt-6 p-6 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-3xl border border-indigo-100 dark:border-indigo-800/50 animate-in fade-in slide-in-from-top-4 text-left font-medium text-sm text-slate-700 dark:text-slate-300 italic leading-relaxed">
-          "{response}"
-        </div>
-      )}
-    </div>
-  );
-};
 
 // Pagination Component
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
@@ -159,7 +112,8 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userCanUseAi, select
     const [viewMode, setViewMode] = React.useState('card'); 
     const [showFilters, setShowFilters] = React.useState(true);
     const [showInfo, setShowInfo] = React.useState(true); 
-    
+    const [showAnalysis, setShowAnalysis] = React.useState(true);
+
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     const [startMonth, setStartMonth] = React.useState(months[0]);
     const [endMonth, setEndMonth] = React.useState(months[months.length - 1]);
@@ -364,11 +318,48 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userCanUseAi, select
         } catch (err) { console.error(err); }
     };
 
-    const getAnalysisPrompt = (customQuery) => {
-        if (customQuery) return `Analisis data rekening SKPD untuk: "${customQuery}"`;
-        const focus = selectedSkpd === 'Semua SKPD' ? 'keseluruhan APBD' : `SKPD: **${selectedSkpd}**`;
-        return `Audit realisasi anggaran per rekening untuk **${focus}** pada tahun ${selectedYear}. Total Anggaran: ${formatIDR(summaryStats.totalAnggaran)}.`;
-    };
+    const getAnalysisPrompt = (query, allData) => {
+    // Jika user mengirim query khusus
+    if (query && query.trim() !== '') {
+        return `Berdasarkan data rekening SKPD, jawab pertanyaan ini: ${query}`;
+    }
+    
+    // Analisis default
+    if (rekeningStats.length === 0) return "Data tidak cukup untuk dianalisis.";
+    
+    const focus = selectedSkpd === 'Semua SKPD' ? 'keseluruhan APBD' : `SKPD: ${selectedSkpd}`;
+    const totalAnggaran = summaryStats?.totalAnggaran || 0;
+    const totalRealisasi = summaryStats?.totalRealisasi || 0;
+    const rataPenyerapan = summaryStats?.rataPenyerapan || 0;
+    
+    const top5 = sortedAndFilteredData.slice(0, 5);
+    const low5 = sortedAndFilteredData.filter(item => item.persentase < 50).slice(0, 3);
+    
+    return `ANALISIS REKENING ANGGARAN
+TAHUN: ${selectedYear}
+FOKUS: ${focus}
+PERIODE: ${startMonth} - ${endMonth}
+
+DATA RINGKAS:
+- Total Anggaran: ${formatIDR(totalAnggaran)}
+- Total Realisasi: ${formatIDR(totalRealisasi)} (${rataPenyerapan.toFixed(1)}%)
+- Sisa Anggaran: ${formatIDR(summaryStats?.totalSisa || 0)}
+- Distribusi Kinerja: Tinggi (${summaryStats?.highPerformer || 0}), Sedang (${summaryStats?.mediumPerformer || 0}), Rendah (${summaryStats?.lowPerformer || 0})
+
+REKENING DENGAN KINERJA TERTINGGI:
+${top5.map((item, i) => `${i+1}. ${item.rekening}: ${item.persentase.toFixed(1)}% (Anggaran: ${formatIDR(item.totalAnggaran)}, Realisasi: ${formatIDR(item.totalRealisasi)})`).join('\n')}
+
+REKENING DENGAN KINERJA RENDAH (<50%):
+${low5.length > 0 ? low5.map((item, i) => `${i+1}. ${item.rekening}: ${item.persentase.toFixed(1)}%`).join('\n') : '- Tidak ada data dengan kinerja rendah'}
+
+BERIKAN ANALISIS MENDALAM MENGENAI:
+1. Evaluasi Kinerja: Identifikasi rekening dengan kinerja optimal dan yang bermasalah.
+2. Identifikasi Masalah: Analisis penyebab rendahnya penyerapan pada rekening dengan kinerja <50%.
+3. Rekomendasi Strategis: 3 langkah konkret untuk meningkatkan kinerja penyerapan.
+4. Peringatan Dini: Poin penting untuk rapat pimpinan terkait optimalisasi anggaran per rekening.
+
+Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
+};
 
     const toggleRincian = (rekening) => {
         setExpandedRekening(prev => (prev === rekening ? null : rekening));
@@ -464,13 +455,48 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userCanUseAi, select
                 </button>
             )}
 
-            <GeminiAnalysis 
-                getAnalysisPrompt={getAnalysisPrompt} 
-                disabledCondition={rekeningStats.length === 0} 
-                theme={theme} 
-                interactivePlaceholder="Analisis rekening pasif dengan sisa terbesar..." 
-                userCanUseAi={userCanUseAi} 
-            />
+            {/* AI Analysis Section dengan Toggle */}
+<div className="relative">
+  <div className="flex justify-end mb-2">
+    <button
+      onClick={() => setShowAnalysis(!showAnalysis)}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+    >
+      {showAnalysis ? (
+        <>🗂️ Sembunyikan Analisis AI</>
+      ) : (
+        <>🤖 Tampilkan Analisis AI</>
+      )}
+    </button>
+  </div>
+  
+  {/* Indikator Data */}
+  {showAnalysis && rekeningStats.length > 0 && (
+    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+      </span>
+      <span>SKPD: {selectedSkpd} | Total Rekening: {rekeningStats.length} | Serapan: {summaryStats?.rataPenyerapan.toFixed(1)}%</span>
+    </div>
+  )}
+  
+  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+  {showAnalysis && (
+    <GeminiAnalysis 
+      getAnalysisPrompt={getAnalysisPrompt} 
+      disabledCondition={rekeningStats.length === 0} 
+      userCanUseAi={userCanUseAi}
+      allData={{
+        selectedSkpd,
+        startMonth,
+        endMonth,
+        summaryStats,
+        topItems: sortedAndFilteredData.slice(0, 5)
+      }}
+    />
+  )}
+</div>
 
             {/* STICKY GLASS FILTER BAR */}
             <div className="sticky top-6 z-50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border border-white/40 dark:border-slate-800/50 p-6 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 dark:shadow-none transition-all duration-500">

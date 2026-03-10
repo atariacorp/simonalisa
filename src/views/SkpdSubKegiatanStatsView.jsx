@@ -16,7 +16,7 @@ import {
 import { db, appId } from '../../utils/firebase';
 import { formatIDR } from '../../utils';
 import { auth } from '../../utils/firebase';
-
+import GeminiAnalysis from '../components/GeminiAnalysis';
 // --- SUB-COMPONENTS ---
 
 const SectionTitle = ({ children }) => (
@@ -30,104 +30,6 @@ const SectionTitle = ({ children }) => (
     <div className="absolute -bottom-4 left-6 h-1 w-24 bg-gradient-to-r from-indigo-600/50 to-transparent rounded-full transition-all duration-700 group-hover:w-48"></div>
   </div>
 );
-
-const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, userRole, userCanUseAi }) => {
-  const [isThinking, setIsThinking] = useState(false);
-  const [response, setResponse] = useState(null);
-  const [error, setError] = useState(null);
-
-  const handleAnalyze = async () => {
-    if (disabledCondition) return;
-    setIsThinking(true);
-    setError(null);
-    
-    const apiKey = ""; // Disediakan oleh environment
-    const prompt = getAnalysisPrompt();
-
-    const fetchWithRetry = async (url, options, retries = 5, backoff = 1000) => {
-      try {
-        const res = await fetch(url, options);
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return await res.json();
-      } catch (err) {
-        if (retries > 0) {
-          await new Promise(resolve => setTimeout(resolve, backoff));
-          return fetchWithRetry(url, options, retries - 1, backoff * 2);
-        }
-        throw err;
-      }
-    };
-
-    try {
-      const result = await fetchWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            systemInstruction: { 
-              parts: [{ text: `Anda adalah auditor keuangan daerah. Analisis performa sub kegiatan berdasarkan data realisasi. Gunakan bahasa profesional untuk ${userRole}.` }] 
-            }
-          })
-        }
-      );
-
-      const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-      setResponse(text || "Gagal mendapatkan analisis.");
-    } catch (err) {
-      setError("Koneksi AI terputus. Silakan coba lagi.");
-    } finally {
-      setIsThinking(false);
-    }
-  };
-
-  return (
-    <div className="relative overflow-hidden bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/40 dark:border-white/5 rounded-[3rem] p-10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] mb-12 transition-all duration-1000 group">
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
-      
-      <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-        <div className="p-5 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 rounded-2xl text-white shadow-[0_15px_35px_-10px_rgba(79,70,229,0.5)] transform -rotate-2 group-hover:rotate-0 transition-transform duration-500">
-          <Sparkles size={32} />
-        </div>
-        <div className="flex-1 space-y-1">
-          <p className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-[0.3em] mb-1">Fiscal Intelligence Module</p>
-          <h3 className="font-black text-2xl text-slate-800 dark:text-white tracking-tighter leading-none">AI Fiscal Insights</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Audit prediktif sub kegiatan menggunakan Gemini 2.5 Flash</p>
-        </div>
-        <div className="flex gap-3 w-full md:w-auto">
-          <button 
-            onClick={handleAnalyze}
-            disabled={disabledCondition || isThinking}
-            className={`w-full md:w-auto px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${
-              isThinking || disabledCondition
-                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-[0_10px_25px_-8px_rgba(79,70,229,0.5)] active:scale-95'
-            }`}
-          >
-            {isThinking ? <Loader2 className="animate-spin" size={18} /> : <MessageSquare size={18} />}
-            {isThinking ? "PROCESSING DATA..." : "GENERATE ANALISIS"}
-          </button>
-        </div>
-      </div>
-      
-      {error && (
-        <div className="mt-6 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold animate-in fade-in">
-          {error}
-        </div>
-      )}
-
-      {response && (
-        <div className="mt-8 relative">
-          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 to-transparent opacity-30 rounded-full"></div>
-          <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-[2rem] border border-indigo-100/50 dark:border-indigo-800/30 text-sm text-slate-700 dark:text-slate-300 italic leading-relaxed pl-10 animate-in fade-in slide-in-from-left-4 duration-1000">
-            "{response}"
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -216,6 +118,7 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole, userCanUse
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [viewMode, setViewMode] = useState('card'); 
+  const [showAnalysis, setShowAnalysis] = useState(true);
   
   const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
   const [startMonth, setStartMonth] = useState(months[0]);
@@ -425,10 +328,44 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole, userCanUse
     return <span className="px-3 py-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-rose-500/20 flex items-center gap-2"><AlertTriangle size={12} /> Kinerja Rendah</span>;
   };
 
-  const getAnalysisPrompt = () => {
+  const getAnalysisPrompt = (query, allData) => {
+    // Jika user mengirim query khusus
+    if (query && query.trim() !== '') {
+        return `Berdasarkan data sub kegiatan SKPD, jawab pertanyaan ini: ${query}`;
+    }
+    
+    // Analisis default
     if (!selectedSkpd) return "Pilih SKPD untuk dianalisis.";
-    return `Analis kinerja penyerapan anggaran per Sub Kegiatan untuk SKPD: **${selectedSkpd}** pada tahun ${selectedYear}. Total Anggaran: ${formatIDR(summaryStats?.totalAnggaran)}. Rata-rata penyerapan: ${summaryStats?.rataPenyerapan.toFixed(1)}%. Identifikasi sub kegiatan paling efisien dan yang bermasalah.`;
-  };
+    if (subKegiatanStats.length === 0) return "Data tidak cukup untuk dianalisis.";
+    
+    const top5 = subKegiatanStats.slice(0, 5);
+    const low5 = subKegiatanStats.filter(item => item.persentase < 50).slice(0, 3);
+    
+    return `ANALISIS SUB KEGIATAN SKPD
+SKPD: ${selectedSkpd}
+TAHUN: ${selectedYear}
+PERIODE: ${startMonth} - ${endMonth}
+
+DATA RINGKAS:
+- Total Anggaran: ${formatIDR(summaryStats?.totalAnggaran || 0)}
+- Total Realisasi: ${formatIDR(summaryStats?.totalRealisasi || 0)}
+- Rata-rata Penyerapan: ${summaryStats?.rataPenyerapan.toFixed(1)}%
+- Distribusi Kinerja: Tinggi (${summaryStats?.highPerformer || 0}), Sedang (${summaryStats?.mediumPerformer || 0}), Rendah (${summaryStats?.lowPerformer || 0})
+
+SUB KEGIATAN DENGAN KINERJA TERTINGGI:
+${top5.map((item, i) => `${i+1}. ${item.subKegiatan}: ${item.persentase.toFixed(1)}% (Anggaran: ${formatIDR(item.totalAnggaran)}, Realisasi: ${formatIDR(item.totalRealisasi)})`).join('\n')}
+
+SUB KEGIATAN DENGAN KINERJA RENDAH (<50%):
+${low5.length > 0 ? low5.map((item, i) => `${i+1}. ${item.subKegiatan}: ${item.persentase.toFixed(1)}%`).join('\n') : '- Tidak ada data dengan kinerja rendah'}
+
+BERIKAN ANALISIS MENDALAM MENGENAI:
+1. Evaluasi Kinerja: Identifikasi sub kegiatan dengan kinerja optimal dan yang bermasalah.
+2. Identifikasi Masalah: Analisis penyebab rendahnya penyerapan pada sub kegiatan dengan kinerja <50%.
+3. Rekomendasi Strategis: 3 langkah konkret untuk meningkatkan kinerja.
+4. Peringatan Dini: Poin penting untuk rapat pimpinan terkait optimalisasi anggaran.
+
+Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
+};
 
   return (
     <div className="space-y-12 animate-in fade-in duration-1000 pb-20 text-left bg-slate-50/30 dark:bg-transparent">
@@ -471,13 +408,49 @@ const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole, userCanUse
         </div>
       </div>
 
-      <GeminiAnalysis 
-        getAnalysisPrompt={getAnalysisPrompt} 
-        disabledCondition={!selectedSkpd || subKegiatanStats.length === 0} 
-        theme={theme}
-        userRole={userRole}
-        userCanUseAi={userCanUseAi}
-      />
+      {/* AI Analysis Section dengan Toggle */}
+<div className="relative">
+  <div className="flex justify-end mb-2">
+    <button
+      onClick={() => setShowAnalysis(!showAnalysis)}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+    >
+      {showAnalysis ? (
+        <>🗂️ Sembunyikan Analisis AI</>
+      ) : (
+        <>🤖 Tampilkan Analisis AI</>
+      )}
+    </button>
+  </div>
+  
+  {/* Indikator Data */}
+  {showAnalysis && selectedSkpd && subKegiatanStats.length > 0 && (
+    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+      </span>
+      <span>SKPD: {selectedSkpd} | Sub Unit: {selectedSubUnit} | Total Sub Kegiatan: {subKegiatanStats.length}</span>
+    </div>
+  )}
+  
+  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+  {showAnalysis && (
+    <GeminiAnalysis 
+      getAnalysisPrompt={getAnalysisPrompt} 
+      disabledCondition={!selectedSkpd || subKegiatanStats.length === 0} 
+      userCanUseAi={userCanUseAi}
+      allData={{
+        selectedSkpd,
+        selectedSubUnit,
+        startMonth,
+        endMonth,
+        summaryStats,
+        topItems: subKegiatanStats.slice(0, 5)
+      }}
+    />
+  )}
+</div>
 
       {/* STICKY GLASS FILTER BAR */}
       <div className="sticky top-6 z-50 bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl border border-white/40 dark:border-white/5 p-8 rounded-[3rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] transition-all duration-700">

@@ -16,14 +16,13 @@ import {
 import { db, appId } from '../../utils/firebase';
 import { formatIDR } from '../../utils';
 import { auth } from '../../utils/firebase'; // Import auth instance
+import GeminiAnalysis from '../components/GeminiAnalysis';
 
 // === DEBUG: TAMBAHKAN INI DI BARIS PERTAMA FILE ===
 console.log('🔥🔥🔥 ANALISIS KINERJA VIEW DIMUAT - VERSI DENGAN PANEL EKSEKUTIF 🔥🔥🔥');
 console.log('Timestamp:', new Date().toISOString());
 
-// HAPUS inisialisasi Firebase manual (baris 14-19)
-// HAPUS fungsi formatCurrency (gunakan formatIDR dari utils)
-
+// ==================== SECTION TITLE COMPONENT ====================
 const SectionTitle = ({ children }) => (
   <div className="relative mb-8 group">
     <h2 className="text-3xl font-black tracking-tighter text-slate-800 dark:text-white transition-all">
@@ -33,17 +32,6 @@ const SectionTitle = ({ children }) => (
   </div>
 );
 
-const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, theme, interactivePlaceholder }) => {
-  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
-  const [result, setResult] = React.useState(null);
-
-  const handleAnalyze = () => {
-    setIsAnalyzing(true);
-    setTimeout(() => {
-      setResult("Analisis kinerja menunjukkan korelasi positif antara realisasi fisik dan efisiensi anggaran. Disarankan untuk memberikan apresiasi pada SKPD dengan pertumbuhan kinerja >10pp.");
-      setIsAnalyzing(false);
-    }, 2000);
-  };
 
   return (
     <div className="relative overflow-hidden bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border border-purple-200/50 dark:border-purple-900/30 rounded-[2.5rem] p-8 shadow-2xl shadow-purple-500/10 mb-10 transition-all duration-500">
@@ -213,6 +201,7 @@ const AnalisisKinerjaView = ({ data = {}, theme, selectedYear, userRole }) => {
     const [sortConfig, setSortConfig] = React.useState({ key: 'kinerjaA', direction: 'descending' });
     const [selectedSkpd, setSelectedSkpd] = React.useState('Semua SKPD');
     const [viewMode, setViewMode] = React.useState('table');
+    const [showAnalysis, setShowAnalysis] = React.useState(true);
 
     // Auth - gunakan onAuthStateChanged
     React.useEffect(() => {
@@ -374,12 +363,41 @@ const AnalisisKinerjaView = ({ data = {}, theme, selectedYear, userRole }) => {
         setSortConfig({ key, direction });
     };
 
-    const getAnalysisPrompt = (customQuery) => {
-        if (customQuery) return `Berdasarkan data kinerja ${analysisType}, berikan analisis untuk: "${customQuery}"`;
-        if (sortedData.length === 0) return "Data tidak cukup.";
-        const top5 = sortedData.slice(0, 5);
-        return `Analis perbandingan kinerja ${analysisType} ${yearA} vs ${yearB}. Top SKPD: ${top5.map(i => i.skpd).join(', ')}`;
-    };
+    // Perbaiki fungsi getAnalysisPrompt untuk komponen universal
+const getAnalysisPrompt = (query, allData) => {
+    // Jika user mengirim query khusus
+    if (query && query.trim() !== '') {
+        return `Berdasarkan data kinerja ${analysisType} tahun ${yearA} vs ${yearB}, jawab pertanyaan ini: ${query}`;
+    }
+    
+    // Analisis default
+    if (sortedData.length === 0) return "Data tidak cukup untuk dianalisis.";
+    
+    const top5 = sortedData.slice(0, 5);
+    const low5 = sortedData.slice(-5).reverse();
+    
+    return `ANALISIS KINERJA PERANGKAT DAERAH
+TAHUN: ${yearA} (Fokus) vs ${yearB} (Benchmark)
+Jenis Analisis: ${analysisType}
+
+DATA RINGKAS:
+- Total SKPD/OPD: ${skpdList.length}
+- Periode Analisis: ${startMonth} - ${endMonth}
+
+SKPD DENGAN KINERJA TERTINGGI:
+${top5.map((item, i) => `${i+1}. ${item.skpd}: ${item.kinerjaA.toFixed(2)}% (${analysisType === 'Belanja' ? 'Pagu' : 'Target'}: ${formatIDR(item.paguA || item.targetA)}, Realisasi: ${formatIDR(item.realisasiA)})`).join('\n')}
+
+SKPD DENGAN KINERJA TERENDAH:
+${low5.map((item, i) => `${i+1}. ${item.skpd}: ${item.kinerjaA.toFixed(2)}% (Delta: ${(item.kinerjaA - item.kinerjaB).toFixed(2)} pp)`).join('\n')}
+
+BERIKAN ANALISIS MENDALAM MENGENAI:
+1. Peringatan Utama (Early Warning): Identifikasi SKPD dengan kinerja sangat rendah (<50%) dan penurunan signifikan.
+2. Evaluasi Kinerja: Bandingkan kinerja tahun ${yearA} dengan ${yearB}. Apakah terjadi peningkatan atau penurunan secara umum?
+3. Rekomendasi Strategis: 3 langkah konkret untuk meningkatkan kinerja SKPD dengan kinerja rendah.
+4. Catatan Tambahan: Poin penting lainnya untuk rapat pimpinan.
+
+Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
+};
 
     const renderSortIcon = (key) => {
         if (sortConfig.key !== key) return <ChevronsUpDown size={14} className="ml-1 opacity-30" />;
@@ -576,7 +594,39 @@ const AnalisisKinerjaView = ({ data = {}, theme, selectedYear, userRole }) => {
             </div>
 
             {/* GEMINI INTELLIGENCE */}
-            <GeminiAnalysis getAnalysisPrompt={getAnalysisPrompt} disabledCondition={sortedData.length === 0} theme={theme} interactivePlaceholder="Tanyakan pola efektivitas SKPD..." />
+            {/* AI Analysis Section dengan Toggle */}
+<div className="relative">
+  <div className="flex justify-end mb-2">
+    <button
+      onClick={() => setShowAnalysis(!showAnalysis)}
+      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+    >
+      {showAnalysis ? (
+        <>🗂️ Sembunyikan Analisis AI</>
+      ) : (
+        <>🤖 Tampilkan Analisis AI</>
+      )}
+    </button>
+  </div>
+  
+  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+  {showAnalysis && (
+    <GeminiAnalysis 
+      getAnalysisPrompt={getAnalysisPrompt} 
+      disabledCondition={sortedData.length === 0} 
+      userCanUseAi={userRole !== 'viewer'} // Sesuaikan dengan role user
+      allData={{
+        analysisType,
+        yearA,
+        yearB,
+        startMonth,
+        endMonth,
+        skpdList: skpdList.length,
+        totalData: sortedData.length
+      }}
+    />
+  )}
+</div>
 
             <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/30 dark:border-white/5 p-8 rounded-[3rem] shadow-2xl space-y-8">
                 {/* SKPD Search/Filter */}
