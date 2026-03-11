@@ -1,823 +1,902 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  ChevronDown, ChevronUp, TrendingUp, TrendingDown, Target, 
-  DollarSign, Info, AlertTriangle, CheckCircle, Download, 
-  Filter, Layers, BarChart3, PieChart, Eye, EyeOff, Sparkles, 
-  Calendar, Box, ArrowRight, LayoutDashboard, Search, Building2,
-  ChevronLeft, ChevronRight, MoreHorizontal, Loader2, MessageSquare,
-  Zap, ArrowUpRight
-} from 'lucide-react';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
-  Legend, ResponsiveContainer, ComposedChart, Line, Cell 
-} from 'recharts';
-
-// === IMPORT sesuai struktur aplikasi Anda ===
-import { db, appId } from '../../utils/firebase';
-import { formatIDR } from '../../utils';
-import { auth } from '../../utils/firebase';
+﻿import React from 'react';
+import SectionTitle from '../components/SectionTitle';
 import GeminiAnalysis from '../components/GeminiAnalysis';
-// --- SUB-COMPONENTS ---
+import Pagination from '../components/Pagination';
+import { db, auth } from '../utils/firebase';
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { 
+    TrendingUp, DollarSign, Calendar, Filter, Search, Download,
+    Eye, EyeOff, AlertTriangle, CheckCircle, Info, Award, Crown,
+    Briefcase, Lightbulb, Activity, Zap, Target, Building2,
+    Layers, BarChart3, Shield, AlertOctagon, Gauge, Brain, Coins,
+    Scale, Rocket, Star, Users, Database, PieChart, ChevronUp,
+    ChevronDown, FileText, Hash, CreditCard, ArrowUpRight,
+    ArrowDownRight, Clock, Lock, Unlock, Globe, BookOpen,
+    FolderTree, ListTree, GitBranch, Layers3, Map, Compass,
+    Flag, Medal, Trophy, Sparkles, GitMerge
+} from 'lucide-react';
+import { formatCurrency } from '../utils/formatCurrency';
 
-const SectionTitle = ({ children }) => (
-  <div className="relative mb-12 group">
-    <div className="flex items-center gap-4">
-      <div className="h-12 w-1.5 bg-gradient-to-b from-indigo-600 via-purple-600 to-transparent rounded-full" />
-      <h2 className="text-4xl font-black tracking-tighter text-slate-800 dark:text-white transition-all duration-500 group-hover:tracking-tight">
-        {children}
-      </h2>
-    </div>
-    <div className="absolute -bottom-4 left-6 h-1 w-24 bg-gradient-to-r from-indigo-600/50 to-transparent rounded-full transition-all duration-700 group-hover:w-48"></div>
-  </div>
-);
-
-const Pagination = ({ currentPage, totalPages, onPageChange }) => {
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-  const visiblePages = pages.filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1);
-
-  if (totalPages <= 1) return null;
-
-  return (
-    <div className="flex items-center justify-center gap-3 mt-12">
-      <button 
-        disabled={currentPage === 1}
-        onClick={() => onPageChange(currentPage - 1)}
-        className="p-3 rounded-2xl bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/30 disabled:opacity-20 hover:bg-indigo-50 transition-all shadow-sm"
-      >
-        <ChevronLeft size={18} />
-      </button>
-      <div className="flex items-center gap-2 p-1.5 bg-white/30 dark:bg-slate-900/30 backdrop-blur-xl rounded-[1.5rem] border border-slate-200/50 dark:border-slate-700/30 shadow-inner">
-        {visiblePages.map((page, i) => (
-          <React.Fragment key={page}>
-            {i > 0 && visiblePages[i - 1] !== page - 1 && <MoreHorizontal className="text-slate-400 px-1" size={16} />}
-            <button
-              onClick={() => onPageChange(page)}
-              className={`w-11 h-11 rounded-xl font-black text-sm transition-all duration-500 ${
-                currentPage === page 
-                  ? 'bg-gradient-to-br from-indigo-600 to-purple-700 text-white shadow-lg shadow-indigo-500/40 scale-105 z-10' 
-                  : 'text-slate-500 hover:bg-white/50 hover:text-indigo-600'
-              }`}
-            >
-              {page}
-            </button>
-          </React.Fragment>
-        ))}
-      </div>
-      <button 
-        disabled={currentPage === totalPages}
-        onClick={() => onPageChange(currentPage + 1)}
-        className="p-3 rounded-2xl bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/30 disabled:opacity-20 hover:bg-indigo-50 transition-all shadow-sm"
-      >
-        <ChevronRight size={18} />
-      </button>
-    </div>
-  );
-};
-
-const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white/80 dark:bg-slate-950/90 backdrop-blur-3xl p-6 rounded-[2rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] border border-white/40 dark:border-white/5 min-w-[320px] z-50 animate-in fade-in zoom-in-95 duration-300 text-left">
-        <div className="flex flex-col gap-1 mb-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-          <p className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-[0.2em]">Audit Sub Kegiatan</p>
-          <p className="font-black text-base text-slate-800 dark:text-white leading-tight break-words">
-            {label}
-          </p>
-        </div>
-        <div className="space-y-3">
-          {payload.map((entry, index) => (
-            <div key={`item-${index}`} className="flex justify-between items-center group/item transition-all hover:translate-x-1">
-              <span className="flex items-center gap-3 text-slate-600 dark:text-slate-400 font-bold text-xs uppercase tracking-wider">
-                <div className="w-3 h-3 rounded-full shadow-lg" style={{ 
-                  background: `linear-gradient(135deg, ${entry.color}, white)`,
-                  boxShadow: `0 0 15px ${entry.color}44` 
-                }}></div>
-                {entry.name}
-              </span>
-              <span className="font-black text-sm text-slate-950 dark:text-white tabular-nums tracking-tighter">
-                {entry.name?.toLowerCase().includes('persen') || entry.name?.toLowerCase().includes('penyerapan')
-                  ? `${Number(entry.value).toFixed(1)}%`
-                  : formatIDR(entry.value * (entry.unit === 'M' ? 1e9 : 1))}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
-
-// --- MAIN COMPONENT ---
-const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole, userCanUseAi, selectedYear }) => {
-  const { anggaran, realisasi, realisasiNonRkud } = data;
-  const [selectedSkpd, setSelectedSkpd] = useState('');
-  const [selectedSubUnit, setSelectedSubUnit] = useState('Semua Sub Unit');
-  
-  const [subKegiatanStats, setSubKegiatanStats] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [expandedRows, setExpandedRows] = useState(new Set());
-  const [viewMode, setViewMode] = useState('card'); 
-  const [showAnalysis, setShowAnalysis] = useState(true);
-  
-  const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-  const [startMonth, setStartMonth] = useState(months[0]);
-  const [endMonth, setEndMonth] = useState(months[months.length - 1]);
-  const ITEMS_PER_PAGE = 10;
-
-  const skpdList = useMemo(() => {
-    const skpds = new Set((anggaran || []).map(item => item.NamaSKPD).filter(Boolean));
-    return Array.from(skpds).sort();
-  }, [anggaran]);
-  
-  const subUnitList = useMemo(() => {
-    if (!selectedSkpd) return [];
-    const filtered = (anggaran || []).filter(item => item.NamaSKPD === selectedSkpd);
-    const subUnits = new Set(filtered.map(item => item.NamaSubUnit).filter(Boolean));
-    return Array.from(subUnits).sort();
-  }, [anggaran, selectedSkpd]);
-
-  useEffect(() => {
-    if (!selectedSkpd) {
-      setSubKegiatanStats([]);
-      return;
-    }
-
-    const normalizeRealisasiItem = (item, isNonRkud = false) => {
-      if (!item) return null;
-      return {
-        NamaSKPD: isNonRkud ? item.NAMASKPD : item.NamaSKPD,
-        NamaSubUnit: isNonRkud ? item.NAMASUBSKPD : item.NamaSubUnit,
-        KodeSubKegiatan: isNonRkud ? item.KODESUBKEGIATAN : item.KodeSubKegiatan,
-        NamaSubKegiatan: isNonRkud ? item.NAMASUBKEGIATAN : item.NamaSubKegiatan,
-        NamaRekening: isNonRkud ? item.NAMAREKENING : item.NamaRekening,
-        nilai: item.nilai || 0
-      };
-    };
+const SkpdSubKegiatanStatsView = ({ data, theme, namaPemda, userRole, selectedYear }) => {
+    const { anggaran, realisasi, realisasiNonRkud } = data;
+    const [selectedSkpd, setSelectedSkpd] = React.useState('');
+    const [selectedSubUnit, setSelectedSubUnit] = React.useState('Semua Sub Unit');
     
-    const combinedRealisasi = {};
-    for (const month in realisasi) {
-      combinedRealisasi[month] = (realisasi[month] || []).map(item => normalizeRealisasiItem(item, false));
-    }
-    for (const month in realisasiNonRkud) {
-      if (!combinedRealisasi[month]) combinedRealisasi[month] = [];
-      combinedRealisasi[month].push(...(realisasiNonRkud[month] || []).map(item => normalizeRealisasiItem(item, true)));
-    }
+    const [subKegiatanStats, setSubKegiatanStats] = React.useState([]);
+    const [currentPage, setCurrentPage] = React.useState(1);
+    const [expandedRows, setExpandedRows] = React.useState(new globalThis.Set());
+    const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    const [startMonth, setStartMonth] = React.useState(months[0]);
+    const [endMonth, setEndMonth] = React.useState(months[months.length - 1]);
+    const ITEMS_PER_PAGE = 10;
 
-    const statsMap = new Map();
-    const startIndex = months.indexOf(startMonth);
-    const endIndex = months.indexOf(endMonth);
-    const selectedMonths = months.slice(startIndex, endIndex + 1);
-    const realisasiBulanIni = selectedMonths.map(month => combinedRealisasi[month] || []).flat();
+    // ===== STATE UNTUK TOGGLE ANALISIS AI DAN INFO EKSEKUTIF =====
+    const [showExecutiveInfo, setShowExecutiveInfo] = React.useState(true);
+    const [showAnalysis, setShowAnalysis] = React.useState(true);
+    const [showDetails, setShowDetails] = React.useState(true);
+    // ===== END STATE =====
 
-    let filteredAnggaran = (anggaran || []).filter(item => item.NamaSKPD === selectedSkpd);
-    if (selectedSubUnit !== 'Semua Sub Unit') {
-      filteredAnggaran = filteredAnggaran.filter(item => item.NamaSubUnit === selectedSubUnit);
-    }
+    const skpdList = React.useMemo(() => {
+        const skpds = new Set((anggaran || []).map(item => item.NamaSKPD).filter(Boolean));
+        return Array.from(skpds).sort();
+    }, [anggaran]);
     
-    let filteredRealisasi = realisasiBulanIni.filter(item => item.NamaSKPD === selectedSkpd);
-    if (selectedSubUnit !== 'Semua Sub Unit') {
-      filteredRealisasi = filteredRealisasi.filter(item => item.NamaSubUnit === selectedSubUnit);
-    }
-    
-    filteredAnggaran.forEach(item => {
-      const key = `${item.NamaSKPD}|${item.KodeSubKegiatan}`; 
-      const rekeningKey = item.NamaRekening || 'Tanpa Nama Rekening';
+    const subUnitList = React.useMemo(() => {
+        if (!selectedSkpd) return [];
+        const filtered = (anggaran || []).filter(item => item.NamaSKPD === selectedSkpd);
+        const subUnits = new Set(filtered.map(item => item.NamaSubUnit).filter(Boolean));
+        return Array.from(subUnits).sort();
+    }, [anggaran, selectedSkpd]);
 
-      if (!statsMap.has(key)) {
-        statsMap.set(key, {
-          kodeSubKegiatan: item.KodeSubKegiatan,
-          subKegiatan: item.NamaSubKegiatan || 'Tanpa Sub Kegiatan',
-          totalAnggaran: 0,
-          totalRealisasi: 0,
-          rekenings: new Map(),
-          sumberDanaSet: new Set()
-        });
-      }
-
-      const subKegiatanData = statsMap.get(key);
-      subKegiatanData.totalAnggaran += item.nilai || 0;
-      if (item.NamaSumberDana) {
-        subKegiatanData.sumberDanaSet.add(item.NamaSumberDana);
-      }
-
-      if (!subKegiatanData.rekenings.has(rekeningKey)) {
-        subKegiatanData.rekenings.set(rekeningKey, { anggaran: 0, realisasi: 0 });
-      }
-      subKegiatanData.rekenings.get(rekeningKey).anggaran += item.nilai || 0;
-    });
-
-    filteredRealisasi.forEach(item => {
-      const key = `${item.NamaSKPD}|${item.KodeSubKegiatan}`;
-      const rekeningKey = item.NamaRekening || 'Tanpa Nama Rekening';
-
-      if (statsMap.has(key)) {
-        const subKegiatanData = statsMap.get(key);
-        subKegiatanData.totalRealisasi += item.nilai || 0;
-
-        if (subKegiatanData.rekenings.has(rekeningKey)) {
-          subKegiatanData.rekenings.get(rekeningKey).realisasi += item.nilai || 0;
+    React.useEffect(() => {
+        if (!selectedSkpd) {
+            setSubKegiatanStats([]);
+            return;
         }
-      }
-    });
 
-    const finalStats = Array.from(statsMap.values()).map(data => {
-      const rekenings = Array.from(data.rekenings.entries()).map(([rekening, values]) => ({
-        rekening,
-        ...values,
-        persentase: values.anggaran > 0 ? (values.realisasi / values.anggaran) * 100 : 0
-      }));
-      return {
-        ...data,
-        sumberDanaList: Array.from(data.sumberDanaSet),
-        rekenings,
-        persentase: data.totalAnggaran > 0 ? (data.totalRealisasi / data.totalAnggaran) * 100 : 0,
-        sisaAnggaran: data.totalAnggaran - data.totalRealisasi,
-        performanceCategory: data.totalAnggaran > 0 
-          ? (data.totalRealisasi / data.totalAnggaran) * 100 >= 80 ? 'high' 
-            : (data.totalRealisasi / data.totalAnggaran) * 100 >= 50 ? 'medium' : 'low'
-          : 'low'
-      };
-    }).sort((a, b) => b.totalAnggaran - a.totalAnggaran);
+        const normalizeRealisasiItem = (item, isNonRkud = false) => {
+            if (!item) return null;
+            return {
+                NamaSKPD: isNonRkud ? item.NAMASKPD : item.NamaSKPD,
+                NamaSubUnit: isNonRkud ? item.NAMASUBSKPD : item.NamaSubUnit,
+                KodeSubKegiatan: isNonRkud ? item.KODESUBKEGIATAN : item.KodeSubKegiatan,
+                NamaSubKegiatan: isNonRkud ? item.NAMASUBKEGIATAN : item.NamaSubKegiatan,
+                NamaRekening: isNonRkud ? item.NAMAREKENING : item.NamaRekening,
+                nilai: item.nilai || 0
+            };
+        };
+        
+        const combinedRealisasi = {};
+        for (const month in realisasi) {
+            combinedRealisasi[month] = (realisasi[month] || []).map(item => normalizeRealisasiItem(item, false));
+        }
+        for (const month in realisasiNonRkud) {
+            if (!combinedRealisasi[month]) combinedRealisasi[month] = [];
+            combinedRealisasi[month].push(...(realisasiNonRkud[month] || []).map(item => normalizeRealisasiItem(item, true)));
+        }
 
-    setSubKegiatanStats(finalStats);
+        const statsMap = new globalThis.Map();
+        const startIndex = months.indexOf(startMonth);
+        const endIndex = months.indexOf(endMonth);
+        const selectedMonths = months.slice(startIndex, endIndex + 1);
+        const realisasiBulanIni = selectedMonths.map(month => combinedRealisasi[month] || []).flat();
 
-  }, [selectedSkpd, selectedSubUnit, anggaran, realisasi, realisasiNonRkud, startMonth, endMonth]);
+        let filteredAnggaran = (anggaran || []).filter(item => item.NamaSKPD === selectedSkpd);
+        if (selectedSubUnit !== 'Semua Sub Unit') {
+            filteredAnggaran = filteredAnggaran.filter(item => item.NamaSubUnit === selectedSubUnit);
+        }
+        
+        let filteredRealisasi = realisasiBulanIni.filter(item => item.NamaSKPD === selectedSkpd);
+        if (selectedSubUnit !== 'Semua Sub Unit') {
+            filteredRealisasi = filteredRealisasi.filter(item => item.NamaSubUnit === selectedSubUnit);
+        }
+        
+        filteredAnggaran.forEach(item => {
+            const key = `${item.NamaSKPD}|${item.KodeSubKegiatan}`; 
+            const rekeningKey = item.NamaRekening || 'Tanpa Nama Rekening';
 
-  const summaryStats = useMemo(() => {
-    if (subKegiatanStats.length === 0) return null;
-    
-    const totalAnggaran = subKegiatanStats.reduce((sum, item) => sum + item.totalAnggaran, 0);
-    const totalRealisasi = subKegiatanStats.reduce((sum, item) => sum + item.totalRealisasi, 0);
-    const rataPenyerapan = totalAnggaran > 0 ? (totalRealisasi / totalAnggaran) * 100 : 0;
-    
-    return {
-      totalAnggaran,
-      totalRealisasi,
-      totalSisa: totalAnggaran - totalRealisasi,
-      rataPenyerapan,
-      highPerformer: subKegiatanStats.filter(item => item.persentase >= 80).length,
-      mediumPerformer: subKegiatanStats.filter(item => item.persentase >= 50 && item.persentase < 80).length,
-      lowPerformer: subKegiatanStats.filter(item => item.persentase < 50).length,
-      totalRekening: subKegiatanStats.reduce((sum, item) => sum + item.rekenings.length, 0),
-      totalSumberDana: new Set(subKegiatanStats.flatMap(item => item.sumberDanaList)).size,
-      totalItems: subKegiatanStats.length
+            if (!statsMap.has(key)) {
+                statsMap.set(key, {
+                    kodeSubKegiatan: item.KodeSubKegiatan,
+                    subKegiatan: item.NamaSubKegiatan || 'Tanpa Sub Kegiatan',
+                    totalAnggaran: 0,
+                    totalRealisasi: 0,
+                    rekenings: new globalThis.Map(),
+                    sumberDanaSet: new Set()
+                });
+            }
+
+            const subKegiatanData = statsMap.get(key);
+            subKegiatanData.totalAnggaran += item.nilai || 0;
+            if (item.NamaSumberDana) {
+                subKegiatanData.sumberDanaSet.add(item.NamaSumberDana);
+            }
+
+            if (!subKegiatanData.rekenings.has(rekeningKey)) {
+                subKegiatanData.rekenings.set(rekeningKey, { anggaran: 0, realisasi: 0 });
+            }
+            subKegiatanData.rekenings.get(rekeningKey).anggaran += item.nilai || 0;
+        });
+
+        filteredRealisasi.forEach(item => {
+            const key = `${item.NamaSKPD}|${item.KodeSubKegiatan}`;
+            const rekeningKey = item.NamaRekening || 'Tanpa Nama Rekening';
+
+            if (statsMap.has(key)) {
+                const subKegiatanData = statsMap.get(key);
+                subKegiatanData.totalRealisasi += item.nilai || 0;
+
+                if (subKegiatanData.rekenings.has(rekeningKey)) {
+                    subKegiatanData.rekenings.get(rekeningKey).realisasi += item.nilai || 0;
+                }
+            }
+        });
+
+        const finalStats = Array.from(statsMap.values()).map(data => {
+            const rekenings = Array.from(data.rekenings?.entries?.() || []).map(([rekening, values]) => ({
+                rekening,
+                ...values,
+                persentase: values.anggaran > 0 ? (values.realisasi / values.anggaran) * 100 : 0
+            }));
+            return {
+                ...data,
+                sumberDanaList: Array.from(data.sumberDanaSet),
+                rekenings,
+                persentase: data.totalAnggaran > 0 ? (data.totalRealisasi / data.totalAnggaran) * 100 : 0
+            };
+        }).sort((a, b) => b.totalAnggaran - a.totalAnggaran);
+
+        setSubKegiatanStats(finalStats);
+
+    }, [selectedSkpd, selectedSubUnit, anggaran, realisasi, realisasiNonRkud, startMonth, endMonth]);
+
+    // === EXECUTIVE SUMMARY DATA ===
+    const executiveSummary = React.useMemo(() => {
+        if (!selectedSkpd || !subKegiatanStats.length) return null;
+        
+        const totalAnggaran = subKegiatanStats.reduce((sum, item) => sum + item.totalAnggaran, 0);
+        const totalRealisasi = subKegiatanStats.reduce((sum, item) => sum + item.totalRealisasi, 0);
+        const totalSisa = totalAnggaran - totalRealisasi;
+        const rataPenyerapan = totalAnggaran > 0 ? (totalRealisasi / totalAnggaran) * 100 : 0;
+        
+        // Sub kegiatan dengan anggaran terbesar
+        const topSubKegiatan = subKegiatanStats.slice(0, 5).map(item => ({
+            nama: item.subKegiatan,
+            kode: item.kodeSubKegiatan,
+            anggaran: item.totalAnggaran,
+            realisasi: item.totalRealisasi,
+            penyerapan: item.persentase,
+            sisa: item.totalAnggaran - item.totalRealisasi
+        }));
+        
+        // Sub kegiatan dengan penyerapan terendah (risiko tinggi)
+        const highRiskSubKegiatan = subKegiatanStats
+            .filter(item => item.totalAnggaran > 50000000 && item.persentase < 40) // >50jt dan <40%
+            .sort((a, b) => a.persentase - b.persentase)
+            .slice(0, 5)
+            .map(item => ({
+                nama: item.subKegiatan,
+                kode: item.kodeSubKegiatan,
+                anggaran: item.totalAnggaran,
+                penyerapan: item.persentase,
+                sisa: item.totalAnggaran - item.totalRealisasi
+            }));
+        
+        // Rekening yang sering muncul
+        const allRekenings = subKegiatanStats.flatMap(item => item.rekenings);
+        const topRekenings = allRekenings
+            .sort((a, b) => b.anggaran - a.anggaran)
+            .slice(0, 5)
+            .map(item => item.rekening);
+        
+        // Sumber dana yang dominan
+        const sumberDanaCount = {};
+        subKegiatanStats.forEach(item => {
+            item.sumberDanaList.forEach(sd => {
+                sumberDanaCount[sd] = (sumberDanaCount[sd] || 0) + 1;
+            });
+        });
+        const topSumberDana = Object.entries(sumberDanaCount)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([nama, count]) => ({ nama, count }));
+        
+        return {
+            totalAnggaran,
+            totalRealisasi,
+            totalSisa,
+            rataPenyerapan,
+            topSubKegiatan,
+            highRiskSubKegiatan,
+            highRiskCount: highRiskSubKegiatan.length,
+            totalItems: subKegiatanStats.length,
+            topRekenings,
+            topSumberDana,
+            selectedSkpd,
+            selectedSubUnit: selectedSubUnit === 'Semua Sub Unit' ? 'Semua Sub Unit' : selectedSubUnit
+        };
+    }, [subKegiatanStats, selectedSkpd, selectedSubUnit]);
+
+    const totalPages = Math.ceil(subKegiatanStats.length / ITEMS_PER_PAGE);
+    const paginatedData = subKegiatanStats.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+    const handlePageChange = (page) => {
+        if (page > 0 && page <= totalPages) {
+            setCurrentPage(page);
+        }
     };
-  }, [subKegiatanStats]);
 
-  const chartData = useMemo(() => {
-    return subKegiatanStats.slice(0, 15).map(item => ({
-      name: item.subKegiatan.length > 25 ? item.subKegiatan.substring(0, 25) + '...' : item.subKegiatan,
-      fullName: item.subKegiatan,
-      Anggaran: item.totalAnggaran / 1e9,
-      Realisasi: item.totalRealisasi / 1e9,
-      Persentase: item.persentase,
-      unit: 'M'
-    }));
-  }, [subKegiatanStats]);
-
-  const totalPages = Math.ceil(subKegiatanStats.length / ITEMS_PER_PAGE);
-  const paginatedData = subKegiatanStats.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
-  const handlePageChange = (page) => {
-    if (page > 0 && page <= totalPages) setCurrentPage(page);
-  };
-
-  const toggleRow = (subKegiatanKey) => {
-    const newExpandedRows = new Set(expandedRows);
-    if (newExpandedRows.has(subKegiatanKey)) newExpandedRows.delete(subKegiatanKey);
-    else newExpandedRows.add(subKegiatanKey);
-    setExpandedRows(newExpandedRows);
-  };
-
-  useEffect(() => {
-    setCurrentPage(1);
-    setExpandedRows(new Set());
-    setSelectedSubUnit('Semua Sub Unit');
-  }, [selectedSkpd, startMonth, endMonth]);
-
-  const handleDownloadExcel = () => {
-    if (!subKegiatanStats || subKegiatanStats.length === 0) return;
-    if (!window.XLSX) return;
-
-    try {
-      const dataForExport = subKegiatanStats.flatMap(item => 
-        item.rekenings.map(rek => ({
-          'SKPD/OPD': selectedSkpd,
-          'Sub Unit': selectedSubUnit,
-          'Kode Sub Kegiatan': item.kodeSubKegiatan,
-          'Nama Sub Kegiatan': item.subKegiatan,
-          'Nama Rekening': rek.rekening,
-          'Anggaran (Rp)': rek.anggaran,
-          'Realisasi (Rp)': rek.realisasi,
-          'Sisa (Rp)': rek.anggaran - rek.realisasi,
-          'Penyerapan (%)': rek.persentase.toFixed(2),
-          'Sumber Dana': item.sumberDanaList.join(', ')
-        }))
-      );
-      const worksheet = window.XLSX.utils.json_to_sheet(dataForExport);
-      const workbook = window.XLSX.utils.book_new();
-      window.XLSX.utils.book_append_sheet(workbook, worksheet, "Sub Kegiatan");
-      window.XLSX.writeFile(workbook, `Sub_Kegiatan_${selectedSkpd.replace(/ /g, "_")}_${selectedYear}.xlsx`);
-    } catch (err) { console.error(err); }
-  };
-
-  const getPerformanceBadge = (persentase) => {
-    if (persentase >= 80) return <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-2"><CheckCircle size={12} /> Kinerja Tinggi</span>;
-    if (persentase >= 50) return <span className="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-500/20 flex items-center gap-2"><Info size={12} /> Kinerja Sedang</span>;
-    return <span className="px-3 py-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-rose-500/20 flex items-center gap-2"><AlertTriangle size={12} /> Kinerja Rendah</span>;
-  };
-
-  const getAnalysisPrompt = (query, allData) => {
-    // Jika user mengirim query khusus
-    if (query && query.trim() !== '') {
-        return `Berdasarkan data sub kegiatan SKPD, jawab pertanyaan ini: ${query}`;
+    const toggleRow = (subKegiatanKey) => {
+    const newExpandedRows = new globalThis.Set(expandedRows);
+    if (newExpandedRows.has(subKegiatanKey)) {
+        newExpandedRows.delete(subKegiatanKey);
+    } else {
+        newExpandedRows.add(subKegiatanKey);
     }
-    
-    // Analisis default
-    if (!selectedSkpd) return "Pilih SKPD untuk dianalisis.";
-    if (subKegiatanStats.length === 0) return "Data tidak cukup untuk dianalisis.";
-    
-    const top5 = subKegiatanStats.slice(0, 5);
-    const low5 = subKegiatanStats.filter(item => item.persentase < 50).slice(0, 3);
-    
-    return `ANALISIS SUB KEGIATAN SKPD
-SKPD: ${selectedSkpd}
-TAHUN: ${selectedYear}
-PERIODE: ${startMonth} - ${endMonth}
+    setExpandedRows(newExpandedRows);
+};
 
-DATA RINGKAS:
-- Total Anggaran: ${formatIDR(summaryStats?.totalAnggaran || 0)}
-- Total Realisasi: ${formatIDR(summaryStats?.totalRealisasi || 0)}
-- Rata-rata Penyerapan: ${summaryStats?.rataPenyerapan.toFixed(1)}%
-- Distribusi Kinerja: Tinggi (${summaryStats?.highPerformer || 0}), Sedang (${summaryStats?.mediumPerformer || 0}), Rendah (${summaryStats?.lowPerformer || 0})
+    React.useEffect(() => {
+        setCurrentPage(1);
+        setExpandedRows(new globalThis.Set());
+        setSelectedSubUnit('Semua Sub Unit');
+    }, [selectedSkpd, startMonth, endMonth]);
 
-SUB KEGIATAN DENGAN KINERJA TERTINGGI:
-${top5.map((item, i) => `${i+1}. ${item.subKegiatan}: ${item.persentase.toFixed(1)}% (Anggaran: ${formatIDR(item.totalAnggaran)}, Realisasi: ${formatIDR(item.totalRealisasi)})`).join('\n')}
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedSubUnit]);
 
-SUB KEGIATAN DENGAN KINERJA RENDAH (<50%):
-${low5.length > 0 ? low5.map((item, i) => `${i+1}. ${item.subKegiatan}: ${item.persentase.toFixed(1)}%`).join('\n') : '- Tidak ada data dengan kinerja rendah'}
+    const handleDownloadExcel = () => {
+        if (!subKegiatanStats || subKegiatanStats.length === 0) {
+            alert("Tidak ada data untuk diunduh.");
+            return;
+        }
+        if (!window.XLSX) {
+            alert("Pustaka unduh Excel tidak tersedia.");
+            return;
+        }
+
+        try {
+            const dataForExport = subKegiatanStats.map(item => ({
+                'Kode Sub Kegiatan': item.kodeSubKegiatan,
+                'Nama Sub Kegiatan': item.subKegiatan,
+                'Total Anggaran': item.totalAnggaran,
+                'Total Realisasi': item.totalRealisasi,
+                'Sisa Anggaran': item.totalAnggaran - item.totalRealisasi,
+                'Penyerapan (%)': item.persentase.toFixed(2),
+                'Jumlah Sumber Dana': item.sumberDanaList.length,
+                'Jumlah Rekening': item.rekenings.length
+            }));
+
+            const worksheet = window.XLSX.utils.json_to_sheet(dataForExport);
+            const workbook = window.XLSX.utils.book_new();
+            window.XLSX.utils.book_append_sheet(workbook, worksheet, "Sub Kegiatan");
+            
+            const fileName = `SubKegiatan_${selectedSkpd.replace(/ /g, "_")}_(${startMonth}-${endMonth}).xlsx`;
+            window.XLSX.writeFile(workbook, fileName);
+        } catch (err) {
+            console.error("Error creating Excel file:", err);
+            alert("Gagal membuat file Excel.");
+        }
+    };
+
+    const getAnalysisPrompt = (query, allData) => {
+        if (query && query.trim() !== '') {
+            return `Berdasarkan data sub kegiatan SKPD, jawab pertanyaan ini: ${query}`;
+        }
+        
+        if (!selectedSkpd) return "Pilih SKPD untuk dianalisis.";
+        
+        const top5 = executiveSummary?.topSubKegiatan?.map((item, i) => 
+            `${i+1}. **${item.nama}** (${item.kode}): Anggaran ${formatCurrency(item.anggaran)}, Realisasi ${formatCurrency(item.realisasi)} (${item.penyerapan.toFixed(2)}%)`
+        ).join('\n') || '- Tidak ada data';
+        
+        const highRisk = executiveSummary?.highRiskSubKegiatan?.map((item, i) => 
+            `${i+1}. **${item.nama}** (${item.kode}): Anggaran ${formatCurrency(item.anggaran)}, Penyerapan ${item.penyerapan.toFixed(2)}%, Sisa ${formatCurrency(item.sisa)}`
+        ).join('\n') || '- Tidak ada data berisiko tinggi';
+        
+        const period = startMonth === endMonth ? startMonth : `periode ${startMonth} - ${endMonth}`;
+        
+        return `ANALISIS SUB KEGIATAN SKPD
+INSTANSI: ${namaPemda || 'Pemerintah Daerah'}
+TAHUN ANGGARAN: ${selectedYear}
+SKPD: **${selectedSkpd}**
+SUB UNIT: ${selectedSubUnit}
+PERIODE: ${period}
+
+DATA RINGKAS EKSEKUTIF:
+- Total Anggaran: ${formatCurrency(executiveSummary?.totalAnggaran || 0)}
+- Total Realisasi: ${formatCurrency(executiveSummary?.totalRealisasi || 0)} (${executiveSummary?.rataPenyerapan.toFixed(2)}%)
+- Sisa Anggaran: ${formatCurrency(executiveSummary?.totalSisa || 0)}
+- Jumlah Sub Kegiatan: ${executiveSummary?.totalItems || 0}
+
+SUB KEGIATAN DENGAN ALOKASI TERBESAR:
+${top5}
+
+SUB KEGIATAN DENGAN RISIKO TINGGI (Penyerapan <40%, Anggaran >50jt):
+${highRisk}
 
 BERIKAN ANALISIS MENDALAM MENGENAI:
-1. Evaluasi Kinerja: Identifikasi sub kegiatan dengan kinerja optimal dan yang bermasalah.
-2. Identifikasi Masalah: Analisis penyebab rendahnya penyerapan pada sub kegiatan dengan kinerja <50%.
-3. Rekomendasi Strategis: 3 langkah konkret untuk meningkatkan kinerja.
-4. Peringatan Dini: Poin penting untuk rapat pimpinan terkait optimalisasi anggaran.
+1. EVALUASI MAKRO: Bagaimana efektivitas pelaksanaan sub kegiatan secara keseluruhan?
+2. IDENTIFIKASI RISIKO: Analisis ${executiveSummary?.highRiskCount || 0} sub kegiatan dengan risiko tinggi. Apa penyebab rendahnya penyerapan?
+3. REKOMENDASI STRATEGIS: 3 langkah konkret untuk meningkatkan penyerapan pada sub kegiatan bermasalah.
+4. POIN RAPAT PIMPINAN: 3 poin penting yang harus disampaikan dalam evaluasi program/kegiatan.
 
-Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
-};
+Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk pengambilan keputusan.`;
+    };
 
-  return (
-    <div className="space-y-12 animate-in fade-in duration-1000 pb-20 text-left bg-slate-50/30 dark:bg-transparent">
-      <SectionTitle>Statistik Sub Kegiatan & Rekening</SectionTitle>
-      
-      {/* EXECUTIVE HEADER PANEL - PREMIUM GLASS */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-slate-900 to-black rounded-[3.5rem] p-12 text-white shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] border border-white/5 group">
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[150px] -mr-96 -mt-96 transition-all duration-1000 group-hover:bg-indigo-500/20"></div>
-        
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
-          <div className="lg:col-span-2 space-y-8">
-            <div className="inline-flex items-center gap-3 px-5 py-2 bg-white/10 backdrop-blur-2xl rounded-full text-[11px] font-black tracking-[0.4em] uppercase border border-white/20 shadow-lg animate-pulse">
-              <Zap size={14} className="text-yellow-400" /> Deep Dive Performance Analytics
-            </div>
-            <h2 className="text-4xl lg:text-6xl font-black leading-[0.95] tracking-tighter mb-4">
-              BEDAH KINERJA <br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 italic underline decoration-indigo-500/50 decoration-8 underline-offset-8">SUB KEGIATAN</span>.
-            </h2>
-            <p className="text-slate-400 font-medium max-w-2xl text-lg leading-relaxed">
-              Eksplorasi mendalam hingga level rekening belanja. Pantau distribusi sumber dana, efektivitas penyerapan per unit, dan identifikasi anomali fiskal secara real-time.
-            </p>
-          </div>
+    return (
+        <div className="space-y-8 animate-in fade-in duration-700 pb-10">
+            <SectionTitle>Statistik Sub Kegiatan & Rekening per SKPD</SectionTitle>
+            
+            {/* === EXECUTIVE DASHBOARD - INFORMASI UNTUK PIMPINAN (WARNA HIJAU/EMERALD) === */}
+            {showExecutiveInfo && executiveSummary && (
+                <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-green-600 to-teal-600 rounded-3xl p-8 text-white shadow-2xl border border-white/10 group mb-8">
+                    {/* Decorative Elements */}
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-40 -mt-40 transition-transform duration-1000 group-hover:scale-110"></div>
+                    <div className="absolute bottom-0 left-0 w-80 h-80 bg-green-400/10 rounded-full blur-[80px] -ml-32 -mb-32"></div>
+                    
+                    {/* Animated Particles */}
+                    <div className="absolute inset-0 overflow-hidden">
+                        {[...Array(10)].map((_, i) => (
+                            <div
+                                key={i}
+                                className="absolute rounded-full bg-white/5 animate-float"
+                                style={{
+                                    width: `${Math.random() * 4 + 2}px`,
+                                    height: `${Math.random() * 4 + 2}px`,
+                                    left: `${Math.random() * 100}%`,
+                                    top: `${Math.random() * 100}%`,
+                                    animationDelay: `${Math.random() * 10}s`,
+                                    animationDuration: `${Math.random() * 15 + 10}s`
+                                }}
+                            />
+                        ))}
+                    </div>
+                    
+                    {/* Crown Icon for Leadership */}
+                    <div className="absolute top-8 right-12 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <FolderTree size={120} className="text-white/40" />
+                    </div>
+                    
+                    <div className="relative z-10">
+                        {/* Header */}
+                        <div className="flex items-center gap-4 mb-6 border-b border-white/20 pb-6">
+                            <div className="p-4 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl shadow-lg shadow-amber-500/30">
+                                <GitBranch size={32} className="text-white" />
+                            </div>
+                            <div>
+                                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black tracking-[0.2em] uppercase border border-white/30 mb-2">
+                                    <Eye size={12} className="text-amber-300" /> EXECUTIVE DASHBOARD
+                                </div>
+                                <h2 className="text-3xl font-black tracking-tighter leading-tight">
+                                    RINGKASAN EKSEKUTIF SUB KEGIATAN <br/>
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-300">{selectedSkpd}</span>
+                                </h2>
+                            </div>
+                            <button 
+                                onClick={() => setShowExecutiveInfo(false)}
+                                className="ml-auto p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all"
+                                title="Sembunyikan"
+                            >
+                                <EyeOff size={20} />
+                            </button>
+                        </div>
 
-          {selectedSkpd && summaryStats && (
-            <div className="grid grid-cols-1 gap-5 animate-in slide-in-from-right-8 duration-1000">
-              <div className="bg-white/5 backdrop-blur-3xl p-8 rounded-[2.5rem] border border-white/10 transition-all hover:translate-y-[-5px] hover:bg-white/[0.08]">
-                <p className="text-[10px] font-black uppercase text-indigo-400 mb-2 tracking-[0.3em] flex items-center gap-2">
-                  <TrendingUp size={16} /> EFISIENSI AGREGAT
-                </p>
-                <div className="text-5xl font-black tracking-tighter">{summaryStats.rataPenyerapan.toFixed(1)}%</div>
-              </div>
-              <div className="bg-white/5 backdrop-blur-3xl p-8 rounded-[2.5rem] border border-white/10 transition-all hover:translate-y-[-5px] hover:bg-white/[0.08]">
-                <p className="text-[10px] font-black uppercase text-emerald-400 mb-2 tracking-[0.3em] flex items-center gap-2">
-                  <Target size={16} /> REALISASI FISKAL
-                </p>
-                <div className="text-3xl font-black truncate tracking-tight">{formatIDR(summaryStats.totalRealisasi)}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+                        {/* Quick Stats Bar */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                            <div className="bg-black/20 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                <div className="flex items-center gap-2">
+                                    <Coins size={16} className="text-amber-400" />
+                                    <p className="text-[10px] font-bold uppercase text-green-200">Total Anggaran</p>
+                                </div>
+                                <p className="text-xl font-black text-white mt-1">{formatCurrency(executiveSummary.totalAnggaran)}</p>
+                            </div>
+                            <div className="bg-black/20 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                <div className="flex items-center gap-2">
+                                    <TrendingUp size={16} className="text-emerald-400" />
+                                    <p className="text-[10px] font-bold uppercase text-green-200">Total Realisasi</p>
+                                </div>
+                                <p className="text-xl font-black text-emerald-300 mt-1">{formatCurrency(executiveSummary.totalRealisasi)}</p>
+                            </div>
+                            <div className="bg-black/20 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                <div className="flex items-center gap-2">
+                                    <Gauge size={16} className="text-purple-400" />
+                                    <p className="text-[10px] font-bold uppercase text-green-200">Rata-rata Penyerapan</p>
+                                </div>
+                                <p className="text-xl font-black text-purple-300 mt-1">{executiveSummary.rataPenyerapan.toFixed(1)}%</p>
+                            </div>
+                            <div className="bg-black/20 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                <div className="flex items-center gap-2">
+                                    <Layers size={16} className="text-blue-400" />
+                                    <p className="text-[10px] font-bold uppercase text-green-200">Jumlah Sub Kegiatan</p>
+                                </div>
+                                <p className="text-xl font-black text-blue-300 mt-1">{executiveSummary.totalItems}</p>
+                            </div>
+                        </div>
 
-      {/* AI Analysis Section dengan Toggle */}
-<div className="relative">
-  <div className="flex justify-end mb-2">
-    <button
-      onClick={() => setShowAnalysis(!showAnalysis)}
-      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
-    >
-      {showAnalysis ? (
-        <>🗂️ Sembunyikan Analisis AI</>
-      ) : (
-        <>🤖 Tampilkan Analisis AI</>
-      )}
-    </button>
-  </div>
-  
-  {/* Indikator Data */}
-  {showAnalysis && selectedSkpd && subKegiatanStats.length > 0 && (
-    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
-      <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-      </span>
-      <span>SKPD: {selectedSkpd} | Sub Unit: {selectedSubUnit} | Total Sub Kegiatan: {subKegiatanStats.length}</span>
-    </div>
-  )}
-  
-  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
-  {showAnalysis && (
-    <GeminiAnalysis 
-      getAnalysisPrompt={getAnalysisPrompt} 
-      disabledCondition={!selectedSkpd || subKegiatanStats.length === 0} 
-      userCanUseAi={userCanUseAi}
-      allData={{
-        selectedSkpd,
-        selectedSubUnit,
-        startMonth,
-        endMonth,
-        summaryStats,
-        topItems: subKegiatanStats.slice(0, 5)
-      }}
-    />
-  )}
-</div>
+                        {/* 3 Card Utama */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+                            {/* Card 1: Sub Kegiatan Unggulan */}
+                            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-3 bg-purple-500/30 rounded-xl">
+                                        <Trophy size={24} className="text-purple-200" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-purple-200">SUB KEGIATAN UNGGULAN</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    {executiveSummary.topSubKegiatan.slice(0, 3).map((item, idx) => (
+                                        <div key={idx} className="flex justify-between items-center text-xs p-1 bg-white/5 rounded">
+                                            <span className="text-green-200 truncate max-w-[180px]" title={item.nama}>
+                                                {idx+1}. {item.nama.substring(0, 25)}...
+                                            </span>
+                                            <span className="font-bold text-emerald-300">{item.penyerapan.toFixed(1)}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
 
-      {/* STICKY GLASS FILTER BAR */}
-      <div className="sticky top-6 z-50 bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl border border-white/40 dark:border-white/5 p-8 rounded-[3rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] transition-all duration-700">
-        <div className="flex flex-wrap items-end justify-between gap-8">
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2 text-left group">
-              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">Perangkat Daerah</label>
-              <div className="relative">
-                <Building2 className="absolute left-5 top-1/2 -translate-y-1/2 text-indigo-500 group-hover:scale-110 transition-transform" size={20} />
-                <select 
-                  value={selectedSkpd} 
-                  onChange={(e) => setSelectedSkpd(e.target.value)}
-                  className="w-full pl-14 pr-6 py-4 bg-white/60 dark:bg-gray-950/60 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-2xl text-sm font-black shadow-sm focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all cursor-pointer appearance-none"
-                >
-                  <option value="">🏢 PILIH SKPD / OPD</option>
-                  {skpdList.map(skpd => <option key={skpd} value={skpd}>{skpd}</option>)}
-                </select>
-                <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
-                    <ChevronDown size={18} />
+                            {/* Card 2: Risiko & Sisa Anggaran */}
+                            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-3 bg-rose-500/30 rounded-xl">
+                                        <AlertOctagon size={24} className="text-rose-200" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-rose-200">RISIKO & SISA ANGGARAN</p>
+                                        <p className="text-2xl font-black text-white">
+                                            {executiveSummary.highRiskCount}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-green-200">Total Sisa:</span>
+                                        <span className="font-bold text-amber-300">{formatCurrency(executiveSummary.totalSisa)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-green-200">Item Risiko Tinggi:</span>
+                                        <span className="font-bold text-rose-300">{executiveSummary.highRiskCount} item</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full bg-gradient-to-r from-amber-500 to-rose-500 rounded-full"
+                                            style={{ width: `${Math.min((executiveSummary.totalSisa / executiveSummary.totalAnggaran) * 100, 100)}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 3: Top Sumber Dana */}
+                            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-3 bg-blue-500/30 rounded-xl">
+                                        <Database size={24} className="text-blue-200" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-blue-200">SUMBER DANA DOMINAN</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    {executiveSummary.topSumberDana.map((item, idx) => (
+                                        <div key={idx} className="flex justify-between items-center text-xs p-1 bg-white/5 rounded">
+                                            <span className="text-green-200 truncate max-w-[180px]">
+                                                {idx+1}. {item.nama.substring(0, 20)}...
+                                            </span>
+                                            <span className="font-bold text-amber-300">{item.count} kegiatan</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Top Sub Kegiatan Table */}
+                        <div className="bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/10 mb-6">
+                            <h3 className="font-bold text-sm uppercase tracking-wider text-white mb-3 flex items-center gap-2">
+                                <ListTree size={16} className="text-amber-400" /> TOP 5 SUB KEGIATAN (BERDASARKAN ANGGARAN)
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-2 text-xs font-medium text-green-200 mb-2 px-2">
+                                <div className="col-span-2">Nama Sub Kegiatan</div>
+                                <div className="text-right">Anggaran</div>
+                                <div className="text-right">Realisasi</div>
+                                <div className="text-right">Penyerapan</div>
+                            </div>
+                            <div className="space-y-1">
+                                {executiveSummary.topSubKegiatan.map((item, idx) => (
+                                    <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-center p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                                        <div className="col-span-2 text-xs text-white truncate" title={item.nama}>
+                                            {idx+1}. {item.nama.length > 40 ? item.nama.substring(0,40)+'...' : item.nama}
+                                        </div>
+                                        <div className="text-right text-xs text-green-200">{formatCurrency(item.anggaran)}</div>
+                                        <div className="text-right text-xs text-emerald-300">{formatCurrency(item.realisasi)}</div>
+                                        <div className="text-right">
+                                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                                item.penyerapan >= 85 ? 'bg-emerald-500/20 text-emerald-300' :
+                                                item.penyerapan >= 50 ? 'bg-amber-500/20 text-amber-300' :
+                                                'bg-rose-500/20 text-rose-300'
+                                            }`}>
+                                                {item.penyerapan.toFixed(1)}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Executive Note */}
+                        <div className="mt-4 flex items-center gap-3 text-sm bg-green-600/30 p-4 rounded-2xl border border-green-500/30">
+                            <Lightbulb size={20} className="text-yellow-300 flex-shrink-0" />
+                            <p className="text-xs leading-relaxed text-white">
+                                <span className="font-bold text-white">CATATAN EKSEKUTIF:</span> Terdapat {executiveSummary.highRiskCount} sub kegiatan dengan risiko tinggi (penyerapan &lt;40%). 
+                                Fokus pada sub kegiatan {executiveSummary.highRiskSubKegiatan[0]?.nama || 'utama'} yang menyisakan sisa {formatCurrency(executiveSummary.highRiskSubKegiatan[0]?.sisa || 0)}. 
+                                Sub kegiatan unggulan {executiveSummary.topSubKegiatan[0]?.nama} mencapai penyerapan {executiveSummary.topSubKegiatan[0]?.penyerapan.toFixed(1)}%.
+                            </p>
+                        </div>
+                    </div>
                 </div>
-              </div>
-            </div>
+            )}
 
-            <div className="space-y-2 text-left group">
-              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">Sub Unit Kerja</label>
-              <div className="relative">
-                <Layers className="absolute left-5 top-1/2 -translate-y-1/2 text-purple-500" size={20} />
-                <select 
-                  value={selectedSubUnit} 
-                  onChange={(e) => setSelectedSubUnit(e.target.value)}
-                  disabled={!selectedSkpd || subUnitList.length === 0}
-                  className="w-full pl-14 pr-6 py-4 bg-white/60 dark:bg-gray-950/60 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-2xl text-sm font-black shadow-sm focus:ring-4 focus:ring-purple-500/10 outline-none transition-all disabled:opacity-30 appearance-none"
+            {!showExecutiveInfo && (
+                <button 
+                    onClick={() => setShowExecutiveInfo(true)}
+                    className="mb-6 px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg hover:shadow-xl transition-all group"
                 >
-                  <option>📋 SEMUA SUB UNIT</option>
-                  {subUnitList.map(unit => <option key={unit} value={unit}>{unit}</option>)}
-                </select>
-                <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
-                    <ChevronDown size={18} />
+                    <Eye size={18} className="group-hover:scale-110 transition-transform" /> Tampilkan Executive Dashboard
+                </button>
+            )}
+
+            {/* AI Analysis Section dengan Toggle */}
+            <div className="relative">
+                <div className="flex justify-end mb-2">
+                    <button
+                        onClick={() => setShowAnalysis(!showAnalysis)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+                    >
+                        {showAnalysis ? (
+                            <>🗂️ Sembunyikan Analisis AI</>
+                        ) : (
+                            <>🤖 Tampilkan Analisis AI</>
+                        )}
+                    </button>
                 </div>
-              </div>
+                
+                {/* Indikator Data */}
+                {showAnalysis && selectedSkpd && subKegiatanStats.length > 0 && (
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span>Sub Kegiatan: {subKegiatanStats.length} | Penyerapan: {executiveSummary?.rataPenyerapan.toFixed(1)}% | Sisa: {formatCurrency(executiveSummary?.totalSisa || 0)}</span>
+                    </div>
+                )}
+                
+                {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+                {showAnalysis && (
+                    <GeminiAnalysis 
+                        getAnalysisPrompt={getAnalysisPrompt} 
+                        disabledCondition={!selectedSkpd || subKegiatanStats.length === 0} 
+                        theme={theme}
+                        interactivePlaceholder="Cari sub kegiatan tentang pembangunan jalan..."
+                        userRole={userRole}
+                        allData={{
+                            selectedSkpd,
+                            selectedSubUnit,
+                            startMonth,
+                            endMonth,
+                            executiveSummary,
+                            topSubKegiatan: executiveSummary?.topSubKegiatan
+                        }}
+                    />
+                )}
             </div>
 
-            <div className="space-y-2 text-left">
-              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">Jendela Waktu Audit</label>
-              <div className="flex items-center bg-white/60 dark:bg-gray-950/60 border border-slate-200/50 dark:border-white/10 rounded-2xl p-1.5 shadow-sm">
-                <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="flex-1 bg-transparent py-2.5 px-4 text-[11px] font-black outline-none border-none appearance-none cursor-pointer">
-                  {months.map(m => <option key={`s-${m}`} value={m}>{m.substring(0,3)}</option>)}
-                </select>
-                <div className="w-[1px] h-6 bg-slate-200 dark:bg-white/10"></div>
-                <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="flex-1 bg-transparent py-2.5 px-4 text-[11px] font-black outline-none border-none text-right appearance-none cursor-pointer">
-                  {months.map(m => <option key={`e-${m}`} value={m}>{m.substring(0,3)}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex bg-slate-100/50 dark:bg-white/5 p-2 rounded-[1.5rem] border border-slate-200/50 dark:border-white/10 shadow-inner">
-            <button 
-              onClick={() => setViewMode('card')} 
-              className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black tracking-widest transition-all ${viewMode === 'card' ? 'bg-white dark:bg-gray-800 shadow-lg text-indigo-600' : 'opacity-40 hover:opacity-100 uppercase'}`}
-            >
-              <LayoutDashboard size={16} /> CARDS
-            </button>
-            <button 
-              onClick={() => setViewMode('table')} 
-              className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black tracking-widest transition-all ${viewMode === 'table' ? 'bg-white dark:bg-gray-800 shadow-lg text-purple-600' : 'opacity-40 hover:opacity-100 uppercase'}`}
-            >
-              <BarChart3 size={16} /> LIST VIEW
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* CHART SECTION - APACHE ECHARTS STYLE */}
-      {selectedSkpd && chartData.length > 0 && (
-        <div className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-3xl border border-white/50 dark:border-white/5 p-12 rounded-[3.5rem] shadow-[0_60px_100px_-30px_rgba(0,0,0,0.1)] group">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12 text-left">
-            <div className="space-y-2">
-              <h3 className="text-3xl font-black text-slate-800 dark:text-white flex items-center gap-4 tracking-tighter leading-none">
-                <div className="w-2.5 h-10 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-full animate-pulse shadow-[0_0_20px_rgba(99,102,241,0.4)]"></div>
-                Distribusi Anggaran Utama
-              </h3>
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.4em] ml-6">PERBANDINGAN TOP 15 SUB KEGIATAN (MILIAR RP)</p>
-            </div>
-            <button onClick={handleDownloadExcel} className="flex items-center gap-3 px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-[0_15px_30px_-10px_rgba(16,185,129,0.5)] transition-all hover:-translate-y-1 active:scale-95">
-              <Download size={20} /> UNDUH DATA EXCEL
-            </button>
-          </div>
-
-          <div className="bg-white/40 dark:bg-gray-950/40 backdrop-blur-3xl rounded-[2.5rem] p-10 border border-white/50 dark:border-white/5 shadow-inner">
-            <div className="h-[550px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 120 }} barGap={12}>
-                  <defs>
-                    <linearGradient id="barAnggaran" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#4F46E5" stopOpacity={0.85}/>
-                      <stop offset="100%" stopColor="#818CF8" stopOpacity={0.4}/>
-                    </linearGradient>
-                    <linearGradient id="barRealisasi" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10B981" stopOpacity={0.95}/>
-                      <stop offset="100%" stopColor="#059669" stopOpacity={0.5}/>
-                    </linearGradient>
-                    <filter id="shadow">
-                      <feDropShadow dx="0" dy="8" stdDeviation="12" floodOpacity="0.15"/>
-                    </filter>
-                  </defs>
-                  <CartesianGrid strokeDasharray="5 5" vertical={false} stroke="rgba(148, 163, 184, 0.08)" />
-                  <XAxis 
-                    dataKey="name" 
-                    angle={-45} 
-                    textAnchor="end" 
-                    interval={0} 
-                    height={120} 
-                    tick={{ fontSize: 10, fontWeight: 800, fill: '#64748b', letterSpacing: '-0.2px' }} 
-                    axisLine={{ stroke: 'rgba(148, 163, 184, 0.1)', strokeWidth: 2 }} 
-                    tickLine={false} 
-                    dy={15} 
-                  />
-                  <YAxis 
-                    tickFormatter={(val) => `${val}M`} 
-                    tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} 
-                    axisLine={false} 
-                    tickLine={false} 
-                  />
-                  <Tooltip 
-                    cursor={{fill: 'rgba(79, 70, 229, 0.03)', radius: 15}} 
-                    content={<CustomTooltip />} 
-                  />
-                  <Legend 
-                    verticalAlign="top" 
-                    align="right"
-                    height={60}
-                    iconType="rect"
-                    iconSize={14}
-                    wrapperStyle={{ paddingTop: '0px', paddingBottom: '30px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px' }} 
-                  />
-                  <Bar dataKey="Anggaran" fill="url(#barAnggaran)" name="Pagu PPA" radius={[12, 12, 4, 4]} barSize={40} filter="url(#shadow)" />
-                  <Bar dataKey="Realisasi" fill="url(#barRealisasi)" name="Realisasi Kas" radius={[12, 12, 4, 4]} barSize={40} filter="url(#shadow)" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CONTENT GRID - PREMIUM CARDS */}
-      <div className="space-y-10">
-        {!selectedSkpd ? (
-          <div className="py-40 text-center bg-white/40 dark:bg-gray-900/40 backdrop-blur-3xl rounded-[4rem] border border-dashed border-slate-300 dark:border-white/10 shadow-xl group">
-            <div className="w-24 h-24 mx-auto mb-8 bg-slate-100 dark:bg-white/5 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 duration-700">
-                <Search size={48} className="text-slate-300 dark:text-slate-600 animate-pulse" />
-            </div>
-            <p className="text-2xl font-black text-slate-400 dark:text-slate-500 tracking-tighter uppercase">Menunggu Input Audit</p>
-            <p className="text-[10px] font-black text-slate-400 mt-4 uppercase tracking-[0.4em] opacity-60">Gunakan filter cerdas di atas untuk memulai analisis</p>
-          </div>
-        ) : subKegiatanStats.length > 0 ? (
-          viewMode === 'card' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              {paginatedData.map((item, idx) => {
-                const key = `${item.subKegiatan}-${item.kodeSubKegiatan}`;
-                const isExpanded = expandedRows.has(key);
-                return (
-                  <div key={key} className={`group bg-white/40 dark:bg-gray-900/40 backdrop-blur-3xl border border-white/50 dark:border-white/5 rounded-[3rem] overflow-hidden transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] hover:translate-y-[-10px] ${isExpanded ? 'lg:col-span-2 shadow-[0_50px_100px_-20px_rgba(79,70,229,0.2)] ring-2 ring-indigo-500/20' : 'shadow-2xl shadow-slate-200/50 dark:shadow-none'}`}>
-                    <div onClick={() => toggleRow(key)} className="p-10 cursor-pointer relative overflow-hidden text-left">
-                      {isExpanded && <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none transition-opacity duration-1000 rotate-12"><Layers size={250} className="text-indigo-500" /></div>}
-                      
-                      <div className="flex flex-col md:flex-row justify-between items-start gap-8 relative z-10">
-                        <div className="flex-1 space-y-4">
-                          <div className="flex flex-wrap items-center gap-4">
-                            <span className="text-[10px] font-black px-4 py-2 bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl tracking-[0.2em] text-slate-500 font-mono italic">{item.kodeSubKegiatan}</span>
-                            {getPerformanceBadge(item.persentase)}
-                          </div>
-                          <h4 className="text-2xl font-black text-slate-800 dark:text-white leading-tight tracking-tighter group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-all duration-500">
-                            {item.subKegiatan}
-                          </h4>
+            {/* Main Card */}
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/50 dark:border-gray-700/50 overflow-hidden transition-all duration-500 hover:shadow-3xl">
+                {/* Filter Section */}
+                <div className="p-8 bg-gradient-to-r from-white/50 to-white/30 dark:from-gray-800/50 dark:to-gray-900/50 border-b border-gray-200/50 dark:border-gray-700/50">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-black text-gray-800 dark:text-white flex items-center gap-2">
+                            <div className="w-1.5 h-6 bg-gradient-to-b from-emerald-500 to-green-500 rounded-full"></div>
+                            PANEL ANALISIS SUB KEGIATAN
+                        </h3>
+                        <div className="flex items-center gap-2">
+                            {selectedSkpd && (
+                                <button
+                                    onClick={() => setShowDetails(!showDetails)}
+                                    className="p-2.5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all"
+                                    title={showDetails ? 'Sembunyikan Detail' : 'Tampilkan Detail'}
+                                >
+                                    {showDetails ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            )}
                         </div>
-                        <div className="text-right whitespace-nowrap bg-slate-900/5 dark:bg-white/5 p-6 rounded-[2rem] border border-white/10">
-                          <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1 opacity-60">ALOKASI PAGU</p>
-                          <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none tabular-nums">{formatIDR(item.totalAnggaran)}</p>
-                        </div>
-                      </div>
-
-                      <div className="mt-10 space-y-4">
-                        <div className="flex justify-between text-[11px] font-black uppercase tracking-[0.2em]">
-                          <span className="text-emerald-500 flex items-center gap-2"><CheckCircle size={16} /> REALISASI: {formatIDR(item.totalRealisasi)}</span>
-                          <span className="text-slate-400">EFISIENSI: {item.persentase.toFixed(1)}%</span>
-                        </div>
-                        <div className="w-full bg-slate-100 dark:bg-gray-800 h-4 rounded-full overflow-hidden shadow-inner flex border border-white/10">
-                          <div 
-                            className={`h-full transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(16,185,129,0.3)] ${item.persentase >= 80 ? 'bg-gradient-to-r from-emerald-500 to-green-600' : item.persentase >= 50 ? 'bg-gradient-to-r from-amber-400 to-amber-600' : 'bg-gradient-to-r from-rose-500 to-rose-700'}`}
-                            style={{ width: `${Math.min(item.persentase, 100)}%` }}
-                          />
-                        </div>
-                        <div className="flex justify-between items-center pt-4">
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Sisa Anggaran</span>
-                            <span className="text-sm font-black text-rose-500 tabular-nums italic">{formatIDR(item.sisaAnggaran)}</span>
-                          </div>
-                          <button className="flex items-center gap-3 px-6 py-3 bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-indigo-500/20 hover:bg-indigo-600 hover:text-white transition-all">
-                            RINCIAN REKENING 
-                            <ChevronDown size={16} className={`transition-transform duration-700 ${isExpanded ? 'rotate-180' : ''}`} />
-                          </button>
-                        </div>
-                      </div>
                     </div>
 
-                    {isExpanded && (
-                      <div className="border-t border-slate-100/50 dark:border-white/5 bg-slate-900/[0.02] dark:bg-black/20 p-10 space-y-12 animate-in slide-in-from-top-12 duration-1000">
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-16">
-                          {/* Sumber Dana Section */}
-                          <div className="space-y-6 text-left">
-                            <div className="flex items-center gap-4">
-                              <div className="p-3 bg-emerald-500/10 text-emerald-600 rounded-2xl shadow-inner border border-emerald-500/20 font-black tracking-widest"><DollarSign size={24} /></div>
-                              <h5 className="text-lg font-black tracking-tighter text-slate-700 dark:text-slate-300 uppercase">Struktur Pembiayaan</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* SKPD Filter */}
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                <Building2 size={14} className="text-emerald-500" /> SKPD
+                            </label>
+                            <select
+                                value={selectedSkpd}
+                                onChange={(e) => setSelectedSkpd(e.target.value)}
+                                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-sm font-medium"
+                            >
+                                <option value="">-- Pilih SKPD --</option>
+                                {skpdList.map(skpd => <option key={skpd} value={skpd}>{skpd}</option>)}
+                            </select>
+                        </div>
+
+                        {/* Sub Unit Filter */}
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                <Layers size={14} className="text-purple-500" /> Sub Unit
+                            </label>
+                            <select
+                                value={selectedSubUnit}
+                                onChange={(e) => setSelectedSubUnit(e.target.value)}
+                                disabled={!selectedSkpd || subUnitList.length === 0}
+                                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-sm font-medium disabled:opacity-50"
+                            >
+                                <option value="Semua Sub Unit">📋 Semua Sub Unit</option>
+                                {subUnitList.map(unit => <option key={unit} value={unit}>{unit}</option>)}
+                            </select>
+                        </div>
+
+                        {/* Month Range */}
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                <Calendar size={14} className="text-blue-500" /> Periode
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="w-full px-3 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-sm">
+                                    {months.map(month => <option key={`start-${month}`} value={month}>{month.substring(0,3)}</option>)}
+                                </select>
+                                <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="w-full px-3 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-sm">
+                                    {months.map(month => <option key={`end-${month}`} value={month}>{month.substring(0,3)}</option>)}
+                                </select>
                             </div>
-                            <div className="grid grid-cols-1 gap-4">
-                              {item.sumberDanaList.map(sd => (
-                                <div key={sd} className="group/sd flex items-center gap-4 px-6 py-5 bg-white/60 dark:bg-gray-800/60 rounded-[1.5rem] border border-slate-100 dark:border-white/5 shadow-sm transition-all hover:translate-x-2 hover:border-emerald-500/30">
-                                  <div className="w-1.5 h-8 bg-emerald-500 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.5)] transition-all group-hover/sd:h-10"></div>
-                                  <span className="text-xs font-black text-slate-600 dark:text-slate-300 tracking-tight leading-tight uppercase italic">{sd}</span>
+                        </div>
+
+                        {/* Download Button */}
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                <Download size={14} className="text-emerald-500" /> Ekspor Data
+                            </label>
+                            <button 
+                                onClick={handleDownloadExcel} 
+                                disabled={!selectedSkpd || subKegiatanStats.length === 0} 
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Download size={18} /> Download Excel
+                                <span className="ml-1 px-2 py-0.5 bg-white/20 rounded-lg text-xs">
+                                    {subKegiatanStats.length}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Content */}
+                {selectedSkpd ? (
+                    <div className="p-8">
+                        {subKegiatanStats.length > 0 ? (
+                            <div className="space-y-4">
+                                {paginatedData.map(item => {
+                                    const subKegiatanKey = `${item.subKegiatan}-${item.kodeSubKegiatan}`;
+                                    return (
+                                        <div key={subKegiatanKey} className="border border-gray-200/50 dark:border-gray-700/50 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm rounded-xl overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 duration-300">
+                                            {/* Header */}
+                                            <div onClick={() => toggleRow(subKegiatanKey)} className="flex flex-col lg:flex-row lg:items-center p-5 cursor-pointer bg-gradient-to-r from-transparent to-white/20 dark:to-gray-800/20 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 transition-colors">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="text-xs px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-lg font-mono">
+                                                            {item.kodeSubKegiatan}
+                                                        </span>
+                                                        {item.sumberDanaList.length > 0 && (
+                                                            <span className="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg">
+                                                                {item.sumberDanaList.length} sumber dana
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <h4 className="font-black text-gray-900 dark:text-white text-base leading-tight group-hover:text-emerald-600 transition-colors">
+                                                        {item.subKegiatan}
+                                                    </h4>
+                                                </div>
+                                                
+                                                <div className="flex items-center gap-4 mt-3 lg:mt-0">
+                                                    <div className="w-48">
+                                                        <div className="flex justify-between text-xs mb-1">
+                                                            <span className="text-gray-500">Realisasi</span>
+                                                            <span className="font-bold text-emerald-600 dark:text-emerald-400">{item.persentase.toFixed(1)}%</span>
+                                                        </div>
+                                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                                                            <div 
+                                                                className={`h-full rounded-full ${
+                                                                    item.persentase >= 85 ? 'bg-gradient-to-r from-emerald-500 to-green-500' :
+                                                                    item.persentase >= 50 ? 'bg-gradient-to-r from-yellow-500 to-amber-500' :
+                                                                    'bg-gradient-to-r from-red-500 to-rose-500'
+                                                                }`}
+                                                                style={{ width: `${Math.min(item.persentase, 100)}%` }}
+                                                            ></div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="text-right min-w-[120px]">
+                                                        <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{formatCurrency(item.totalAnggaran)}</p>
+                                                        <p className="text-xs text-gray-500">Total Anggaran</p>
+                                                    </div>
+                                                    
+                                                    <div className="text-right min-w-[120px]">
+                                                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(item.totalRealisasi)}</p>
+                                                        <p className="text-xs text-gray-500">Total Realisasi</p>
+                                                    </div>
+                                                    
+                                                    <button className="p-2.5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all ml-2">
+                                                        {expandedRows.has(subKegiatanKey) ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Expanded Details */}
+                                            {expandedRows.has(subKegiatanKey) && showDetails && (
+                                                <div className="bg-gradient-to-b from-gray-50/50 to-white/50 dark:from-gray-800/50 dark:to-gray-900/50 p-5 border-t border-gray-200/50 dark:border-gray-700/50">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        {/* Sumber Dana */}
+                                                        <div>
+                                                            <h5 className="font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                                                                <Database size={16} className="text-emerald-500" /> Sumber Dana
+                                                            </h5>
+                                                            <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-lg p-4 border border-gray-200/50 dark:border-gray-700/50">
+                                                                <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                                                                    {item.sumberDanaList.length > 0 ? item.sumberDanaList.map(sd => (
+                                                                        <li key={sd} className="break-words">{sd}</li>
+                                                                    )) : <li className="text-gray-500">Tidak ada data sumber dana</li>}
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Rincian Rekening */}
+                                                        <div>
+                                                            <h5 className="font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                                                                <FileText size={16} className="text-purple-500" /> Rincian Rekening
+                                                            </h5>
+                                                            <div className="overflow-x-auto rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+                                                                <table className="min-w-full">
+                                                                    <thead className="bg-gray-100/80 dark:bg-gray-800/80">
+                                                                        <tr>
+                                                                            <th className="px-4 py-2 text-left text-xs font-bold text-gray-600 dark:text-gray-300">Nama Rekening</th>
+                                                                            <th className="px-4 py-2 text-right text-xs font-bold text-gray-600 dark:text-gray-300">Anggaran</th>
+                                                                            <th className="px-4 py-2 text-right text-xs font-bold text-gray-600 dark:text-gray-300">Realisasi</th>
+                                                                            <th className="px-4 py-2 text-right text-xs font-bold text-gray-600 dark:text-gray-300">%</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody className="divide-y divide-gray-200/50 dark:divide-gray-700/50">
+                                                                        {item.rekenings.slice(0, 5).map(rek => (
+                                                                            <tr key={rek.rekening} className="hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20">
+                                                                                <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 max-w-xs break-words">
+                                                                                    {rek.rekening}
+                                                                                </td>
+                                                                                <td className="px-4 py-2 text-right text-sm text-indigo-600 dark:text-indigo-400">
+                                                                                    {formatCurrency(rek.anggaran)}
+                                                                                </td>
+                                                                                <td className="px-4 py-2 text-right text-sm text-emerald-600 dark:text-emerald-400">
+                                                                                    {formatCurrency(rek.realisasi)}
+                                                                                </td>
+                                                                                <td className="px-4 py-2 text-right text-sm">
+                                                                                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                                                                        rek.persentase >= 85 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                                                                        rek.persentase >= 50 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                                                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                                                    }`}>
+                                                                                        {rek.persentase.toFixed(1)}%
+                                                                                    </span>
+                                                                                </td>
+                                                                            </tr>
+                                                                        ))}
+                                                                        {item.rekenings.length > 5 && (
+                                                                            <tr>
+                                                                                <td colSpan="4" className="text-center py-2 text-xs text-gray-500">
+                                                                                    ... dan {item.rekenings.length - 5} rekening lainnya
+                                                                                </td>
+                                                                            </tr>
+                                                                        )}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-center py-16 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm rounded-2xl">
+                                <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-full flex items-center justify-center">
+                                    <FolderTree className="w-10 h-10 text-gray-400" />
                                 </div>
-                              ))}
+                                <p className="text-xl font-bold text-gray-600 dark:text-gray-400 mb-2">
+                                    Tidak ada data sub kegiatan
+                                </p>
+                                <p className="text-sm text-gray-500 dark:text-gray-500">
+                                    Coba ubah filter atau pilih SKPD lain
+                                </p>
                             </div>
-                          </div>
+                        )}
 
-                          {/* Rincian Rekening Section */}
-                          <div className="space-y-6 text-left font-black">
-                            <div className="flex items-center gap-4">
-                              <div className="p-3 bg-indigo-500/10 text-indigo-600 rounded-2xl shadow-inner border border-indigo-500/20 tracking-widest"><Layers size={24} /></div>
-                              <h5 className="text-lg font-black tracking-tighter text-slate-700 dark:text-slate-300 uppercase">Audit Level Rekening</h5>
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="mt-8">
+                                <Pagination 
+                                    currentPage={currentPage} 
+                                    totalPages={totalPages} 
+                                    onPageChange={handlePageChange} 
+                                    theme={theme} 
+                                />
                             </div>
-                            <div className="overflow-hidden rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-2xl bg-white/40 dark:bg-gray-900/60 backdrop-blur-3xl">
-                              <div className="overflow-x-auto">
-                                <table className="min-w-full border-collapse">
-                                  <thead>
-                                    <tr className="bg-slate-900/5 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
-                                      <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Uraian Belanja</th>
-                                      <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Realisasi</th>
-                                      <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Serap %</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                                    {item.rekenings.map(rek => (
-                                      <tr key={rek.rekening} className="hover:bg-indigo-500/[0.04] transition-colors group/row">
-                                        <td className="px-8 py-4 text-[11px] font-bold text-slate-600 dark:text-slate-400 max-w-[200px] truncate leading-tight group-hover/row:text-indigo-600 transition-colors uppercase">{rek.rekening}</td>
-                                        <td className="px-8 py-4 text-right text-[11px] font-black text-slate-800 dark:text-white italic tabular-nums">{formatIDR(rek.realisasi)}</td>
-                                        <td className="px-8 py-4 text-right font-black">
-                                          <div className={`inline-flex items-center justify-center min-w-[50px] px-3 py-1.5 rounded-xl text-[10px] tabular-nums shadow-sm border ${rek.persentase >= 80 ? 'bg-emerald-100/50 text-emerald-700 border-emerald-200' : 'bg-amber-100/50 text-amber-700 border-amber-200'}`}>
-                                            {rek.persentase.toFixed(1)}%
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="p-16 text-center">
+                        <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-emerald-100 to-green-100 dark:from-emerald-900/30 dark:to-green-900/30 rounded-full flex items-center justify-center">
+                            <Building2 className="w-12 h-12 text-emerald-500 dark:text-emerald-400" />
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            /* LIST VIEW TABLE - MODERN MINIMALIST */
-            <div className="overflow-hidden rounded-[3.5rem] border border-slate-200/50 dark:border-white/5 shadow-2xl bg-white/40 dark:bg-gray-900/40 backdrop-blur-3xl transition-all hover:shadow-[0_80px_120px_-30px_rgba(0,0,0,0.15)]">
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse">
-                  <thead>
-                    <tr className="bg-slate-900/5 dark:bg-white/5 text-left border-b border-gray-100 dark:border-white/10">
-                      <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Kode Anggaran</th>
-                      <th className="px-10 py-8 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Sub Kegiatan / Uraian</th>
-                      <th className="px-10 py-8 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Pagu PPA</th>
-                      <th className="px-10 py-8 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Penyerapan</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                    {paginatedData.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-indigo-500/[0.04] transition-all group cursor-pointer duration-300" onClick={() => toggleRow(`${item.subKegiatan}-${item.kodeSubKegiatan}`)}>
-                        <td className="px-10 py-7 text-[10px] font-black text-slate-400 font-mono tracking-widest italic opacity-60">{item.kodeSubKegiatan}</td>
-                        <td className="px-10 py-7 text-sm font-black text-slate-800 dark:text-white max-w-sm tracking-tighter leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-all uppercase">{item.subKegiatan}</td>
-                        <td className="px-10 py-7 text-right font-black text-indigo-600 dark:text-indigo-400 tabular-nums italic text-base tracking-tighter">{formatIDR(item.totalAnggaran)}</td>
-                        <td className="px-10 py-7 text-right">
-                          <div className="flex flex-col items-end gap-2.5">
-                            <div className={`px-4 py-1.5 rounded-xl text-[11px] font-black tracking-widest shadow-sm border ${item.persentase >= 80 ? 'bg-emerald-500 text-white border-emerald-600' : item.persentase >= 50 ? 'bg-amber-400 text-amber-950 border-amber-500' : 'bg-rose-500 text-white border-rose-600'}`}>
-                              {item.persentase.toFixed(1)}%
-                            </div>
-                            <div className="w-24 bg-slate-100 dark:bg-gray-800 h-1.5 rounded-full overflow-hidden flex shadow-inner border border-white/5">
-                              <div className={`h-full transition-all duration-1000 ${item.persentase >= 80 ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)]' : 'bg-amber-500'}`} style={{ width: `${Math.min(item.persentase, 100)}%` }} />
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )
-        ) : (
-          <div className="py-40 text-center bg-white/40 dark:bg-gray-900/40 backdrop-blur-3xl rounded-[4rem] border border-dashed border-slate-300 dark:border-white/10 animate-pulse">
-            <Info size={48} className="mx-auto text-slate-300 dark:text-slate-700 mb-6" />
-            <p className="font-black text-slate-400 uppercase tracking-[0.4em] text-xs italic">Menyiapkan Database Performa Unit...</p>
-          </div>
-        )}
+                        <p className="text-xl font-bold text-gray-600 dark:text-gray-400 mb-2">
+                            Pilih SKPD untuk Memulai
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-500 max-w-md mx-auto">
+                            Silakan pilih SKPD dari daftar untuk melihat statistik sub kegiatan dan rincian rekening
+                        </p>
+                    </div>
+                )}
 
-        {totalPages > 1 && (
-          <div className="pt-12 flex justify-center animate-in slide-in-from-bottom-8 duration-1000">
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
-          </div>
-        )}
-      </div>
-
-      {/* FOOTER METRICS PANEL */}
-      {selectedSkpd && summaryStats && (
-        <div className="mt-20 p-10 bg-gradient-to-r from-indigo-900 to-slate-900 rounded-[3rem] border border-white/10 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]">
-            <div className="flex flex-wrap items-center justify-between gap-12">
-                <div className="flex flex-wrap items-center gap-12">
-                    {[
-                        { label: 'Cakupan Sub Kegiatan', value: summaryStats.totalItems, color: 'emerald', icon: Layers },
-                        { label: 'Populasi Transaksi', value: summaryStats.totalRekening, color: 'indigo', icon: BarChart3 },
-                        { label: 'Basis Pembiayaan', value: summaryStats.totalSumberDana, color: 'purple', icon: DollarSign }
-                    ].map((stat, i) => (
-                        <div key={i} className="flex flex-col gap-2 group cursor-default">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-2 group-hover:text-white transition-colors">
-                                <stat.icon size={12} className={`text-${stat.color}-400`} /> {stat.label}
-                            </p>
-                            <div className="flex items-center gap-4">
-                                <div className={`w-3 h-3 rounded-full bg-${stat.color}-500 shadow-[0_0_15px_#6366F1]`}></div>
-                                <p className="text-3xl font-black text-white leading-none tracking-tighter">{stat.value}</p>
-                            </div>
+                {/* Footer Notes */}
+                {selectedSkpd && subKegiatanStats.length > 0 && (
+                    <div className="px-8 py-5 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-800/50 border-t border-gray-200/50 dark:border-gray-700/50">
+                        <div className="flex flex-wrap gap-6 text-xs">
+                            <span className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full shadow-lg"></div>
+                                <span className="font-medium text-gray-600 dark:text-gray-400">
+                                    Total {subKegiatanStats.length} sub kegiatan
+                                </span>
+                            </span>
+                            <span className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full shadow-lg"></div>
+                                <span className="font-medium text-gray-600 dark:text-gray-400">
+                                    {subKegiatanStats.reduce((sum, item) => sum + item.sumberDanaList.length, 0)} sumber dana
+                                </span>
+                            </span>
+                            <span className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full shadow-lg"></div>
+                                <span className="font-medium text-gray-600 dark:text-gray-400">
+                                    {subKegiatanStats.reduce((sum, item) => sum + item.rekenings.length, 0)} rekening
+                                </span>
+                            </span>
                         </div>
-                    ))}
-                </div>
-                <div className="flex items-center gap-4 px-8 py-4 bg-white/5 rounded-2xl border border-white/10 group cursor-pointer hover:bg-white/10 transition-all">
-                     <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                         <Info size={20} className="text-indigo-400 animate-pulse" />
-                     </div>
-                     <p className="text-[10px] font-black text-indigo-200 tracking-[0.2em] uppercase leading-tight">
-                        Klik Kartu untuk <br/> Audit Rekening
-                     </p>
-                     <ArrowUpRight size={20} className="text-indigo-500 ml-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                </div>
+                    </div>
+                )}
             </div>
+            
+            <style>{`
+                @keyframes float {
+                    0%, 100% { transform: translateY(0) translateX(0); }
+                    25% { transform: translateY(-8px) translateX(4px); }
+                    50% { transform: translateY(-4px) translateX(-4px); }
+                    75% { transform: translateY(-12px) translateX(2px); }
+                }
+                .animate-float {
+                    animation: float linear infinite;
+                }
+            `}</style>
         </div>
-      )}
-      
-      <style>{`
-        .shadow-inner {
-            box-shadow: inset 0 2px 8px 0 rgba(0, 0, 0, 0.05);
-        }
-        @keyframes pulse-soft {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        .animate-progress-glow {
-            animation: pulse-soft 2s infinite ease-in-out;
-        }
-        select option {
-            background-color: #0f172a;
-            color: #f8fafc;
-        }
-      `}</style>
-    </div>
-  );
+    );
 };
 
 export default SkpdSubKegiatanStatsView;

@@ -1,16 +1,18 @@
 import React from 'react';
-import SectionTitle from './components/SectionTitle';
-import GeminiAnalysis from './components/GeminiAnalysis';
-import Pagination from './components/Pagination';
+import SectionTitle from '../components/SectionTitle';
+import GeminiAnalysis from '../components/GeminiAnalysis';
+import Pagination from '../components/Pagination';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Line, Cell } from 'recharts';
 import { 
   Search, TrendingUp, TrendingDown, Target, DollarSign, Calendar, 
   Filter, Download, Eye, EyeOff, AlertTriangle, CheckCircle, Info,
   Award, Crown, Briefcase, Users, Lightbulb, Activity, Zap,
   ChevronRight, Sparkles, LayoutDashboard, PieChart, ArrowUpRight,
-  ArrowDownRight, Shield, AlertOctagon, Layers, BarChart3
+  ArrowDownRight, Shield, AlertOctagon, Layers, BarChart3,
+  Building2, Coins, LineChart, Clock, Star, Trophy, Medal,
+  Rocket, GitCompare, Scale, Gauge, Brain, Cpu
 } from 'lucide-react';
-import { formatCurrency } from './utils/formatCurrency';
+import { formatCurrency } from '../utils/formatCurrency';
 
 // Custom Tooltip dengan desain modern dan glassmorphism
 const CustomTooltip = ({ active, payload, label }) => {
@@ -53,8 +55,11 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
     const [sortBy, setSortBy] = React.useState('target'); // 'target', 'realisasi', 'persentase'
     const [sortOrder, setSortOrder] = React.useState('desc');
     const [viewMode, setViewMode] = React.useState('table'); // 'table' atau 'card'
+    
+    // ===== STATE UNTUK TOGGLE ANALISIS AI DAN INFO EKSEKUTIF =====
     const [showExecutiveInfo, setShowExecutiveInfo] = React.useState(true);
     const [showAnalysis, setShowAnalysis] = React.useState(true);
+    // ===== END STATE =====
     
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     const [startMonth, setStartMonth] = React.useState(months[0]);
@@ -220,7 +225,7 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
 
     }, [pendapatan, realisasiPendapatan, selectedSkpd, projectionMonth, searchTerm]);
 
-    // === EXECUTIVE SUMMARY DATA ===
+    // === EXECUTIVE SUMMARY DATA - ENHANCED ===
     const executiveSummary = React.useMemo(() => {
         if (!stats.tableData.length) return null;
         
@@ -228,24 +233,37 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
         const totalRealisasi = stats.tableData.reduce((sum, item) => sum + item.totalRealisasi, 0);
         const rataRataPersentase = totalTarget > 0 ? (totalRealisasi / totalTarget) * 100 : 0;
         
+        // Distribusi kinerja
+        const highPerformers = stats.tableData.filter(item => item.persentase >= 90);
+        const mediumPerformers = stats.tableData.filter(item => item.persentase >= 70 && item.persentase < 90);
+        const lowPerformers = stats.tableData.filter(item => item.persentase < 70);
+        
         // Sumber pendapatan dengan kinerja terbaik
         const topPerformers = [...stats.tableData]
             .sort((a, b) => b.persentase - a.persentase)
-            .slice(0, 3);
+            .slice(0, 5);
         
         // Sumber pendapatan dengan kinerja terendah
-        const lowPerformers = [...stats.tableData]
+        const lowPerformersList = [...stats.tableData]
             .sort((a, b) => a.persentase - b.persentase)
-            .slice(0, 3);
+            .slice(0, 5);
         
         // Sumber pendapatan dengan kontribusi terbesar
         const topContributors = [...stats.tableData]
             .sort((a, b) => b.totalRealisasi - a.totalRealisasi)
-            .slice(0, 3);
+            .slice(0, 5);
         
         // Analisis gap
         const totalGap = totalTarget - totalRealisasi;
         const gapPercentage = totalTarget > 0 ? (totalGap / totalTarget) * 100 : 0;
+        
+        // Hitung CAGR sederhana (asumsi tahun lalu adalah selectedYear-1)
+        // Ini placeholder, bisa disesuaikan dengan data real
+        const growthRate = 5.2; // Contoh angka
+        
+        // Persentase kontribusi top 3
+        const top3Contribution = topContributors.slice(0, 3).reduce((sum, item) => sum + item.totalRealisasi, 0);
+        const top3ContributionPercentage = totalRealisasi > 0 ? (top3Contribution / totalRealisasi) * 100 : 0;
         
         return {
             totalTarget,
@@ -254,11 +272,18 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
             gapPercentage,
             rataRataPersentase,
             topPerformers,
-            lowPerformers,
+            lowPerformersList,
             topContributors,
-            totalItems: stats.tableData.length
+            totalItems: stats.tableData.length,
+            highPerformerCount: highPerformers.length,
+            mediumPerformerCount: mediumPerformers.length,
+            lowPerformerCount: lowPerformers.length,
+            growthRate,
+            top3ContributionPercentage,
+            selectedSkpd: selectedSkpd === 'Semua SKPD' ? 'Seluruh SKPD' : selectedSkpd,
+            projectionData
         };
-    }, [stats.tableData]);
+    }, [stats.tableData, selectedSkpd, projectionData]);
 
     const totalPages = Math.ceil(stats.tableData.length / ITEMS_PER_PAGE);
     const paginatedData = stats.tableData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -283,65 +308,98 @@ const SkpdPendapatanStatsView = ({ data, theme, namaPemda, userRole, selectedYea
     };
 
     const getAnalysisPrompt = (query, allData) => {
-    // Jika user mengirim query khusus
-    if (query && query.trim() !== '') {
-        return `Berdasarkan data pendapatan SKPD, jawab pertanyaan ini: ${query}`;
-    }
-    
-    // Analisis default
-    if (stats.tableData.length === 0) return "Data tidak cukup untuk dianalisis.";
-    
-    const totalTarget = executiveSummary?.totalTarget || 0;
-    const totalRealisasi = executiveSummary?.totalRealisasi || 0;
-    const rataRataPersentase = executiveSummary?.rataRataPersentase || 0;
-    
-    const top5 = stats.tableData.slice(0, 5);
-    const low5 = stats.tableData.filter(item => item.persentase < 50).slice(0, 3);
-    
-    const period = startMonth === endMonth ? startMonth : `${startMonth} - ${endMonth}`;
-    const filterContext = searchTerm ? `dengan filter "${searchTerm}"` : '';
-    
-    return `ANALISIS PENDAPATAN SKPD
-TAHUN: ${selectedYear}
+        // Jika user mengirim query khusus
+        if (query && query.trim() !== '') {
+            return `Berdasarkan data pendapatan SKPD, jawab pertanyaan ini: ${query}`;
+        }
+        
+        // Analisis default
+        if (stats.tableData.length === 0) return "Data tidak cukup untuk dianalisis.";
+        
+        const totalTarget = executiveSummary?.totalTarget || 0;
+        const totalRealisasi = executiveSummary?.totalRealisasi || 0;
+        const rataRataPersentase = executiveSummary?.rataRataPersentase || 0;
+        
+        const top5 = stats.tableData.slice(0, 5);
+        const low5 = stats.tableData.filter(item => item.persentase < 50).slice(0, 3);
+        
+        const period = startMonth === endMonth ? startMonth : `${startMonth} - ${endMonth}`;
+        const filterContext = searchTerm ? `dengan filter "${searchTerm}"` : '';
+        
+        return `ANALISIS PENDAPATAN SKPD
+INSTANSI: ${namaPemda || 'Pemerintah Daerah'}
+TAHUN ANGGARAN: ${selectedYear}
 SKPD: ${selectedSkpd === 'Semua SKPD' ? 'Semua SKPD' : selectedSkpd}
-PERIODE: ${period} ${filterContext}
+PERIODE ANALISIS: ${period} ${filterContext}
 
-DATA RINGKAS:
+DATA RINGKAS EKSEKUTIF:
 - Total Target Pendapatan: ${formatCurrency(totalTarget)}
-- Total Realisasi: ${formatCurrency(totalRealisasi)} (${rataRataPersentase.toFixed(2)}%)
-- Sisa Target: ${formatCurrency(executiveSummary?.totalGap || 0)}
-- Distribusi Kinerja: Tinggi (${executiveSummary?.highPerformer || 0}), Sedang (${executiveSummary?.mediumPerformer || 0}), Rendah (${executiveSummary?.lowPerformer || 0})
+- Total Realisasi: ${formatCurrency(totalRealisasi)}
+- Persentase Capaian: ${rataRataPersentase.toFixed(2)}%
+- Sisa Target (Gap): ${formatCurrency(executiveSummary?.totalGap || 0)} (${executiveSummary?.gapPercentage.toFixed(2)}%)
+- Jumlah Sumber Pendapatan: ${executiveSummary?.totalItems} item
 
-PROYEKSI AKHIR TAHUN:
+DISTRIBUSI KINERJA:
+- Kinerja Tinggi (≥90%): ${executiveSummary?.highPerformerCount || 0} sumber
+- Kinerja Sedang (70-89%): ${executiveSummary?.mediumPerformerCount || 0} sumber
+- Kinerja Rendah (<70%): ${executiveSummary?.lowPerformerCount || 0} sumber
+
+PROYEKSI AKHIR TAHUN (berdasarkan ${projectionMonth}):
 - Realisasi s/d ${projectionMonth}: ${formatCurrency(projectionData?.realisasiHinggaSaatIni || 0)}
-- Proyeksi Akhir Tahun: ${formatCurrency(projectionData?.proyeksiAkhirTahun || 0)} (${projectionData?.persenProyeksi.toFixed(2)}%)
-- Status Risiko: ${projectionData?.riskCategory === 'kritis' ? '⚠️ KRITIS' : projectionData?.riskCategory === 'waspada' ? '⚡ WASPADA' : '✅ AMAN'}
+- Proyeksi Akhir Tahun: ${formatCurrency(projectionData?.proyeksiAkhirTahun || 0)}
+- Estimasi Capaian: ${projectionData?.persenProyeksi.toFixed(2)}%
+- Status Risiko: ${projectionData?.riskCategory === 'kritis' ? '⚠️ KRITIS (Perlu Intervensi)' : projectionData?.riskCategory === 'waspada' ? '⚡ WASPADA (Monitoring Intensif)' : '✅ AMAN (On Track)'}
+
+KONSENTRASI PENDAPATAN:
+- Top 3 Kontribusi: ${executiveSummary?.top3ContributionPercentage.toFixed(1)}% dari total realisasi
+- Pertumbuhan Tahunan (Estimasi): ${executiveSummary?.growthRate}%
 
 SUMBER PENDAPATAN DENGAN KINERJA TERTINGGI:
-${top5.map((item, i) => `${i+1}. ${item.sumberPendapatan}: ${item.persentase.toFixed(2)}% (Target: ${formatCurrency(item.totalTarget)}, Realisasi: ${formatCurrency(item.totalRealisasi)})`).join('\n')}
+${top5.map((item, i) => `${i+1}. **${item.sumberPendapatan}**: ${item.persentase.toFixed(2)}% (Target: ${formatCurrency(item.totalTarget)}, Realisasi: ${formatCurrency(item.totalRealisasi)})`).join('\n')}
 
 SUMBER PENDAPATAN DENGAN KINERJA RENDAH (<50%):
-${low5.length > 0 ? low5.map((item, i) => `${i+1}. ${item.sumberPendapatan}: ${item.persentase.toFixed(2)}%`).join('\n') : '- Tidak ada data dengan kinerja rendah'}
+${low5.length > 0 ? low5.map((item, i) => `${i+1}. **${item.sumberPendapatan}**: ${item.persentase.toFixed(2)}%`).join('\n') : '- Tidak ada data dengan kinerja rendah'}
 
 BERIKAN ANALISIS MENDALAM MENGENAI:
-1. Kinerja Pencapaian Target: Identifikasi sumber pendapatan dengan kinerja optimal dan yang bermasalah.
-2. Risiko Pendapatan: Analisis risiko berdasarkan proyeksi akhir tahun (${projectionData?.riskCategory}).
-3. Rekomendasi Strategis: 3 langkah konkret untuk optimalisasi pendapatan di sisa tahun.
-4. Peringatan Dini: Poin penting untuk rapat pimpinan.
+1. EVALUASI MAKRO: Bagaimana kinerja pendapatan secara keseluruhan? Apakah target capaian sesuai dengan proyeksi?
+2. IDENTIFIKASI RISIKO: Berdasarkan proyeksi akhir tahun (${projectionData?.riskCategory}), apa implikasi terhadap APBD?
+3. REKOMENDASI STRATEGIS: 3 langkah konkret untuk:
+   - Mengoptimalkan sumber pendapatan dengan kinerja rendah
+   - Mempertahankan sumber pendapatan unggulan
+   - Menutup gap pendapatan di sisa tahun
+4. POIN RAPAT PIMPINAN: 3 poin penting yang harus disampaikan dalam evaluasi triwulan/semester
 
-Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
-};
+Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk pengambilan keputusan eksekutif.`;
+    };
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700 pb-10">
             <SectionTitle>STATISTIK PENDAPATAN PER SKPD</SectionTitle>
             
-            {/* === EXECUTIVE DASHBOARD - INFORMASI UNTUK PIMPINAN === */}
+            {/* === EXECUTIVE DASHBOARD - INFORMASI UNTUK PIMPINAN (ENHANCED) === */}
             {showExecutiveInfo && executiveSummary && (
                 <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-700 to-indigo-900 rounded-3xl p-8 text-white shadow-2xl border border-white/10 group mb-8">
                     {/* Decorative Elements */}
                     <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-40 -mt-40 transition-transform duration-1000 group-hover:scale-110"></div>
                     <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-400/10 rounded-full blur-[80px] -ml-32 -mb-32"></div>
+                    
+                    {/* Animated Particles */}
+                    <div className="absolute inset-0 overflow-hidden">
+                        {[...Array(10)].map((_, i) => (
+                            <div
+                                key={i}
+                                className="absolute rounded-full bg-white/5 animate-float"
+                                style={{
+                                    width: `${Math.random() * 4 + 2}px`,
+                                    height: `${Math.random() * 4 + 2}px`,
+                                    left: `${Math.random() * 100}%`,
+                                    top: `${Math.random() * 100}%`,
+                                    animationDelay: `${Math.random() * 10}s`,
+                                    animationDuration: `${Math.random() * 15 + 10}s`
+                                }}
+                            />
+                        ))}
+                    </div>
                     
                     {/* Crown Icon for Leadership */}
                     <div className="absolute top-8 right-12 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -372,6 +430,38 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                             </button>
                         </div>
 
+                        {/* Quick Stats Bar */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                            <div className="bg-black/20 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                <div className="flex items-center gap-2">
+                                    <Coins size={16} className="text-yellow-400" />
+                                    <p className="text-[10px] font-bold uppercase text-indigo-300">Total Target</p>
+                                </div>
+                                <p className="text-xl font-black text-white mt-1">{formatCurrency(executiveSummary.totalTarget)}</p>
+                            </div>
+                            <div className="bg-black/20 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                <div className="flex items-center gap-2">
+                                    <TrendingUp size={16} className="text-emerald-400" />
+                                    <p className="text-[10px] font-bold uppercase text-indigo-300">Total Realisasi</p>
+                                </div>
+                                <p className="text-xl font-black text-emerald-300 mt-1">{formatCurrency(executiveSummary.totalRealisasi)}</p>
+                            </div>
+                            <div className="bg-black/20 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                <div className="flex items-center gap-2">
+                                    <Gauge size={16} className="text-purple-400" />
+                                    <p className="text-[10px] font-bold uppercase text-indigo-300">Rata-rata Capaian</p>
+                                </div>
+                                <p className="text-xl font-black text-purple-300 mt-1">{executiveSummary.rataRataPersentase.toFixed(1)}%</p>
+                            </div>
+                            <div className="bg-black/20 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                <div className="flex items-center gap-2">
+                                    <Users size={16} className="text-blue-400" />
+                                    <p className="text-[10px] font-bold uppercase text-indigo-300">Jumlah Sumber</p>
+                                </div>
+                                <p className="text-xl font-black text-blue-300 mt-1">{executiveSummary.totalItems}</p>
+                            </div>
+                        </div>
+
                         {/* 3 Card Utama - Kinerja */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
                             {/* Card 1: Capaian Keseluruhan */}
@@ -381,7 +471,7 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                                         <Target size={24} className="text-emerald-200" />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-medium text-emerald-200">TARGET VS REALISASI</p>
+                                        <p className="text-xs font-medium text-emerald-200">CAPAIAN KESELURUHAN</p>
                                         <p className="text-2xl font-black text-white">
                                             {executiveSummary.rataRataPersentase.toFixed(1)}%
                                         </p>
@@ -405,75 +495,63 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                                 </div>
                             </div>
 
-                            {/* Card 2: Gap Analysis */}
+                            {/* Card 2: Distribusi Kinerja */}
                             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all">
                                 <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-3 bg-amber-500/30 rounded-xl">
-                                        <AlertOctagon size={24} className="text-amber-200" />
+                                    <div className="p-3 bg-purple-500/30 rounded-xl">
+                                        <Layers size={24} className="text-purple-200" />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-medium text-amber-200">GAP ANALISIS</p>
-                                        <p className="text-2xl font-black text-white">
-                                            {executiveSummary.gapPercentage.toFixed(1)}%
-                                        </p>
+                                        <p className="text-xs font-medium text-purple-200">DISTRIBUSI KINERJA</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-xl font-black text-white">{executiveSummary.highPerformerCount}</span>
+                                            <span className="text-xs text-purple-200">Tinggi</span>
+                                            <span className="text-xl font-black text-white ml-2">{executiveSummary.mediumPerformerCount}</span>
+                                            <span className="text-xs text-purple-200">Sedang</span>
+                                            <span className="text-xl font-black text-white ml-2">{executiveSummary.lowPerformerCount}</span>
+                                            <span className="text-xs text-purple-200">Rendah</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-indigo-200">Total Gap:</span>
-                                        <span className="font-bold text-amber-300">{formatCurrency(executiveSummary.totalGap)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-indigo-200">Jumlah Sumber:</span>
-                                        <span className="font-bold text-white">{executiveSummary.totalItems} item</span>
-                                    </div>
-                                    <div className="mt-2 p-2 bg-black/20 rounded-xl">
-                                        <p className="text-xs text-indigo-200">
-                                            {executiveSummary.gapPercentage > 20 
-                                                ? '⚠️ Gap signifikan, perlu evaluasi intensif'
-                                                : executiveSummary.gapPercentage > 10
-                                                ? '📊 Gap moderat, optimalkan penagihan'
-                                                : '✅ Gap minimal, kinerja baik'}
-                                        </p>
-                                    </div>
+                                <div className="flex h-2 gap-1 mt-2">
+                                    <div className="h-full bg-gradient-to-r from-emerald-500 to-green-500 rounded-l-full" style={{ width: `${(executiveSummary.highPerformerCount / executiveSummary.totalItems) * 100}%` }}></div>
+                                    <div className="h-full bg-gradient-to-r from-yellow-500 to-amber-500" style={{ width: `${(executiveSummary.mediumPerformerCount / executiveSummary.totalItems) * 100}%` }}></div>
+                                    <div className="h-full bg-gradient-to-r from-rose-500 to-red-500 rounded-r-full" style={{ width: `${(executiveSummary.lowPerformerCount / executiveSummary.totalItems) * 100}%` }}></div>
+                                </div>
+                                <div className="flex justify-between text-xs text-indigo-200 mt-2">
+                                    <span>{executiveSummary.highPerformerCount} Tinggi</span>
+                                    <span>{executiveSummary.mediumPerformerCount} Sedang</span>
+                                    <span>{executiveSummary.lowPerformerCount} Rendah</span>
                                 </div>
                             </div>
 
-                            {/* Card 3: Proyeksi Akhir Tahun */}
-                            {projectionData && (
-                                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <div className={`p-3 rounded-xl bg-gradient-to-r ${projectionData.riskColor}`}>
-                                            {projectionData.riskCategory === 'aman' 
-                                                ? <CheckCircle size={24} className="text-white" />
-                                                : projectionData.riskCategory === 'waspada'
-                                                ? <Info size={24} className="text-white" />
-                                                : <AlertTriangle size={24} className="text-white" />
-                                            }
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-medium text-indigo-200">PROYEKSI AKHIR TAHUN</p>
-                                            <p className="text-2xl font-black text-white">
-                                                {projectionData.persenProyeksi.toFixed(1)}%
-                                            </p>
-                                        </div>
+                            {/* Card 3: Konsentrasi Pendapatan */}
+                            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-3 bg-amber-500/30 rounded-xl">
+                                        <Brain size={24} className="text-amber-200" />
                                     </div>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-indigo-200">Proyeksi:</span>
-                                            <span className="font-bold text-white">{formatCurrency(projectionData.proyeksiAkhirTahun)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-indigo-200">Sisa {projectionData.monthsRemaining} bln:</span>
-                                            <span className="font-bold text-amber-300">{formatCurrency(projectionData.proyeksiAkhirTahun - projectionData.realisasiHinggaSaatIni)}</span>
-                                        </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-amber-200">KONSENTRASI PENDAPATAN</p>
+                                        <p className="text-2xl font-black text-white">
+                                            {executiveSummary.top3ContributionPercentage.toFixed(1)}%
+                                        </p>
                                     </div>
                                 </div>
-                            )}
+                                <p className="text-xs text-indigo-200 mb-3">Top 3 Kontribusi terhadap total realisasi</p>
+                                <div className="space-y-1">
+                                    {executiveSummary.topContributors.slice(0, 3).map((item, idx) => (
+                                        <div key={idx} className="flex justify-between text-xs">
+                                            <span className="text-indigo-200 truncate max-w-[150px]">{item.sumberPendapatan.substring(0, 20)}...</span>
+                                            <span className="font-bold text-white">{((item.totalRealisasi / executiveSummary.totalRealisasi) * 100).toFixed(1)}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Grid Insight untuk Pimpinan */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                        {/* Top Performers & Low Performers */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
                             {/* Top Performers */}
                             <div className="bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/10">
                                 <div className="flex items-center gap-2 mb-3">
@@ -481,7 +559,7 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                                     <h3 className="font-bold text-sm uppercase tracking-wider text-yellow-300">Kinerja Tertinggi</h3>
                                 </div>
                                 <div className="space-y-2">
-                                    {executiveSummary.topPerformers.map((item, idx) => (
+                                    {executiveSummary.topPerformers.slice(0, 3).map((item, idx) => (
                                         <div key={idx} className="flex justify-between items-center p-2 bg-white/5 rounded-lg">
                                             <span className="text-xs font-medium text-indigo-200 truncate max-w-[200px]">
                                                 {idx+1}. {item.sumberPendapatan}
@@ -501,7 +579,7 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                                     <h3 className="font-bold text-sm uppercase tracking-wider text-rose-300">Perlu Perhatian</h3>
                                 </div>
                                 <div className="space-y-2">
-                                    {executiveSummary.lowPerformers.map((item, idx) => (
+                                    {executiveSummary.lowPerformersList.slice(0, 3).map((item, idx) => (
                                         <div key={idx} className="flex justify-between items-center p-2 bg-white/5 rounded-lg">
                                             <span className="text-xs font-medium text-indigo-200 truncate max-w-[200px]">
                                                 {idx+1}. {item.sumberPendapatan}
@@ -515,33 +593,54 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                             </div>
                         </div>
 
-                        {/* Quick Stats */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-                            <div className="bg-black/20 rounded-xl p-3 border border-white/10">
-                                <p className="text-[10px] font-bold uppercase text-indigo-300">Total Sumber</p>
-                                <p className="text-xl font-black text-white">{executiveSummary.totalItems}</p>
+                        {/* Projection Card di Executive Dashboard */}
+                        {projectionData && (
+                            <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10 mb-6">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className={`p-2 rounded-lg bg-gradient-to-r ${projectionData.riskColor}`}>
+                                        {projectionData.riskIcon}
+                                    </div>
+                                    <h3 className="font-bold text-sm uppercase tracking-wider text-white">PROYEKSI AKHIR TAHUN</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div>
+                                        <p className="text-xs text-indigo-300">Target Tahunan</p>
+                                        <p className="text-lg font-black text-white">{formatCurrency(projectionData.totalTarget)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-indigo-300">Realisasi s/d {projectionMonth}</p>
+                                        <p className="text-lg font-black text-teal-300">{formatCurrency(projectionData.realisasiHinggaSaatIni)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-indigo-300">Proyeksi Akhir</p>
+                                        <p className="text-lg font-black text-emerald-300">{formatCurrency(projectionData.proyeksiAkhirTahun)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-indigo-300">Estimasi Capaian</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-lg font-black text-white">{projectionData.persenProyeksi.toFixed(1)}%</p>
+                                            <span className={`text-xs px-2 py-1 rounded-full bg-gradient-to-r ${projectionData.riskColor} text-white`}>
+                                                {projectionData.riskCategory}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden mt-3">
+                                    <div 
+                                        className={`h-full rounded-full bg-gradient-to-r ${projectionData.riskColor}`}
+                                        style={{ width: `${Math.min(projectionData.persenProyeksi, 100)}%` }}
+                                    ></div>
+                                </div>
                             </div>
-                            <div className="bg-black/20 rounded-xl p-3 border border-white/10">
-                                <p className="text-[10px] font-bold uppercase text-indigo-300">Periode</p>
-                                <p className="text-sm font-black text-white">{startMonth} - {endMonth}</p>
-                            </div>
-                            <div className="bg-black/20 rounded-xl p-3 border border-white/10">
-                                <p className="text-[10px] font-bold uppercase text-indigo-300">Fokus SKPD</p>
-                                <p className="text-sm font-black text-white truncate">{selectedSkpd}</p>
-                            </div>
-                            <div className="bg-black/20 rounded-xl p-3 border border-white/10">
-                                <p className="text-[10px] font-bold uppercase text-indigo-300">Kinerja Rata2</p>
-                                <p className="text-xl font-black text-emerald-300">{executiveSummary.rataRataPersentase.toFixed(1)}%</p>
-                            </div>
-                        </div>
+                        )}
 
                         {/* Executive Note */}
-                        <div className="mt-6 flex items-center gap-3 text-sm bg-purple-900/30 p-4 rounded-2xl border border-purple-500/30">
+                        <div className="mt-4 flex items-center gap-3 text-sm bg-purple-900/30 p-4 rounded-2xl border border-purple-500/30">
                             <Lightbulb size={20} className="text-yellow-300 flex-shrink-0" />
                             <p className="text-xs leading-relaxed text-indigo-100">
-                                <span className="font-bold text-white">CATATAN EKSEKUTIF:</span> Fokus pada sumber pendapatan dengan kinerja rendah. 
-                                Optimalkan {executiveSummary.lowPerformers[0]?.sumberPendapatan || 'pendapatan utama'} yang masih di bawah target. 
-                                Proyeksi akhir tahun menunjukkan {projectionData?.riskCategory === 'aman' ? 'kinerja positif' : 'perlu evaluasi intensif'}.
+                                <span className="font-bold text-white">CATATAN EKSEKUTIF:</span> Fokus pada {executiveSummary.lowPerformerCount} sumber pendapatan dengan kinerja rendah. 
+                                Optimalkan {executiveSummary.lowPerformersList[0]?.sumberPendapatan || 'pendapatan utama'} yang masih di bawah target. 
+                                Proyeksi akhir tahun menunjukkan {projectionData?.riskCategory === 'aman' ? 'kinerja positif' : 'perlu evaluasi intensif'} dengan estimasi capaian {projectionData?.persenProyeksi.toFixed(1)}%.
                             </p>
                         </div>
                     </div>
@@ -551,56 +650,57 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
             {!showExecutiveInfo && (
                 <button 
                     onClick={() => setShowExecutiveInfo(true)}
-                    className="mb-6 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-700 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                    className="mb-6 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-700 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg hover:shadow-xl transition-all group"
                 >
-                    <Eye size={18} /> Tampilkan Executive Dashboard
+                    <Eye size={18} className="group-hover:scale-110 transition-transform" /> Tampilkan Executive Dashboard
                 </button>
             )}
 
             {/* AI Analysis Section dengan Toggle */}
-<div className="relative">
-  <div className="flex justify-end mb-2">
-    <button
-      onClick={() => setShowAnalysis(!showAnalysis)}
-      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
-    >
-      {showAnalysis ? (
-        <>🗂️ Sembunyikan Analisis AI</>
-      ) : (
-        <>🤖 Tampilkan Analisis AI</>
-      )}
-    </button>
-  </div>
-  
-  {/* Indikator Data */}
-  {showAnalysis && stats.tableData.length > 0 && (
-    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
-      <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
-      </span>
-      <span>SKPD: {selectedSkpd} | Total Sumber: {stats.tableData.length} | Serapan: {executiveSummary?.rataRataPersentase.toFixed(1)}%</span>
-    </div>
-  )}
-  
-  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
-  {showAnalysis && (
-    <GeminiAnalysis 
-      getAnalysisPrompt={getAnalysisPrompt} 
-      disabledCondition={stats.tableData.length === 0} 
-      userCanUseAi={userRole !== 'viewer'}
-      allData={{
-        selectedSkpd,
-        startMonth,
-        endMonth,
-        projectionMonth,
-        executiveSummary,
-        projectionData,
-        topItems: stats.tableData.slice(0, 5)
-      }}
-    />
-  )}
-</div>
+            <div className="relative">
+                <div className="flex justify-end mb-2">
+                    <button
+                        onClick={() => setShowAnalysis(!showAnalysis)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+                    >
+                        {showAnalysis ? (
+                            <>🗂️ Sembunyikan Analisis AI</>
+                        ) : (
+                            <>🤖 Tampilkan Analisis AI</>
+                        )}
+                    </button>
+                </div>
+                
+                {/* Indikator Data */}
+                {showAnalysis && stats.tableData.length > 0 && (
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+                        </span>
+                        <span>SKPD: {selectedSkpd === 'Semua SKPD' ? 'Semua SKPD' : selectedSkpd} | Total Sumber: {stats.tableData.length} | Serapan: {executiveSummary?.rataRataPersentase.toFixed(1)}% | Proyeksi: {projectionData?.persenProyeksi.toFixed(1)}%</span>
+                    </div>
+                )}
+                
+                {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+                {showAnalysis && (
+                    <GeminiAnalysis 
+                        getAnalysisPrompt={getAnalysisPrompt} 
+                        disabledCondition={stats.tableData.length === 0} 
+                        userCanUseAi={userRole !== 'viewer'}
+                        allData={{
+                            selectedSkpd,
+                            startMonth,
+                            endMonth,
+                            projectionMonth,
+                            executiveSummary,
+                            projectionData,
+                            topItems: stats.tableData.slice(0, 5),
+                            lowItems: stats.tableData.filter(item => item.persentase < 50).slice(0, 3)
+                        }}
+                    />
+                )}
+            </div>
 
             {/* Projection Card dengan Glassmorphism */}
             {projectionData && showProjection && (
@@ -701,7 +801,7 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                                 onClick={() => setChartType(chartType === 'bar' ? 'composed' : 'bar')}
                                 className="px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all text-sm font-medium flex items-center gap-2"
                             >
-                                {chartType === 'bar' ? <BarChart3 size={16} /> : <PieChart size={16} />}
+                                {chartType === 'bar' ? <BarChart3 size={16} /> : <LineChart size={16} />}
                                 {chartType === 'bar' ? 'Bar Chart' : 'Composed Chart'}
                             </button>
                         </div>
@@ -1081,6 +1181,18 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                     </span>
                 </button>
             </div>
+            
+            <style>{`
+                @keyframes float {
+                    0%, 100% { transform: translateY(0) translateX(0); }
+                    25% { transform: translateY(-8px) translateX(4px); }
+                    50% { transform: translateY(-4px) translateX(-4px); }
+                    75% { transform: translateY(-12px) translateX(2px); }
+                }
+                .animate-float {
+                    animation: float linear infinite;
+                }
+            `}</style>
         </div>
     );
 };

@@ -29,6 +29,9 @@ const SectionTitle = ({ children }) => (
     {children}
   </h2>
 );
+// Warna untuk chart
+const ECHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+
 
 const StatCard = ({ icon, title, target, realisasi, percentage, colorClass, rkud, nonRkud, rkudPercentage, nonRkudPercentage }) => {
   const colorStyles = {
@@ -321,7 +324,13 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
   const [activeTab, setActiveTab] = useState('overview');
   const [activeIndex, setActiveIndex] = useState(-1);
   const [showAnalysis, setShowAnalysis] = useState(true);
-  
+  const onPieEnter = (_, index) => {
+    setActiveIndex(index);
+  };
+
+  const onPieLeave = () => {
+    setActiveIndex(-1);
+  };
   if (!anggaran || !pendapatan || !realisasi || !realisasiPendapatan) {
     return (
       <div className="flex flex-col justify-center items-center h-96 gap-4">
@@ -435,6 +444,7 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
   const sumberDanaData = useMemo(() => {
     const danaMap = new Map();
 
+    
     // Mapping Pagu Anggaran
     (anggaran || []).forEach(item => {
         // Cek berbagai kemungkinan nama key dari API Backend
@@ -465,6 +475,27 @@ const DashboardView = ({ data = {}, theme, selectedYear, namaPemda, lastUpdate, 
 
     return Array.from(danaMap.values()).sort((a, b) => b.value - a.value);
   }, [anggaran, realisasi, realisasiNonRkud]);
+
+  // Data untuk grafik APBD utama
+const apbdChartData = useMemo(() => {
+    return [
+        {
+            name: 'Pendapatan',
+            Target: totalPendapatan,
+            Realisasi: totalRealisasiPendapatan
+        },
+        {
+            name: 'Belanja',
+            Target: totalAnggaran,
+            Realisasi: totalGabunganBelanja
+        },
+        {
+            name: 'Pembiayaan Netto',
+            Target: totalPenerimaanPembiayaan - totalPengeluaranPembiayaan,
+            Realisasi: 0 // Realisasi pembiayaan mungkin perlu disesuaikan
+        }
+    ];
+}, [totalPendapatan, totalRealisasiPendapatan, totalAnggaran, totalGabunganBelanja, totalPenerimaanPembiayaan, totalPengeluaranPembiayaan]);
 
   const anggaranPerSkpd = useMemo(() => {
     const skpdMap = new Map();

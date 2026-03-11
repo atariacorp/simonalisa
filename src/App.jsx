@@ -20,22 +20,17 @@ import {
   orderBy
 } from "firebase/firestore";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { useAuth, useData } from './hooks';
-import { menuItems, menuDescriptions } from './constants/menuItems';
-// Import dari firebase.js (konfigurasi terpusat)
+
+// Import SATU KALI dari setiap lokasi
 import { db, auth } from './utils/firebase';
-
-// Import dari hooks
-import { useAuth } from './hooks/useAuth';
-import { useData } from './hooks/useData';
-
-// Import dari constants
-import { menuItems, menuDescriptions } from './constants/menuItems';
-
-// Import dari utils
 import { formatCurrency } from './utils/formatCurrency';
-import { db, auth } from './utils/firebase';
 import { logActivity } from './utils/logActivity';
+
+// Import hooks
+import { useAuth, useData } from './hooks';
+
+// Import constants
+import { menuItems as menuItemsConfig, menuDescriptions as menuDescriptionsConfig } from './constants/menuItems';
 
 // Import komponen
 import SectionTitle from './components/SectionTitle';
@@ -77,24 +72,6 @@ import { uploadData, deleteMonthlyData, fetchData } from './services/firebaseSer
 // Import branding
 import { brandingConfig } from './assets/config/branding';
 
-// --- Activity Logging Function ---
-const logActivity = async (action, details = {}) => {
-    try {
-        const user = auth.currentUser;
-        if (!user) return;
-
-        await addDoc(collection(db, "logs"), {
-            action: action,
-            details: details,
-            userEmail: user.email,
-            userId: user.uid,
-            timestamp: new Date(),
-        });
-    } catch (error) {
-        console.error("Error logging activity:", error);
-    }
-};
-
 // --- Main App Component ---
 const App = () => {
   const [scriptsLoaded, setScriptsLoaded] = React.useState(false);
@@ -124,6 +101,10 @@ const App = () => {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [searchMenuTerm, setSearchMenuTerm] = React.useState('');
   const [activeView, setActiveView] = React.useState('dashboard');
+
+  // Gunakan menuItems dari import
+  const menuItems = menuItemsConfig;
+  const menuDescriptions = menuDescriptionsConfig;
 
   React.useEffect(() => {
     const loadScript = (src) => {
@@ -312,111 +293,6 @@ const App = () => {
       realisasiNonRkud: appData.realisasiNonRkud && Object.keys(appData.realisasiNonRkud).length > 0,
   };
 
-  const menuDescriptions = {
-    'dashboard': 'Menampilkan ringkasan visual APBD, termasuk total pendapatan, belanja, dan pembiayaan.',
-    'analisis-kualitas-belanja': 'Menganalisis komposisi belanja berdasarkan jenisnya (modal, pegawai, barang/jasa) untuk menilai kualitas alokasi anggaran.',
-    'mandatory-spending': 'Menganalisis pemenuhan alokasi belanja wajib, seperti porsi belanja pegawai terhadap total APBD.',
-    'analisis-potensi-silpa': 'Memproyeksikan potensi Sisa Lebih Perhitungan Anggaran (SiLPA) di akhir tahun berdasarkan realisasi bulanan.',
-    'analisis-lintas-tahun': 'Membandingkan data APBD antara dua tahun anggaran yang berbeda untuk melihat tren dan perubahan kinerja.',
-    'analisis-kinerja': 'Membandingkan kinerja penyerapan anggaran atau pencapaian pendapatan antar SKPD dalam dua tahun berbeda.',
-    'skpd-stats': 'Menampilkan statistik perbandingan antara pagu anggaran dan realisasi belanja untuk setiap SKPD.',
-    'skpd-pendapatan-stats': 'Menampilkan statistik perbandingan antara target dan realisasi pendapatan untuk setiap SKPD.',
-    'sumber-dana-stats': 'Merinci komposisi sumber pendanaan yang digunakan oleh masing-masing SKPD.',
-    'skpd-rekening-stats': 'Merinci pagu anggaran dan realisasi belanja hingga ke level rekening untuk setiap SKPD.',
-    'skpd-subkegiatan-stats': 'Merinci pagu anggaran dan realisasi belanja hingga ke level sub kegiatan beserta rincian rekening di dalamnya.',
-    'panduan': 'Panduan penggunaan aplikasi SIMONALISA.'
-  };
-  
-const menuItems = [
-    { 
-      id: 'dashboard-group', 
-      label: 'Dashboard', 
-      icon: LayoutDashboard,
-      subMenus: [
-          { id: 'dashboard', label: 'Dashboard Utama', icon: LayoutDashboard },
-          { id: 'analisis-kualitas-belanja', label: 'Analisis Belanja', icon: PieChartIcon },
-          { id: 'mandatory-spending', label: 'Mandatory Spending', icon: Building },
-          { id: 'laporan-tematik', label: 'Laporan Tematik', icon: BookCopy },
-          { id: 'analisis-potensi-silpa', label: 'Analisis Potensi SiLPA', icon: Shuffle },
-          { id: 'analisis-lintas-tahun', label: 'Analisis Lintas Tahun', icon: ArrowRightLeft },
-          { id: 'analisis-kinerja', label: 'Analisis Kinerja', icon: Award },
-          { id: 'skpd-stats', label: 'Statistik Belanja', icon: BarChartHorizontal },
-          { id: 'skpd-pendapatan-stats', label: 'Statistik Pendapatan', icon: TrendingUp },
-          { id: 'sumber-dana-stats', label: 'Statistik Sumber Dana', icon: Droplets },
-          { id: 'skpd-rekening-stats', label: 'Statistik Rekening', icon: FileText },
-          { id: 'skpd-subkegiatan-stats', label: 'Statistik Sub Kegiatan', icon: FileText },
-          { id: 'panduan', label: 'Panduan', icon: BookOpen, requiredRole: ['admin', 'editor', 'viewer'] }
-      ]
-    },
-    {
-      id: 'referensi-group',
-      label: 'Referensi',
-      icon: BookMarked,
-      requiredRole: ['admin', 'editor', 'viewer'],
-      subMenus: [
-        { id: 'referensi-akun', label: 'Akun Kode Rekening', icon: FileText },
-        { id: 'penandaan-mandatory', label: 'Penandaan Mandatory', icon: BookCopy },
-        { id: 'penandaan-tematik', label: 'Penandaan Tematik', icon: Tag },
-        { id: 'referensi-penandaan', label: 'Penandaan Anggaran', icon: Briefcase },
-        { id: 'proses-penandaan', label: 'Proses Penandaan', icon: Tag },
-      ]
-    },
-    { 
-        id: 'penganggaran-group',
-        label: 'Penganggaran',
-        icon: Archive,
-        requiredRole: ['admin', 'editor'],
-        subMenus: [
-            { id: 'anggaran', label: 'Anggaran', icon: Archive, statusKey: 'anggaran' },
-            { id: 'pendapatan', label: 'Target Pendapatan', icon: DollarSign, statusKey: 'pendapatan' },
-            { id: 'penerimaanPembiayaan', label: 'Penerimaan Pembiayaan', icon: Globe, statusKey: 'penerimaanPembiayaan' },
-            { id: 'pengeluaranPembiayaan', label: 'Pengeluaran Pembiayaan', icon: MinusCircle, statusKey: 'pengeluaranPembiayaan' },
-        ]
-    },
-    { 
-        id: 'penatausahaan-group',
-        label: 'Penatausahaan',
-        icon: BookCopy,
-        requiredRole: ['admin', 'editor'],
-        subMenus: [
-            { id: 'realisasi', label: 'Realisasi Belanja', icon: ArrowDownCircle, statusKey: 'realisasi' },
-            { id: 'realisasiPendapatan', label: 'Realisasi Pendapatan', icon: TrendingUp, statusKey: 'realisasiPendapatan' },
-            { id: 'realisasiNonRkud', label: 'Realisasi Non RKUD', icon: Shuffle, statusKey: 'realisasiNonRkud' },
-        ]
-    },
-    {
-        id: 'pengaturan',
-        label: 'Pengaturan',
-        icon: Settings,
-    },
-    {
-        id: 'activity-log',
-        label: 'Log Aktivitas',
-        icon: History,
-        requiredRole: ['admin']
-    }
-  ];
-
-  // Filter menu berdasarkan pencarian
-  const filteredMenuItems = React.useMemo(() => {
-    if (!searchMenuTerm) return menuItems;
-    
-    return menuItems.map(item => {
-      if (item.subMenus) {
-        const filteredSubMenus = item.subMenus.filter(sub => 
-          sub.label.toLowerCase().includes(searchMenuTerm.toLowerCase())
-        );
-        if (filteredSubMenus.length > 0) {
-          return { ...item, subMenus: filteredSubMenus };
-        }
-      }
-      if (item.label.toLowerCase().includes(searchMenuTerm.toLowerCase())) {
-        return item;
-      }
-      return null;
-    }).filter(Boolean);
-  }, [searchMenuTerm]);
-
   const ANGGARAN_MAPPING = {
       NamaSKPD: ['Nama SKPD'],
       NamaSubUnit: ['Nama Sub Unit'],
@@ -497,150 +373,26 @@ const menuItems = [
   const REALISASI_NON_RKUD_INSTRUCTION = "Ambil Data Dari SIPD AKLAP (Data Jurnal). Sesuaikan isi data sesuai format. Pastikan semua pencairan melalui Non RKUD. (BOK, BOS, BOSP, TPG, Tamsil, BLUD).";
   const REALISASI_NON_RKUD_FILTER = null;
   
-  if (loadError) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-red-100 text-red-700 p-4">Error: {loadError}</div>;
-  }
-
-  if (isAuthLoading || !scriptsLoaded) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900"><div className="text-lg font-medium text-gray-600 dark:text-gray-300">Memuat aplikasi...</div></div>;
-  }
-  
-  if (!user) {
-      return <LoginView theme={theme} />;
-  }
-  
-  const handleUpload = async (parsedData, month, setProgress) => {
-      if (userRole !== 'admin') {
-          throw new Error("Anda tidak memiliki izin untuk mengunggah data.");
-      }
-      
-      const CHUNK_SIZE = 400;
-      const collectionName = activeView;
-      const collectionRef = collection(db, "publicData", String(selectedYear), collectionName);
-
-      setProgress('Menghapus data lama...');
-      const oldDocsQuery = query(collectionRef, where("month", "==", month || 'annual'));
-      const oldDocsSnapshot = await getDocs(oldDocsQuery);
-      const deleteBatch = writeBatch(db);
-      oldDocsSnapshot.forEach(doc => deleteBatch.delete(doc.ref));
-      await deleteBatch.commit();
-
-      const chunks = [];
-      for (let i = 0; i < parsedData.length; i += CHUNK_SIZE) {
-          chunks.push(parsedData.slice(i, i + CHUNK_SIZE));
-      }
-
-      setProgress(`Membagi data menjadi ${chunks.length} bagian...`);
-
-      for (let i = 0; i < chunks.length; i++) {
-          setProgress(`Mengunggah bagian ${i + 1} dari ${chunks.length}...`);
-          const chunk = chunks[i];
-          const docPayload = {
-              month: month || 'annual',
-              data: chunk,
-          };
-          await addDoc(collectionRef, docPayload);
-      }
-
-      if (collectionName === 'realisasi' || collectionName === 'realisasiPendapatan') {
-        const metadataRef = doc(db, "publicData", String(selectedYear), "metadata", "lastUpdate");
-        await setDoc(metadataRef, {
-            timestamp: new Date(),
-            updatedBy: auth.currentUser.email
-        });
-      }
-  };
-
-  const handleDeleteMonthlyData = async (collectionName, month, setProgress) => {
-    if (userRole !== 'admin') {
-      setProgress('Error: Anda tidak memiliki izin untuk menghapus data.');
-      setTimeout(() => setProgress(''), 5000);
-      return;
-    }
-    if (!window.confirm(`APAKAH ANDA YAKIN? Tindakan ini akan menghapus semua data ${collectionName.replace(/([A-Z])/g, ' $1')} untuk bulan ${month} pada tahun ${selectedYear}. Tindakan ini tidak dapat diurungkan.`)) {
-      return;
-    }
-
-    setIsDeleting(true);
-    setProgress('Mempersiapkan penghapusan data...');
-
-    try {
-      const BATCH_SIZE = 400;
-      const collectionRef = collection(db, "publicData", String(selectedYear), collectionName);
-      const oldDocsQuery = query(collectionRef, where("month", "==", month));
-      const oldDocsSnapshot = await getDocs(oldDocsQuery);
-      
-      if (oldDocsSnapshot.empty) {
-        setProgress('Tidak ada data untuk dihapus pada bulan ini.');
-        setTimeout(() => setProgress(''), 3000);
-        setIsDeleting(false);
-        return;
-      }
-
-      const deleteBatches = [];
-      let currentBatch = writeBatch(db);
-      let currentBatchSize = 0;
-
-      oldDocsSnapshot.forEach((doc) => {
-        currentBatch.delete(doc.ref);
-        currentBatchSize++;
-        if (currentBatchSize >= BATCH_SIZE) {
-          deleteBatches.push(currentBatch);
-          currentBatch = writeBatch(db);
-          currentBatchSize = 0;
-        }
-      });
-
-      if (currentBatchSize > 0) {
-        deleteBatches.push(currentBatch);
-      }
-
-      for (let i = 0; i < deleteBatches.length; i++) {
-        setProgress(`Menghapus data bulan ${month} (batch ${i + 1} dari ${deleteBatches.length})...`);
-        await deleteBatches[i].commit();
-      }
-      
-      setProgress(`Data untuk bulan ${month} berhasil dihapus.`);
-      await logActivity('Hapus Data Bulanan', { dataType: collectionName, month: month, status: 'Berhasil' });
-
-    } catch (err) {
-      console.error("Error deleting monthly data:", err);
-      setProgress(`Gagal menghapus data: ${err.message}`);
-      await logActivity('Hapus Data Bulanan', { dataType: collectionName, month: month, status: 'Gagal', error: err.message });
-    } finally {
-      setIsDeleting(false);
-      setTimeout(() => setProgress(''), 5000);
-    }
-  };
-
-  const handleReferensiUpload = async (parsedData, dataType, setProgress) => {
-    if (userRole !== 'admin') {
-        throw new Error("Anda tidak memiliki izin untuk mengunggah data referensi.");
-    }
+  // Filter menu berdasarkan pencarian
+  const filteredMenuItems = React.useMemo(() => {
+    if (!searchMenuTerm) return menuItems;
     
-    const CHUNK_SIZE = 400;
-    const dataRef = collection(db, "publicData", String(selectedYear), `referensi-${dataType}`);
+    return menuItems.map(item => {
+      if (item.subMenus) {
+        const filteredSubMenus = item.subMenus.filter(sub => 
+          sub.label.toLowerCase().includes(searchMenuTerm.toLowerCase())
+        );
+        if (filteredSubMenus.length > 0) {
+          return { ...item, subMenus: filteredSubMenus };
+        }
+      }
+      if (item.label.toLowerCase().includes(searchMenuTerm.toLowerCase())) {
+        return item;
+      }
+      return null;
+    }).filter(Boolean);
+  }, [searchMenuTerm, menuItems]);
 
-    setProgress('Menghapus data referensi lama...');
-    const oldDocsSnapshot = await getDocs(dataRef);
-    const deleteBatch = writeBatch(db);
-    oldDocsSnapshot.forEach(doc => deleteBatch.delete(doc.ref));
-    await deleteBatch.commit();
-
-    const chunks = [];
-    for (let i = 0; i < parsedData.length; i += CHUNK_SIZE) {
-        chunks.push(parsedData.slice(i, i + CHUNK_SIZE));
-    }
-
-    setProgress(`Membagi data menjadi ${chunks.length} bagian...`);
-
-    for (let i = 0; i < chunks.length; i++) {
-        setProgress(`Mengunggah bagian ${i + 1} dari ${chunks.length}...`);
-        const chunk = chunks[i];
-        await addDoc(dataRef, { rows: chunk });
-    }
-  };
-  
   const getAnggaranAnalysisPrompt = (period, data, customQuery) => {
       if (customQuery) {
           return `Berdasarkan data anggaran yang tersedia, berikan analisis untuk permintaan berikut: "${customQuery}"`;
@@ -750,6 +502,174 @@ const menuItems = [
       `;
   };
 
+  const handleUpload = async (parsedData, month, setProgress) => {
+      if (userRole !== 'admin') {
+          throw new Error("Anda tidak memiliki izin untuk mengunggah data.");
+      }
+      
+      const CHUNK_SIZE = 400;
+      const collectionName = activeView;
+      const collectionRef = collection(db, "publicData", String(selectedYear), collectionName);
+
+      setProgress('Menghapus data lama...');
+      const oldDocsQuery = query(collectionRef, where("month", "==", month || 'annual'));
+      const oldDocsSnapshot = await getDocs(oldDocsQuery);
+      const deleteBatch = writeBatch(db);
+      oldDocsSnapshot.forEach(doc => deleteBatch.delete(doc.ref));
+      await deleteBatch.commit();
+
+      const chunks = [];
+      for (let i = 0; i < parsedData.length; i += CHUNK_SIZE) {
+          chunks.push(parsedData.slice(i, i + CHUNK_SIZE));
+      }
+
+      setProgress(`Membagi data menjadi ${chunks.length} bagian...`);
+
+      for (let i = 0; i < chunks.length; i++) {
+          setProgress(`Mengunggah bagian ${i + 1} dari ${chunks.length}...`);
+          const chunk = chunks[i];
+          const docPayload = {
+              month: month || 'annual',
+              data: chunk,
+          };
+          await addDoc(collectionRef, docPayload);
+      }
+
+      if (collectionName === 'realisasi' || collectionName === 'realisasiPendapatan') {
+        const metadataRef = doc(db, "publicData", String(selectedYear), "metadata", "lastUpdate");
+        await setDoc(metadataRef, {
+            timestamp: new Date(),
+            updatedBy: auth.currentUser.email
+        });
+      }
+
+      await logActivity('Unggah Data', { 
+        dataType: collectionName, 
+        month: month, 
+        year: selectedYear,
+        totalRows: parsedData.length 
+      });
+  };
+
+  const handleDeleteMonthlyData = async (collectionName, month, setProgress) => {
+    if (userRole !== 'admin') {
+      setProgress('Error: Anda tidak memiliki izin untuk menghapus data.');
+      setTimeout(() => setProgress(''), 5000);
+      return;
+    }
+    if (!window.confirm(`APAKAH ANDA YAKIN? Tindakan ini akan menghapus semua data ${collectionName.replace(/([A-Z])/g, ' $1')} untuk bulan ${month} pada tahun ${selectedYear}. Tindakan ini tidak dapat diurungkan.`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setProgress('Mempersiapkan penghapusan data...');
+
+    try {
+      const BATCH_SIZE = 400;
+      const collectionRef = collection(db, "publicData", String(selectedYear), collectionName);
+      const oldDocsQuery = query(collectionRef, where("month", "==", month));
+      const oldDocsSnapshot = await getDocs(oldDocsQuery);
+      
+      if (oldDocsSnapshot.empty) {
+        setProgress('Tidak ada data untuk dihapus pada bulan ini.');
+        setTimeout(() => setProgress(''), 3000);
+        setIsDeleting(false);
+        return;
+      }
+
+      const deleteBatches = [];
+      let currentBatch = writeBatch(db);
+      let currentBatchSize = 0;
+
+      oldDocsSnapshot.forEach((doc) => {
+        currentBatch.delete(doc.ref);
+        currentBatchSize++;
+        if (currentBatchSize >= BATCH_SIZE) {
+          deleteBatches.push(currentBatch);
+          currentBatch = writeBatch(db);
+          currentBatchSize = 0;
+        }
+      });
+
+      if (currentBatchSize > 0) {
+        deleteBatches.push(currentBatch);
+      }
+
+      for (let i = 0; i < deleteBatches.length; i++) {
+        setProgress(`Menghapus data bulan ${month} (batch ${i + 1} dari ${deleteBatches.length})...`);
+        await deleteBatches[i].commit();
+      }
+      
+      setProgress(`Data untuk bulan ${month} berhasil dihapus.`);
+      await logActivity('Hapus Data Bulanan', { 
+        dataType: collectionName, 
+        month: month, 
+        year: selectedYear,
+        status: 'Berhasil' 
+      });
+
+    } catch (err) {
+      console.error("Error deleting monthly data:", err);
+      setProgress(`Gagal menghapus data: ${err.message}`);
+      await logActivity('Hapus Data Bulanan', { 
+        dataType: collectionName, 
+        month: month, 
+        year: selectedYear,
+        status: 'Gagal', 
+        error: err.message 
+      });
+    } finally {
+      setIsDeleting(false);
+      setTimeout(() => setProgress(''), 5000);
+    }
+  };
+
+  const handleReferensiUpload = async (parsedData, dataType, setProgress) => {
+    if (userRole !== 'admin') {
+        throw new Error("Anda tidak memiliki izin untuk mengunggah data referensi.");
+    }
+    
+    const CHUNK_SIZE = 400;
+    const dataRef = collection(db, "publicData", String(selectedYear), `referensi-${dataType}`);
+
+    setProgress('Menghapus data referensi lama...');
+    const oldDocsSnapshot = await getDocs(dataRef);
+    const deleteBatch = writeBatch(db);
+    oldDocsSnapshot.forEach(doc => deleteBatch.delete(doc.ref));
+    await deleteBatch.commit();
+
+    const chunks = [];
+    for (let i = 0; i < parsedData.length; i += CHUNK_SIZE) {
+        chunks.push(parsedData.slice(i, i + CHUNK_SIZE));
+    }
+
+    setProgress(`Membagi data menjadi ${chunks.length} bagian...`);
+
+    for (let i = 0; i < chunks.length; i++) {
+        setProgress(`Mengunggah bagian ${i + 1} dari ${chunks.length}...`);
+        const chunk = chunks[i];
+        await addDoc(dataRef, { rows: chunk });
+    }
+
+    await logActivity('Unggah Data Referensi', { 
+      dataType: dataType, 
+      year: selectedYear,
+      totalRows: parsedData.length 
+    });
+  };
+  
+  if (loadError) {
+    return <div className="h-screen w-screen flex items-center justify-center bg-red-100 text-red-700 p-4">Error: {loadError}</div>;
+  }
+
+  if (isAuthLoading || !scriptsLoaded) {
+    return <div className="h-screen w-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900"><div className="text-lg font-medium text-gray-600 dark:text-gray-300">Memuat aplikasi...</div></div>;
+  }
+  
+  if (!user) {
+      return <LoginView theme={theme} />;
+  }
+
   const renderView = () => {
     switch (activeView) {
       case 'dashboard': return <DashboardView data={allData} theme={theme} selectedYear={selectedYear} namaPemda={namaPemda} lastUpdate={lastUpdate} userRole={userRole} />;
@@ -761,7 +681,16 @@ const menuItems = [
       case 'analisis-potensi-silpa': return <AnalisisPotensiSiLPAView data={allData} theme={theme} selectedYear={selectedYear} userRole={userRole} />;
       case 'skpd-stats': return <SkpdBelanjaStatsView data={allData} theme={theme} namaPemda={namaPemda} userRole={userRole} />;
       case 'skpd-pendapatan-stats': return <SkpdPendapatanStatsView data={allData} theme={theme} namaPemda={namaPemda} userRole={userRole} />;
-      case 'analisis-lintas-tahun': return <AnalisisLintasTahunView theme={theme} user={user} selectedYear={selectedYear} namaPemda={namaPemda} />;
+      case 'analisis-lintas-tahun': 
+        return (
+          <AnalisisLintasTahunView 
+            theme={theme} 
+            user={user} 
+            selectedYear={selectedYear} 
+            namaPemda={namaPemda}
+            data={allData}
+          />
+        );
       case 'skpd-rekening-stats': return <SkpdRekeningStatsView data={allData} theme={theme} namaPemda={namaPemda} userRole={userRole} />;
       case 'skpd-subkegiatan-stats': return <SkpdSubKegiatanStatsView data={allData} theme={theme} namaPemda={namaPemda} userRole={userRole} />;
       case 'referensi-akun': return <ReferensiAkunView theme={theme} userRole={userRole} selectedYear={selectedYear} onUpload={handleReferensiUpload} />;

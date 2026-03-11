@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Download, ChevronDown, ChevronRight } from 'lucide-react';
-import ProgressCircle from './components/ProgressCircle';
-import Pagination from './components/Pagination';
+import ProgressCircle from './ProgressCircle';
+import Pagination from './Pagination';
 // import GeminiAnalysis from './components/GeminiAnalysis'; // Akan diimpor setelah komponen ini dibuat
 
 // Sementara definisikan formatCurrency di sini (nanti akan dipindah ke utils)

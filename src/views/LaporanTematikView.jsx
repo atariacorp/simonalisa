@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import SectionTitle from './components/SectionTitle';
-import GeminiAnalysis from './components/GeminiAnalysis';
-import Pagination from './components/Pagination';
+import SectionTitle from '../components/SectionTitle';
+import GeminiAnalysis from '../components/GeminiAnalysis';
+import Pagination from '../components/Pagination';
 import { 
     ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, 
     Tooltip, Legend, ResponsiveContainer, Area
@@ -11,8 +11,8 @@ import {
     ArrowUpDown, Wallet, TrendingUp, Activity, Layers
 } from 'lucide-react';
 import { collection, onSnapshot, query } from "firebase/firestore";
-import { db } from './utils/firebase';
-import { formatCurrency } from './utils/formatCurrency';
+import { db } from '../utils/firebase';
+import { formatCurrency } from '../utils/formatCurrency';
 
 // --- STYLING CONSTANTS FOR GLASSMORPHISM ---
 const glassCard = "bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] rounded-2xl";

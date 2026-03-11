@@ -41,9 +41,9 @@ import {
   Zap
 } from 'lucide-react';
 
-// ===== TAMBAHKAN INI =====
+// ===== IMPORT GEMINI ANALYSIS =====
 import GeminiAnalysis from '../components/GeminiAnalysis';
-// ===== END TAMBAHAN =====
+// ===== END IMPORT =====
 
 // --- UTILITIES ---
 const formatCurrency = (value) => {
@@ -161,9 +161,9 @@ const AnalisisPotensiSiLPAView = ({ data = {}, theme, selectedYear, userRole }) 
         realisasiNonRkud = {} 
     } = data;
 
-    // ===== TAMBAHKAN STATE UNTUK TOGGLE ANALISIS =====
+    // ===== STATE UNTUK TOGGLE ANALISIS AI (LOKAL) =====
     const [showAnalysis, setShowAnalysis] = useState(true);
-    // ===== END TAMBAHAN =====
+    // ===== END STATE =====
 
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     const COLORS = {
@@ -281,44 +281,43 @@ const AnalisisPotensiSiLPAView = ({ data = {}, theme, selectedYear, userRole }) 
     }, [searchTerm, riskLevel]);
 
     const getAnalysisPrompt = (query, allData) => {
-    // Jika user mengirim query khusus
-    if (query && query.trim() !== '') {
-        return `Berdasarkan data potensi SiLPA tahun ${selectedYear}, jawab pertanyaan ini: ${query}`;
-    }
-    
-    // Analisis default
-    if (!silpaData.tableData || silpaData.tableData.length === 0) {
-        return "Data tidak cukup untuk dianalisis.";
-    }
-    
-    const top5 = silpaData.tableData.slice(0, 5);
-    const totalAnggaran = silpaData.totals.totalAnggaran;
-    const totalPotensiSiLPA = silpaData.totals.potensiSiLPA;
-    const persenSiLPA = totalAnggaran > 0 ? ((totalPotensiSiLPA / totalAnggaran) * 100).toFixed(2) : 0;
-    
-    return `ANALISIS POTENSI SILPA DAERAH
-TAHUN: ${selectedYear}
-BULAN PROYEKSI: ${projectionMonth}
-PERIODE ANALISIS: ${startMonth} - ${endMonth}
+        // Jika user mengirim query khusus
+        if (query && query.trim() !== '') {
+            return `Berdasarkan data potensi SiLPA tahun ${selectedYear}, jawab pertanyaan ini: ${query}`;
+        }
+        
+        // Analisis default
+        if (!silpaData.tableData || silpaData.tableData.length === 0) {
+            return "Data tidak cukup untuk dianalisis.";
+        }
+        
+        const top5 = silpaData.tableData.slice(0, 5);
+        const totalAnggaran = silpaData.totals.totalAnggaran;
+        const totalPotensiSiLPA = silpaData.totals.potensiSiLPA;
+        const persenSiLPA = totalAnggaran > 0 ? ((totalPotensiSiLPA / totalAnggaran) * 100).toFixed(2) : 0;
+        
+        return `ANALISIS POTENSI SILPA DAERAH
+    TAHUN: ${selectedYear}
+    BULAN PROYEKSI: ${projectionMonth}
 
-DATA RINGKAS:
-- Total Pagu Anggaran: ${formatCurrency(totalAnggaran)}
-- Estimasi Potensi SiLPA: ${formatCurrency(totalPotensiSiLPA)} (${persenSiLPA}%)
-- Total SKPD Dianalisis: ${silpaData.tableData.length} SKPD
-- Bulan dengan Data: ${silpaData.monthsPassed} bulan
-- Sisa Bulan: ${silpaData.monthsRemaining} bulan
+    DATA RINGKAS:
+    - Total Pagu Anggaran: ${formatCurrency(totalAnggaran)}
+    - Estimasi Potensi SiLPA: ${formatCurrency(totalPotensiSiLPA)} (${persenSiLPA}%)
+    - Total SKPD Dianalisis: ${silpaData.tableData.length} SKPD
+    - Bulan dengan Data: ${silpaData.monthsPassed} bulan
+    - Sisa Bulan: ${silpaData.monthsRemaining} bulan
 
-SKPD DENGAN POTENSI SILPA TERTINGGI:
-${top5.map((item, i) => `${i+1}. ${item.skpd}: ${formatCurrency(item.potensiSiLPA)} (${item.persenSiLPA.toFixed(2)}%)`).join('\n')}
+    SKPD DENGAN POTENSI SILPA TERTINGGI:
+    ${top5.map((item, i) => `${i+1}. ${item.skpd}: ${formatCurrency(item.potensiSiLPA)} (${item.persenSiLPA.toFixed(2)}%)`).join('\n')}
 
-BERIKAN ANALISIS MENDALAM MENGENAI:
-1. Peringatan Utama: Identifikasi 3 SKPD dengan risiko SiLPA tertinggi.
-2. Evaluasi Proyeksi: Apakah estimasi SiLPA ${persenSiLPA}% tergolong wajar atau perlu perhatian khusus?
-3. Rekomendasi Strategis: 3 langkah konkret untuk memitigasi potensi SiLPA.
-4. Catatan Tambahan: Poin penting untuk rapat pimpinan terkait percepatan realisasi.
+    BERIKAN ANALISIS MENDALAM MENGENAI:
+    1. Peringatan Utama: Identifikasi 3 SKPD dengan risiko SiLPA tertinggi.
+    2. Evaluasi Proyeksi: Apakah estimasi SiLPA ${persenSiLPA}% tergolong wajar atau perlu perhatian khusus?
+    3. Rekomendasi Strategis: 3 langkah konkret untuk memitigasi potensi SiLPA.
+    4. Catatan Tambahan: Poin penting untuk rapat pimpinan terkait percepatan realisasi.
 
-Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
-};
+    Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
+    };
 
     const handleDownloadExcel = () => {
         if (!silpaData.tableData || silpaData.tableData.length === 0) return;
@@ -473,52 +472,50 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
             )}
 
             {/* AI Analysis Section dengan Toggle */}
-<div className="relative">
-  <div className="flex justify-end mb-2">
-    <button
-      onClick={() => setShowAnalysis(!showAnalysis)}
-      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
-    >
-      {showAnalysis ? (
-        <>🗂️ Sembunyikan Analisis AI</>
-      ) : (
-        <>🤖 Tampilkan Analisis AI</>
-      )}
-    </button>
-  </div>
-  
-  {/* Indikator Data */}
-  {showAnalysis && silpaData.tableData && silpaData.tableData.length > 0 && (
-    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
-      <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-      </span>
-      <span>Data: {silpaData.tableData.length} SKPD | Proyeksi: {projectionMonth} | Risiko: {riskLevel}</span>
-    </div>
-  )}
-  
-  {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
-  {showAnalysis && (
-    <GeminiAnalysis 
-      getAnalysisPrompt={getAnalysisPrompt} 
-      disabledCondition={!silpaData.tableData || silpaData.tableData.length === 0} 
-      userCanUseAi={userRole !== 'viewer'}
-      allData={{
-        selectedYear,
-        projectionMonth,
-        startMonth,
-        endMonth,
-        totalAnggaran: silpaData.totals.totalAnggaran,
-        totalPotensiSiLPA: silpaData.totals.potensiSiLPA,
-        monthsPassed: silpaData.monthsPassed,
-        monthsRemaining: silpaData.monthsRemaining,
-        totalSKPD: silpaData.tableData.length,
-        topSKPD: silpaData.tableData.slice(0, 5)
-      }}
-    />
-  )}
-</div>
+            <div className="relative">
+                <div className="flex justify-end mb-2">
+                    <button
+                        onClick={() => setShowAnalysis(!showAnalysis)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+                    >
+                        {showAnalysis ? (
+                            <>🗂️ Sembunyikan Analisis AI</>
+                        ) : (
+                            <>🤖 Tampilkan Analisis AI</>
+                        )}
+                    </button>
+                </div>
+                
+                {/* Indikator Data */}
+                {showAnalysis && silpaData.tableData && silpaData.tableData.length > 0 && (
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                        </span>
+                        <span>Data: {silpaData.tableData.length} SKPD | Proyeksi: {projectionMonth} | Risiko: {riskLevel}</span>
+                    </div>
+                )}
+                
+                {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
+                {showAnalysis && (
+                    <GeminiAnalysis 
+                        getAnalysisPrompt={getAnalysisPrompt} 
+                        disabledCondition={!silpaData.tableData || silpaData.tableData.length === 0} 
+                        userCanUseAi={userRole !== 'viewer'}
+                        allData={{
+                            selectedYear,
+                            projectionMonth,
+                            totalAnggaran: silpaData.totals.totalAnggaran,
+                            totalPotensiSiLPA: silpaData.totals.potensiSiLPA,
+                            monthsPassed: silpaData.monthsPassed,
+                            monthsRemaining: silpaData.monthsRemaining,
+                            totalSKPD: silpaData.tableData.length,
+                            topSKPD: silpaData.tableData.slice(0, 5)
+                        }}
+                    />
+                )}
+            </div>
             
             <div className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-3xl rounded-[3.5rem] shadow-[0_60px_100px_-30px_rgba(0,0,0,0.1)] border border-white/50 dark:border-white/5 overflow-hidden transition-all duration-700 hover:shadow-[0_80px_120px_-30px_rgba(0,0,0,0.15)]">
                 {/* Controls & Summary */}

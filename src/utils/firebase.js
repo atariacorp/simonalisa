@@ -18,3 +18,4 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 export { db, auth };
+export const appId = 'YOUR_APP_ID'; // Ganti dengan appId yang benar

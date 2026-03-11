@@ -1,9 +1,9 @@
 import React from 'react';
-import SectionTitle from './components/SectionTitle';
-import Pagination from './components/Pagination';
+import SectionTitle from '../components/SectionTitle';
+import Pagination from '../components/Pagination';
 import { Users, Loader } from 'lucide-react';
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from './utils/firebase';
+import { db } from '../utils/firebase';
 
 
 // --- KOMPONEN ACTIVITY LOG VIEW YANG DIPERBARUI ---

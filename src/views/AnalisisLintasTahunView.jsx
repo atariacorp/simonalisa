@@ -11,10 +11,13 @@ import {
 } from 'lucide-react';
 
 // Import yang benar dari aplikasi yang sudah ada
-import { db, appId } from '../../utils/firebase';
-import { formatIDR } from '../../utils';
-import { auth } from '../../utils/firebase';
+import { db, auth } from '../utils/firebase';
+import { collection, getDocs, query } from 'firebase/firestore';
+import { formatIDR } from '../utils/formatCurrency';
 import GeminiAnalysis from '../components/GeminiAnalysis';
+
+// Tambahkan di bagian atas, setelah import:
+const appId = "1:805666292304:web:247f1e25e3e4d88621c755";
 
 // SectionTitle Component
 const SectionTitle = ({ children }) => (
@@ -30,23 +33,33 @@ const SectionTitle = ({ children }) => (
 const AnalisisLintasTahunView = ({ data = {}, theme, selectedYear, userRole }) => {
     const [user, setUser] = React.useState(null);
     const currentYear = new Date().getFullYear();
-    // Tiga tahun perbandingan: 2023, 2024, 2025
-    const years = [2023, 2024, 2025];
+    // Tiga tahun perbandingan: 2024, 2025, 2026
+    const years = [2024, 2025, 2026];
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     
     // State untuk tiga tahun
-    const [yearFirst, setYearFirst] = React.useState(2023);
-    const [yearSecond, setYearSecond] = React.useState(2024);
-    const [yearThird, setYearThird] = React.useState(2025);
+    const [yearFirst, setYearFirst] = React.useState(2024);
+    const [yearSecond, setYearSecond] = React.useState(2025);
+    const [yearThird, setYearThird] = React.useState(2026);
     const [startMonth, setStartMonth] = React.useState(months[0]);
     const [endMonth, setEndMonth] = React.useState(months[months.length - 1]);
+    
+    // ===== STATE UNTUK TOGGLE ANALISIS AI (LOKAL) =====
     const [showAnalysis, setShowAnalysis] = React.useState(true);
+    // ===== END STATE =====
 
     // Data untuk tiga tahun
     const [dataFirst, setDataFirst] = React.useState(null);
     const [dataSecond, setDataSecond] = React.useState(null);
     const [dataThird, setDataThird] = React.useState(null);
     
+    // ===== TAMBAHKAN INI UNTUK DEBUG PROPS =====
+React.useEffect(() => {
+    console.log('📦 DEBUG - Props data yang diterima:', data);
+    console.log('📦 DEBUG - Apakah data kosong?', Object.keys(data).length === 0);
+}, [data]);
+// ===== END DEBUG =====
+
     const [isLoading, setIsLoading] = React.useState(false);
     const [error, setError] = React.useState('');
     const [selectedSkpdBelanja, setSelectedSkpdBelanja] = React.useState('Semua SKPD');
@@ -66,7 +79,7 @@ const AnalisisLintasTahunView = ({ data = {}, theme, selectedYear, userRole }) =
 
         for (const dataType of dataTypes) {
             // Perbaikan: Gunakan path Firebase yang benar sesuai aplikasi
-            const collRef = collection(db, 'artifacts', appId, 'public', 'data', String(year), dataType);
+            const collRef = collection(db, "publicData", String(year), dataType);
             const snapshot = await getDocs(query(collRef));
             let data = [];
             snapshot.forEach(doc => {
@@ -103,6 +116,14 @@ const AnalisisLintasTahunView = ({ data = {}, theme, selectedYear, userRole }) =
                     fetchDataForYear(yearSecond),
                     fetchDataForYear(yearThird)
                 ]);
+                
+                // ===== TAMBAHKAN INI UNTUK DEBUG =====
+    console.log(`🔥 DEBUG - Data dari Firebase tahun ${yearFirst}:`, fetchedDataFirst);
+    console.log(`🔥 DEBUG - Data dari Firebase tahun ${yearSecond}:`, fetchedDataSecond);
+    console.log(`🔥 DEBUG - Data dari Firebase tahun ${yearThird}:`, fetchedDataThird);
+    console.log('✅ Apakah dataFirst dari Firebase?', fetchedDataFirst !== null);
+    // ===== END DEBUG =====
+                
                 setDataFirst(fetchedDataFirst); 
                 setDataSecond(fetchedDataSecond);
                 setDataThird(fetchedDataThird);
@@ -196,6 +217,18 @@ const AnalisisLintasTahunView = ({ data = {}, theme, selectedYear, userRole }) =
             },
         ];
         
+        // ===== TAMBAHKAN INI UNTUK DEBUG =====
+console.log('🔍 DEBUG - Data untuk Bar Chart:', comparisonData);
+console.log('📊 DEBUG - totalsFirst:', totalsFirst);
+console.log('📊 DEBUG - totalsSecond:', totalsSecond);
+console.log('📊 DEBUG - totalsThird:', totalsThird);
+console.log('📅 DEBUG - Tahun yang digunakan:', {
+    yearFirst,
+    yearSecond,
+    yearThird
+});
+// ===== END DEBUG =====
+
         // Growth rates
         const growthRates = [
             {
@@ -533,7 +566,7 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                         <div className="relative group">
                             <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500 transition-transform group-hover:scale-110" size={18} />
                             <select value={yearFirst} onChange={e => setYearFirst(parseInt(e.target.value))} className="w-full pl-12 pr-6 py-3.5 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black shadow-sm focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all cursor-pointer">
-                                {[2023, 2024, 2025].map(y => <option key={y} value={y}>{y}</option>)}
+                                {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                             </select>
                         </div>
                     </div>
@@ -542,7 +575,7 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                         <div className="relative group">
                             <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400 transition-transform group-hover:scale-110" size={18} />
                             <select value={yearSecond} onChange={e => setYearSecond(parseInt(e.target.value))} className="w-full pl-12 pr-6 py-3.5 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black shadow-sm focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all cursor-pointer">
-                                {[2023, 2024, 2025].map(y => <option key={y} value={y}>{y}</option>)}
+                                {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                             </select>
                         </div>
                     </div>
@@ -551,7 +584,7 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                         <div className="relative group">
                             <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-500 transition-transform group-hover:scale-110" size={18} />
                             <select value={yearThird} onChange={e => setYearThird(parseInt(e.target.value))} className="w-full pl-12 pr-6 py-3.5 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black shadow-sm focus:ring-4 focus:ring-purple-500/20 outline-none transition-all cursor-pointer">
-                                {[2023, 2024, 2025].map(y => <option key={y} value={y}>{y}</option>)}
+                                {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                             </select>
                         </div>
                     </div>
@@ -764,7 +797,7 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                             </div>
                         </div>
                         
-                        <div className="h-[500px]">
+                        <div className="h-[500px] w-full relative" style={{ minHeight: '500px', minWidth: '100%' }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 {activeChart === 'bar' ? (
                                     <BarChart data={comparisonData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }} barGap={12}>
@@ -814,9 +847,9 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                                                 padding: '1rem 1.5rem'
                                             }}
                                             formatter={(val, name) => {
-                                                const year = name === yearFirst ? yearFirst : name === yearSecond ? yearSecond : yearThird;
-                                                return [formatIDR(val), year];
-                                            }}
+                                                // name bisa berupa string "2024", "2025", atau "2026"
+                                                return [formatIDR(val), name];
+                                        }}
                                         />
                                         <Legend 
                                             verticalAlign="top" 
@@ -826,9 +859,9 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                                             iconSize={10}
                                             wrapperStyle={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', paddingBottom: '20px' }} 
                                         />
-                                        <Bar dataKey={yearFirst} fill="url(#barGradientFirst)" name={String(yearFirst)} radius={[8, 8, 4, 4]} barSize={45} filter="url(#glow)" />
-                                        <Bar dataKey={yearSecond} fill="url(#barGradientSecond)" name={String(yearSecond)} radius={[8, 8, 4, 4]} barSize={45} filter="url(#glow)" />
-                                        <Bar dataKey={yearThird} fill="url(#barGradientThird)" name={String(yearThird)} radius={[8, 8, 4, 4]} barSize={45} filter="url(#glow)" />
+                                        <Bar dataKey={String(yearFirst)} fill="url(#barGradientFirst)" name={String(yearFirst)} radius={[8, 8, 4, 4]} barSize={45} filter="url(#glow)" />
+                                        <Bar dataKey={String(yearSecond)} fill="url(#barGradientSecond)" name={String(yearSecond)} radius={[8, 8, 4, 4]} barSize={45} filter="url(#glow)" />
+                                        <Bar dataKey={String(yearThird)} fill="url(#barGradientThird)" name={String(yearThird)} radius={[8, 8, 4, 4]} barSize={45} filter="url(#glow)" />
                                     </BarChart>
                                 ) : (
                                     <AreaChart data={comparisonData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
@@ -851,9 +884,9 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                                         <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `${(val / 1e9).toFixed(1)}M`} />
                                         <Tooltip contentStyle={{ borderRadius: '1.5rem', border: 'none', backdropFilter: 'blur(10px)' }} />
                                         <Legend verticalAlign="top" align="right" height={50} iconType="circle" />
-                                        <Area type="monotone" dataKey={yearFirst} stroke="#435EBE" strokeWidth={3} fill="url(#areaGradientFirst)" name={String(yearFirst)} />
-                                        <Area type="monotone" dataKey={yearSecond} stroke="#A855F7" strokeWidth={3} fill="url(#areaGradientSecond)" name={String(yearSecond)} />
-                                        <Area type="monotone" dataKey={yearThird} stroke="#F59E0B" strokeWidth={3} fill="url(#areaGradientThird)" name={String(yearThird)} />
+                                        <Area type="monotone" dataKey={String(yearFirst)} stroke="#435EBE" strokeWidth={3} fill="url(#areaGradientFirst)" name={String(yearFirst)} />
+                                        <Area type="monotone" dataKey={String(yearSecond)} stroke="#A855F7" strokeWidth={3} fill="url(#areaGradientSecond)" name={String(yearSecond)} />
+                                        <Area type="monotone" dataKey={String(yearThird)} stroke="#F59E0B" strokeWidth={3} fill="url(#areaGradientThird)" name={String(yearThird)} />
                                     </AreaChart>
                                 )}
                             </ResponsiveContainer>
@@ -900,7 +933,7 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                                 </div>
                             )}
 
-                            <div className="pt-6 h-[400px]">
+                            <div className="pt-6 h-[400px] w-full relative" style={{ minHeight: '400px', minWidth: '100%' }}>
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 mb-8 flex items-center gap-3">
                                     <TrendingUp size={16} className="text-indigo-500" /> Kurva Penyerapan Kumulatif 3 Tahun
                                 </h4>
@@ -994,7 +1027,7 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                                 </div>
                             )}
 
-                            <div className="pt-6 h-[400px]">
+                            <div className="pt-6 h-[400px] w-full relative" style={{ minHeight: '400px', minWidth: '100%' }}>
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 mb-8 flex items-center gap-3">
                                     <TrendingUp size={16} className="text-emerald-500" /> Kurva Pencapaian Kumulatif 3 Tahun
                                 </h4>

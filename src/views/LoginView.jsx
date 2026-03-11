@@ -4,8 +4,8 @@ import {
     Info, X, Code, Calendar, Phone, Mail as MailIcon 
 } from 'lucide-react';
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from './utils/firebase';
-import { brandingConfig } from './assets/config/branding';
+import { auth } from '../utils/firebase';
+import { brandingConfig } from '../assets/config/branding';
 
 const LoginView = ({ theme }) => {
     const [email, setEmail] = useState('');

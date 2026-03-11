@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatCurrency } from './utils/formatCurrency';
+import { formatCurrency } from '../utils/formatCurrency';
 
 const StatCard = ({ icon, title, target, realisasi, percentage, colorClass, rkud, nonRkud, rkudPercentage, nonRkudPercentage }) => (
   <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md flex flex-col justify-between min-h-[220px]">

@@ -13,8 +13,8 @@ import {
 // MENGGUNAKAN SUMBER DATA FIREBASE ASLI DARI APLIKASI ANDA
 // ==============================================================================
 import { collection, onSnapshot } from "firebase/firestore";
-import { db } from './utils/firebase'; 
-import GeminiAnalysis from './components/GeminiAnalysis';
+import { db } from '../utils/firebase'; 
+import GeminiAnalysis from '../components/GeminiAnalysis';
 
 // --- UTILITIES ---
 const formatCurrency = (value) => {
@@ -109,6 +109,9 @@ const CustomBarTooltip = ({ active, payload, label }) => {
 
 // Komponen Card Analisis Spesifik (Modern Analysis Card)
 const ModernAnalysisCard = ({ title, data, threshold, type, getAnalysisPrompt, namaPemda, selectedYear, userCanUseAi, regulationText }) => {
+    // State lokal untuk toggle analisis di card ini
+    const [showAnalysis, setShowAnalysis] = useState(true);
+    
     // Tentukan warna dan status berdasarkan tipe dan threshold
     let isCompliant = false;
     let colorClass = '';
@@ -363,7 +366,6 @@ const ModernAnalysisCard = ({ title, data, threshold, type, getAnalysisPrompt, n
 const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear, userCanUseAi }) => {
     const { anggaran, realisasi, realisasiNonRkud } = data; 
     const [activeTab, setActiveTab] = useState('pegawai');
-    const [showAnalysis, setShowAnalysis] = useState(true);
     const [refPendidikan, setRefPendidikan] = useState([]);
     const [refInfrastruktur, setRefInfrastruktur] = useState([]);
 
@@ -767,18 +769,16 @@ const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear, userCanUs
                         <div className="relative">
                             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-2xl pointer-events-none"></div>
                             <ModernAnalysisCard
-    title="Belanja Pegawai"
-    data={analysisData.pegawai}
-    threshold={30}
-    type="pegawai"
-    getAnalysisPrompt={getAnalysisPrompt}
-    namaPemda={namaPemda}
-    selectedYear={selectedYear}
-    userCanUseAi={userCanUseAi}
-    regulationText="UU No. 1 Tahun 2022 Pasal 146 menetapkan batas maksimal Belanja Pegawai daerah adalah 30%..."
-    showAnalysis={showAnalysis}
-    setShowAnalysis={setShowAnalysis}
-/>
+                                title="Belanja Pegawai"
+                                data={analysisData.pegawai}
+                                threshold={30}
+                                type="pegawai"
+                                getAnalysisPrompt={getAnalysisPrompt}
+                                namaPemda={namaPemda}
+                                selectedYear={selectedYear}
+                                userCanUseAi={userCanUseAi}
+                                regulationText="UU No. 1 Tahun 2022 Pasal 146 menetapkan batas maksimal Belanja Pegawai daerah adalah 30% dari total belanja APBD, dengan pengecualian untuk belanja pegawai yang bersumber dari alokasi Dana Alokasi Khusus Nonfisik, dana darurat, belanja pegawai untuk kebutuhan tertentu yang diatur dengan Peraturan Pemerintah, dan penghasilan tertentu yang diatur dengan Undang-Undang."
+                            />
                         </div>
                     </div>
                 );

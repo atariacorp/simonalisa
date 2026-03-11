@@ -1,7 +1,14 @@
 import React from 'react';
 
-const SectionTitle = ({ children }) => (
-  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-6">{children}</h2>
-);
+const SectionTitle = ({ children }) => {
+  return (
+    <div className="relative mb-8 group">
+      <h2 className="text-3xl font-black tracking-tighter text-slate-800 dark:text-white transition-all">
+        {children}
+      </h2>
+      <div className="absolute -bottom-2 left-0 h-1.5 w-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full transition-all group-hover:w-24"></div>
+    </div>
+  );
+};
 
-export default SectionTitle; // HANYA INI, tidak ada export lain
+export default SectionTitle;

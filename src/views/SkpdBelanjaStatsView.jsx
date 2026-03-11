@@ -18,7 +18,7 @@ const formatCurrency = (value) => {
         maximumFractionDigits: 0,
     }).format(value);
 };
-import GeminiAnalysis from './components/GeminiAnalysis';
+import GeminiAnalysis from '../components/GeminiAnalysis';
 
 // Pindahkan array months ke luar komponen untuk mencegah infinite loop (re-render re-allocation)
 const MONTHS_ARRAY = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];

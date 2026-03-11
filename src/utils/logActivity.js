@@ -1,5 +1,5 @@
 import { collection, addDoc } from "firebase/firestore";
-import { db, auth } from '../firebase';
+import { db, auth } from './firebase';
 
 export const logActivity = async (action, details = {}) => {
     try {

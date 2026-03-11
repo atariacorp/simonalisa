@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
-
-// Helper function to format numbers to Indonesian Rupiah
 export const formatCurrency = (value) => {
-    if (typeof value !== 'number' || isNaN(value)) {
+    if (value === null || value === undefined || isNaN(value)) {
         return 'Rp 0';
     }
+    
+    // Format ke Rupiah
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    }).format(value);
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(value).replace(/^Rp\s+/, 'Rp ');
 };
+
+// Alias untuk kompatibilitas dengan kode yang mungkin menggunakan formatIDR
+export const formatIDR = formatCurrency;
