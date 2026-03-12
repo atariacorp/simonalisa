@@ -6,7 +6,9 @@ import {
 import { 
     Users, Building2, GraduationCap, AlertTriangle, CheckCircle, Info, 
     Bot, Sparkles, Loader2, RefreshCw, LayoutGrid, Lightbulb, Scale, 
-    HardHat, BookOpen, Activity, Download, DollarSign, Target
+    HardHat, BookOpen, Activity, Download, DollarSign, Target, Eye, EyeOff,
+    Award, Crown, Briefcase, Zap, Gauge, Brain, Coins, Rocket, Medal, Trophy,
+    ArrowUpRight, ArrowDownRight, Clock, Shield, AlertOctagon
 } from 'lucide-react';
 
 // ==============================================================================
@@ -58,6 +60,333 @@ const exportToCSV = (data, filename) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+};
+
+// ============================================================
+// FITUR BARU: REKOMENDASI PEMENUHAN MANDATORY SPENDING
+// ============================================================
+
+/**
+ * Menghitung rekomendasi penyesuaian anggaran untuk memenuhi mandatory spending
+ * @param {Object} data - Data analisis mandatory spending
+ * @param {string} type - Tipe mandatory ('pegawai', 'infrastruktur', 'pendidikan')
+ * @param {number} targetPersentase - Target persentase yang ingin dicapai
+ * @param {string} level - Level rekomendasi ('ekstrim', 'moderat', 'toleran')
+ * @returns {Object} Rekomendasi penyesuaian
+ */
+const hitungRekomendasi = (data, type, targetPersentase, level) => {
+    if (!data || !data.totalAPBD) return null;
+    
+    const totalAPBD = data.totalAPBD;
+    const currentPercentage = data.percentage;
+    const selisihPersentase = targetPersentase - currentPercentage;
+    const selisihNominal = (selisihPersentase / 100) * totalAPBD;
+    
+    // Tentukan faktor toleransi berdasarkan level
+    let faktorToleransi = 1.0;
+    let deskripsiLevel = '';
+    
+    switch(level) {
+        case 'ekstrim':
+            faktorToleransi = 1.2; // 20% lebih agresif
+            deskripsiLevel = '⚠️ REKOMENDASI EKSTRIM: Prioritas utama pemenuhan mandatory, dampak signifikan pada program lain';
+            break;
+        case 'moderat':
+            faktorToleransi = 1.0; // Presisi
+            deskripsiLevel = '⚖️ REKOMENDASI MODERAT: Keseimbangan antara pemenuhan mandatory dan program lain';
+            break;
+        case 'toleran':
+            faktorToleransi = 0.8; // 20% lebih toleran
+            deskripsiLevel = '🛡️ REKOMENDASI TOLERAN: Minimal intervensi, prioritaskan program existing';
+            break;
+        default:
+            faktorToleransi = 1.0;
+            deskripsiLevel = '📊 REKOMENDASI STANDAR';
+    }
+    
+    const targetNominal = (targetPersentase / 100) * totalAPBD * faktorToleransi;
+    const currentNominal = type === 'pegawai' ? data.belanjaPegawaiUntukPerhitungan :
+                           type === 'infrastruktur' ? data.belanjaInfrastruktur :
+                           data.belanjaPendidikan;
+    
+    const perluDitambah = selisihPersentase > 0;
+    const nominalPenyesuaian = Math.abs(selisihNominal) * faktorToleransi;
+    
+    // Analisis sumber penyesuaian berdasarkan tipe mandatory
+    let sumberPenyesuaian = [];
+    let rekomendasiDetail = [];
+    
+    if (type === 'pegawai') {
+        // Untuk pegawai: harus dikurangi jika melebihi batas
+        if (currentPercentage > targetPersentase) {
+            // Identifikasi belanja non-prioritas yang bisa dikurangi
+            sumberPenyesuaian = [
+                { nama: 'Belanja Perjalanan Dinas', prioritas: 'Rendah', estimasi: totalAPBD * 0.02 },
+                { nama: 'Belanja ATK dan Perlengkapan', prioritas: 'Rendah', estimasi: totalAPBD * 0.015 },
+                { nama: 'Belanja Pemeliharaan Rutin', prioritas: 'Sedang', estimasi: totalAPBD * 0.03 },
+                { nama: 'Belanja Honorarium Non-ASN', prioritas: 'Sedang', estimasi: totalAPBD * 0.025 },
+                { nama: 'Belanja Jasa Konsultan', prioritas: 'Rendah', estimasi: totalAPBD * 0.01 }
+            ];
+            
+            rekomendasiDetail = [
+                `Kurangi belanja perjalanan dinas sebesar ${formatCurrency(totalAPBD * 0.02)}`,
+                `Efisiensi belanja ATK dan perlengkapan kantor ${formatCurrency(totalAPBD * 0.015)}`,
+                `Tinjau ulang belanja pemeliharaan rutin yang tidak mendesak`,
+                `Optimalkan penggunaan tenaga ASN, kurangi honorarium non-ASN`
+            ];
+        }
+    } else {
+        // Untuk infrastruktur & pendidikan: harus ditambah jika kurang
+        if (currentPercentage < targetPersentase) {
+            // Identifikasi belanja yang bisa dialihkan/ditunda
+            sumberPenyesuaian = [
+                { nama: 'Belanja Pembangunan Gedung Baru', prioritas: 'Tinggi', estimasi: totalAPBD * 0.05 },
+                { nama: 'Belanja Rehabilitasi Sedang/Berat', prioritas: 'Tinggi', estimasi: totalAPBD * 0.04 },
+                { nama: 'Belanja Pengadaan Peralatan', prioritas: 'Sedang', estimasi: totalAPBD * 0.03 },
+                { nama: 'Belanja Peningkatan Jalan', prioritas: 'Tinggi', estimasi: totalAPBD * 0.06 },
+                { nama: 'Belanja Pengadaan Buku/Perpustakaan', prioritas: 'Sedang', estimasi: totalAPBD * 0.01 }
+            ];
+            
+            rekomendasiDetail = [
+                `Alihkan dana dari belanja operasional rutin sebesar ${formatCurrency(totalAPBD * 0.02)}`,
+                `Tunda belanja pembangunan gedung baru yang belum mendesak`,
+                `Optimalkan realokasi anggaran dari SKPD dengan penyerapan rendah`,
+                `Gunakan dana darurat untuk memenuhi kekurangan mandatory`
+            ];
+        }
+    }
+    
+    // Hitung dampak terhadap komponen APBD lain
+    const dampakAPBD = {
+        belanjaOperasi: nominalPenyesuaian * 0.4,
+        belanjaModal: nominalPenyesuaian * 0.35,
+        belanjaTakTerduga: nominalPenyesuaian * 0.25,
+        silpaEstimasi: perluDitambah ? -nominalPenyesuaian : nominalPenyesuaian
+    };
+    
+    return {
+        perluDitambah,
+        currentPercentage,
+        targetPersentase,
+        selisihPersentase: Math.abs(selisihPersentase).toFixed(2),
+        nominalPenyesuaian,
+        sumberPenyesuaian: sumberPenyesuaian.slice(0, 3),
+        rekomendasiDetail: rekomendasiDetail.slice(0, 3),
+        dampakAPBD,
+        deskripsiLevel,
+        level
+    };
+};
+
+// Komponen Rekomendasi Card
+const RekomendasiCard = ({ data, type, onClose }) => {
+    const [level, setLevel] = useState('moderat');
+    const [rekomendasi, setRekomendasi] = useState(null);
+    
+    const targetPersentase = type === 'pegawai' ? 30 : type === 'infrastruktur' ? 40 : 20;
+    
+    useEffect(() => {
+        if (data) {
+            setRekomendasi(hitungRekomendasi(data, type, targetPersentase, level));
+        }
+    }, [data, type, level, targetPersentase]);
+    
+    if (!rekomendasi) return null;
+    
+    const isPegawai = type === 'pegawai';
+    const statusWarna = isPegawai 
+        ? (rekomendasi.perluDitambah ? 'bg-red-500' : 'bg-green-500')
+        : (rekomendasi.perluDitambah ? 'bg-green-500' : 'bg-red-500');
+    
+    return (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+                {/* Header */}
+                <div className={`p-6 bg-gradient-to-r ${statusWarna} to-${statusWarna}/80 text-white rounded-t-3xl`}>
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-white/20 rounded-2xl">
+                                {isPegawai ? <Users size={28} /> : type === 'infrastruktur' ? <HardHat size={28} /> : <BookOpen size={28} />}
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-black tracking-tight">
+                                    REKOMENDASI PEMENUHAN {type.toUpperCase()}
+                                </h3>
+                                <p className="text-white/80 text-sm mt-1">
+                                    Analisis strategis penyesuaian APBD untuk memenuhi mandatory spending
+                                </p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={onClose}
+                            className="p-2 hover:bg-white/20 rounded-xl transition-colors"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </div>
+                
+                {/* Level Selector */}
+                <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">
+                        Pilih Level Rekomendasi:
+                    </p>
+                    <div className="grid grid-cols-3 gap-3">
+                        {['ekstrim', 'moderat', 'toleran'].map((lvl) => (
+                            <button
+                                key={lvl}
+                                onClick={() => setLevel(lvl)}
+                                className={`p-4 rounded-xl text-sm font-bold transition-all ${
+                                    level === lvl
+                                        ? lvl === 'ekstrim' ? 'bg-red-500 text-white shadow-lg shadow-red-500/30' :
+                                          lvl === 'moderat' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' :
+                                          'bg-green-500 text-white shadow-lg shadow-green-500/30'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                }`}
+                            >
+                                {lvl === 'ekstrim' && '⚠️ EKSTRIM'}
+                                {lvl === 'moderat' && '⚖️ MODERAT'}
+                                {lvl === 'toleran' && '🛡️ TOLERAN'}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-3 italic">
+                        {rekomendasi.deskripsiLevel}
+                    </p>
+                </div>
+                
+                {/* Content */}
+                <div className="p-6 space-y-6">
+                    {/* Status Kepatuhan */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-gray-50 dark:bg-gray-800/50 p-5 rounded-2xl">
+                            <p className="text-xs text-gray-500 mb-1">Kondisi Saat Ini</p>
+                            <p className={`text-2xl font-black ${
+                                (isPegawai && data.percentage <= targetPersentase) || 
+                                (!isPegawai && data.percentage >= targetPersentase) 
+                                    ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                                {data.percentage.toFixed(2)}%
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">dari target {targetPersentase}%</p>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-800/50 p-5 rounded-2xl">
+                            <p className="text-xs text-gray-500 mb-1">Selisih</p>
+                            <p className="text-2xl font-black text-orange-600">
+                                {rekomendasi.selisihPersentase}%
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">
+                                {rekomendasi.perluDitambah ? 'Perlu ditambah' : 'Perlu dikurangi'}
+                            </p>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-800/50 p-5 rounded-2xl">
+                            <p className="text-xs text-gray-500 mb-1">Nominal Penyesuaian</p>
+                            <p className="text-2xl font-black text-indigo-600">
+                                {formatCurrency(rekomendasi.nominalPenyesuaian)}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">(termasuk faktor toleransi)</p>
+                        </div>
+                    </div>
+                    
+                    {/* Sumber Penyesuaian */}
+                    <div className="bg-blue-50/50 dark:bg-blue-900/20 p-5 rounded-2xl border border-blue-200 dark:border-blue-800">
+                        <h4 className="font-bold text-blue-800 dark:text-blue-300 mb-4 flex items-center gap-2">
+                            <Target size={18} /> Sumber Penyesuaian Prioritas
+                        </h4>
+                        <div className="space-y-3">
+                            {rekomendasi.sumberPenyesuaian.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-white/50 dark:bg-gray-800/50 rounded-xl">
+                                    <div>
+                                        <p className="font-semibold text-gray-800 dark:text-gray-200">{item.nama}</p>
+                                        <p className="text-xs text-gray-500">Prioritas: {item.prioritas}</p>
+                                    </div>
+                                    <p className="font-bold text-indigo-600 dark:text-indigo-400">
+                                        {formatCurrency(item.estimasi)}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Rekomendasi Detail */}
+                    <div className="bg-green-50/50 dark:bg-green-900/20 p-5 rounded-2xl border border-green-200 dark:border-green-800">
+                        <h4 className="font-bold text-green-800 dark:text-green-300 mb-4 flex items-center gap-2">
+                            <CheckCircle size={18} /> Rekomendasi Strategis
+                        </h4>
+                        <ul className="space-y-2">
+                            {rekomendasi.rekomendasiDetail.map((item, idx) => (
+                                <li key={idx} className="flex items-start gap-3 text-sm">
+                                    <span className="text-green-600 font-bold mt-0.5">✓</span>
+                                    <span className="text-gray-700 dark:text-gray-300">{item}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    
+                    {/* Dampak terhadap APBD */}
+                    <div className="bg-purple-50/50 dark:bg-purple-900/20 p-5 rounded-2xl border border-purple-200 dark:border-purple-800">
+                        <h4 className="font-bold text-purple-800 dark:text-purple-300 mb-4 flex items-center gap-2">
+                            <Activity size={18} /> Dampak terhadap Komponen APBD
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 bg-white/50 dark:bg-gray-800/50 rounded-xl">
+                                <p className="text-xs text-gray-500">Belanja Operasi</p>
+                                <p className="font-bold text-gray-800 dark:text-gray-200">
+                                    {formatCurrency(rekomendasi.dampakAPBD.belanjaOperasi)}
+                                </p>
+                            </div>
+                            <div className="p-3 bg-white/50 dark:bg-gray-800/50 rounded-xl">
+                                <p className="text-xs text-gray-500">Belanja Modal</p>
+                                <p className="font-bold text-gray-800 dark:text-gray-200">
+                                    {formatCurrency(rekomendasi.dampakAPBD.belanjaModal)}
+                                </p>
+                            </div>
+                            <div className="p-3 bg-white/50 dark:bg-gray-800/50 rounded-xl">
+                                <p className="text-xs text-gray-500">Belanja Tak Terduga</p>
+                                <p className="font-bold text-gray-800 dark:text-gray-200">
+                                    {formatCurrency(rekomendasi.dampakAPBD.belanjaTakTerduga)}
+                                </p>
+                            </div>
+                            <div className="p-3 bg-white/50 dark:bg-gray-800/50 rounded-xl">
+                                <p className="text-xs text-gray-500">Estimasi SiLPA</p>
+                                <p className={`font-bold ${rekomendasi.dampakAPBD.silpaEstimasi > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {formatCurrency(Math.abs(rekomendasi.dampakAPBD.silpaEstimasi))}
+                                    <span className="text-xs ml-1">{rekomendasi.dampakAPBD.silpaEstimasi > 0 ? '(+)' : '(-)'}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Catatan Kaki */}
+                    <p className="text-xs text-gray-400 italic border-t border-gray-200 dark:border-gray-700 pt-4">
+                        * Rekomendasi ini bersifat simulasi dan perlu dikaji lebih lanjut dengan mempertimbangkan 
+                        prioritas pembangunan daerah, kapasitas fiskal, serta regulasi terkait.
+                    </p>
+                </div>
+                
+                {/* Footer */}
+                <div className="p-6 bg-gray-50 dark:bg-gray-800/50 rounded-b-3xl border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex justify-end gap-3">
+                        <button
+                            onClick={onClose}
+                            className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                        >
+                            Tutup
+                        </button>
+                        <button
+                            onClick={() => {
+                                // Fungsi untuk download rekomendasi sebagai PDF/Excel
+                                alert('Fitur download akan segera tersedia');
+                            }}
+                            className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                        >
+                            <Download size={18} /> Download Rekomendasi
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 // --- SUB-COMPONENTS ---
@@ -303,13 +632,29 @@ const ModernAnalysisCard = ({ title, data, threshold, type, getAnalysisPrompt, n
                 <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
                     <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-4 sm:justify-between sm:items-center">
                         <h3 className="text-lg font-bold text-gray-800 dark:text-white">Rincian Sub Kegiatan</h3>
-                        <button 
-                            onClick={handleDownloadExcel}
-                            className="flex justify-center items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400 px-4 py-2 rounded-xl transition-colors font-semibold text-sm"
-                        >
-                            <Download size={16} />
-                            Download Excel
-                        </button>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={handleDownloadExcel}
+                                className="flex justify-center items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400 px-4 py-2 rounded-xl transition-colors font-semibold text-sm"
+                            >
+                                <Download size={16} />
+                                Download Excel
+                            </button>
+
+                            {/* Tombol Rekomendasi - TAMBAHKAN INI */}
+                            <button
+                                onClick={() => {
+                                    // Panggil fungsi dari props untuk membuka modal
+                                    if (window.openRekomendasiModal) {
+                                        window.openRekomendasiModal(type);
+                                    }
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-sm hover:from-purple-700 hover:to-indigo-700 transition-all shadow-lg"
+                            >
+                                <Target size={16} />
+                                Rekomendasi Pemenuhan
+                            </button>
+                        </div>
                     </div>
                     <div className="overflow-x-auto max-h-[500px]">
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
@@ -361,13 +706,28 @@ const ModernAnalysisCard = ({ title, data, threshold, type, getAnalysisPrompt, n
     );
 };
 
-
 // --- MAIN VIEW COMPONENT ---
 const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear, userCanUseAi }) => {
     const { anggaran, realisasi, realisasiNonRkud } = data; 
     const [activeTab, setActiveTab] = useState('pegawai');
     const [refPendidikan, setRefPendidikan] = useState([]);
     const [refInfrastruktur, setRefInfrastruktur] = useState([]);
+    
+    // ===== STATE UNTUK INFO EKSEKUTIF DAN MODAL REKOMENDASI =====
+    const [showExecutiveInfo, setShowExecutiveInfo] = useState(true);
+    const [showRekomendasi, setShowRekomendasi] = useState(false);
+    const [rekomendasiType, setRekomendasiType] = useState('pegawai');
+    // ===== END STATE =====
+
+    // ===== FUNGSI UNTUK MEMBUKA MODAL REKOMENDASI =====
+    const bukaRekomendasi = (type) => {
+        setRekomendasiType(type);
+        setShowRekomendasi(true);
+    };
+
+    // Buat fungsi global agar bisa diakses dari komponen anak
+    window.openRekomendasiModal = bukaRekomendasi;
+    // ===== END FUNGSI =====
 
     useEffect(() => {
         const unsubFunctions = [];
@@ -400,7 +760,6 @@ const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear, userCanUs
 
         return () => unsubFunctions.forEach(unsub => unsub && unsub());
     }, [selectedYear]);
-
 
     // =========================================================================
     // INI ADALAH LOGIKA ORIGINAL YANG DIPULIHKAN 100% SESUAI PERMINTAAN ANDA
@@ -584,6 +943,29 @@ const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear, userCanUs
     }, [anggaran, realisasi, realisasiNonRkud, refPendidikan, refInfrastruktur]);
     // =========================================================================
 
+    // === EXECUTIVE SUMMARY DATA ===
+    const executiveSummary = useMemo(() => {
+        if (!analysisData || !analysisData[activeTab]) return null;
+        
+        const data = analysisData[activeTab];
+        const threshold = activeTab === 'pegawai' ? 30 : activeTab === 'infrastruktur' ? 40 : 20;
+        const isCompliant = activeTab === 'pegawai' ? data.percentage <= threshold : data.percentage >= threshold;
+        
+        return {
+            totalAPBD: data.totalAPBD,
+            alokasi: activeTab === 'pegawai' ? data.belanjaPegawaiUntukPerhitungan : 
+                     activeTab === 'infrastruktur' ? data.belanjaInfrastruktur : 
+                     data.belanjaPendidikan,
+            percentage: data.percentage,
+            threshold,
+            isCompliant,
+            selisih: Math.abs(data.percentage - threshold),
+            perluTindakan: activeTab === 'pegawai' ? data.percentage > threshold : data.percentage < threshold,
+            title: activeTab === 'pegawai' ? 'Belanja Pegawai' :
+                   activeTab === 'infrastruktur' ? 'Infrastruktur Publik' : 'Fungsi Pendidikan'
+        };
+    }, [analysisData, activeTab]);
+
     // Fungsi untuk mendapatkan warna berdasarkan persentase dan threshold
     const getStatusColor = (percentage, threshold, type) => {
         if (type === 'pegawai') {
@@ -613,106 +995,147 @@ const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear, userCanUs
 
     // Dashboard Eksekutif untuk Mandatory Spending
     const renderExecutiveDashboard = () => {
-        const currentData = activeTab === 'pegawai' ? analysisData.pegawai :
-                            activeTab === 'infrastruktur' ? analysisData.infrastruktur :
-                            analysisData.pendidikan;
-        
+        const currentData = analysisData[activeTab];
         const threshold = activeTab === 'pegawai' ? 30 : activeTab === 'infrastruktur' ? 40 : 20;
         const title = activeTab === 'pegawai' ? 'Belanja Pegawai' :
                       activeTab === 'infrastruktur' ? 'Infrastruktur Publik' : 'Fungsi Pendidikan';
-                      
         const targetDesc = activeTab === 'pegawai' ? 'Batas Maksimal' : 'Batas Minimal';
         
         if (!currentData || !currentData.totalAPBD) return null;
 
         return (
             <div className="mb-8">
-                {/* Glassmorphism Header Card */}
-                <div className="relative overflow-hidden rounded-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
-                    {/* Background Gradient Effect */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-blue-500/5 pointer-events-none"></div>
-                    
+                {/* Executive Header - PREMIUM GLASSMORPHISM */}
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-700 to-indigo-900 p-8 text-white shadow-2xl border border-white/10 group mb-6">
                     {/* Decorative Elements */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-400/10 to-blue-400/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-emerald-400/10 to-teal-400/10 rounded-full blur-3xl -ml-20 -mb-20"></div>
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-40 -mt-40"></div>
+                    <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-400/10 rounded-full blur-[80px] -ml-32 -mb-32"></div>
                     
-                    <div className="relative p-6">
-                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+                    {/* Crown Icon */}
+                    <div className="absolute top-8 right-12 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Crown size={120} className="text-yellow-400" />
+                    </div>
+                    
+                    <div className="relative z-10">
+                        {/* Header */}
+                        <div className="flex items-center gap-4 mb-6 border-b border-white/20 pb-6">
+                            <div className="p-4 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl shadow-lg shadow-yellow-500/30">
+                                <Scale size={32} className="text-white" />
+                            </div>
                             <div>
-                                <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2 mb-1">
-                                    <Scale size={16} /> Mandatory Spending {title}
-                                </h3>
-                                <p className="text-3xl font-black bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                                    {formatCurrency(currentData.totalAPBD)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Total APBD Tahun {selectedYear}
-                                </p>
-                            </div>
-                            <div className="flex flex-col items-end">
-                                <div className={`px-4 py-2 rounded-xl flex items-center gap-3 bg-gradient-to-r ${getStatusColor(currentData.percentage, threshold, activeTab)} shadow-lg text-white`}>
-                                    {getStatusIcon(currentData.percentage, threshold, activeTab)}
-                                    <div>
-                                        <p className="text-xs font-medium opacity-90">{targetDesc} {threshold}%</p>
-                                        <p className="text-xl font-bold leading-tight">{currentData.percentage.toFixed(2)}%</p>
-                                    </div>
+                                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black tracking-[0.2em] uppercase border border-white/30 mb-2">
+                                    <Eye size={12} className="text-yellow-300" /> EXECUTIVE DASHBOARD
                                 </div>
+                                <h2 className="text-3xl font-black tracking-tighter leading-tight">
+                                    RINGKASAN EKSEKUTIF {title} <br/>
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-pink-300">TAHUN {selectedYear}</span>
+                                </h2>
                             </div>
+                            <button 
+                                onClick={() => setShowExecutiveInfo(!showExecutiveInfo)}
+                                className="ml-auto p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all"
+                                title={showExecutiveInfo ? 'Sembunyikan' : 'Tampilkan'}
+                            >
+                                {showExecutiveInfo ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
                         </div>
 
-                        {/* Key Metrics Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Alokasi Card */}
-                            <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl border border-white/40 dark:border-gray-700/50 p-4 shadow-sm hover:shadow-md transition-shadow">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg">
-                                        <DollarSign className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        {showExecutiveInfo && (
+                            <>
+                                {/* Quick Stats */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                                    <div className="bg-black/20 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                        <div className="flex items-center gap-2">
+                                            <Coins size={16} className="text-yellow-400" />
+                                            <p className="text-[10px] font-bold uppercase text-indigo-200">Total APBD</p>
+                                        </div>
+                                        <p className="text-xl font-black text-white mt-1">{formatCurrency(currentData.totalAPBD)}</p>
                                     </div>
-                                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Alokasi Anggaran {title}</p>
-                                </div>
-                                <p className="text-2xl font-bold text-gray-800 dark:text-white">
-                                    {activeTab === 'pegawai' ? formatCurrency(currentData.belanjaPegawaiUntukPerhitungan) :
-                                     activeTab === 'infrastruktur' ? formatCurrency(currentData.belanjaInfrastruktur) :
-                                     formatCurrency(currentData.belanjaPendidikan)}
-                                </p>
-                                <div className="mt-3 h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                    <div 
-                                        className={`h-full rounded-full bg-gradient-to-r ${getStatusColor(currentData.percentage, threshold, activeTab)}`}
-                                        style={{ width: `${Math.min(currentData.percentage, 100)}%` }}
-                                    ></div>
-                                </div>
-                            </div>
-
-                            {/* Info Card Khusus */}
-                            <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-xl border border-white/40 dark:border-gray-700/50 p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-center">
-                                {activeTab === 'pegawai' ? (
-                                    <>
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-sm text-gray-600 dark:text-gray-400">Total Belanja Pegawai</span>
-                                            <span className="font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(currentData.totalBelanjaPegawai)}</span>
+                                    <div className="bg-black/20 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                        <div className="flex items-center gap-2">
+                                            <DollarSign size={16} className="text-emerald-400" />
+                                            <p className="text-[10px] font-bold uppercase text-indigo-200">Alokasi {title}</p>
                                         </div>
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-sm text-gray-600 dark:text-gray-400">Belanja Dikecualikan</span>
-                                            <span className="font-semibold text-emerald-600 dark:text-emerald-400">-{formatCurrency(currentData.belanjaPegawaiDikecualikan)}</span>
+                                        <p className="text-xl font-black text-emerald-300 mt-1">{formatCurrency(activeTab === 'pegawai' ? currentData.belanjaPegawaiUntukPerhitungan : activeTab === 'infrastruktur' ? currentData.belanjaInfrastruktur : currentData.belanjaPendidikan)}</p>
+                                    </div>
+                                    <div className="bg-black/20 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                        <div className="flex items-center gap-2">
+                                            <Gauge size={16} className="text-purple-400" />
+                                            <p className="text-[10px] font-bold uppercase text-indigo-200">Persentase Saat Ini</p>
                                         </div>
-                                        <div className="w-full border-t border-gray-200 dark:border-gray-700 my-1"></div>
-                                        <div className="flex justify-between items-center mt-1">
-                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Dasar Perhitungan</span>
-                                            <span className="font-bold text-indigo-600 dark:text-indigo-400">{formatCurrency(currentData.belanjaPegawaiUntukPerhitungan)}</span>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="flex items-start gap-3">
-                                        <Info className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                                            {activeTab === 'infrastruktur' 
-                                                ? "Perhitungan mengacu pada daftar sub-kegiatan infrastruktur publik, di luar belanja bagi hasil dan transfer daerah sesuai ketentuan UU 1/2022." 
-                                                : "Perhitungan mencakup seluruh alokasi anggaran yang mendukung fungsi pendidikan sesuai pemetaan kodefikasi."}
+                                        <p className={`text-xl font-black ${activeTab === 'pegawai' ? (currentData.percentage <= threshold ? 'text-green-300' : 'text-red-300') : (currentData.percentage >= threshold ? 'text-green-300' : 'text-red-300')}`}>
+                                            {currentData.percentage.toFixed(2)}%
                                         </p>
                                     </div>
-                                )}
-                            </div>
-                        </div>
+                                    <div className="bg-black/20 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                        <div className="flex items-center gap-2">
+                                            <Target size={16} className="text-blue-400" />
+                                            <p className="text-[10px] font-bold uppercase text-indigo-200">{targetDesc}</p>
+                                        </div>
+                                        <p className="text-xl font-black text-blue-300 mt-1">{threshold}%</p>
+                                    </div>
+                                </div>
+
+                                {/* Status Card */}
+                                <div className={`p-5 rounded-2xl mb-4 ${activeTab === 'pegawai' 
+                                    ? (currentData.percentage <= threshold ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-rose-500/20 border-rose-500/30')
+                                    : (currentData.percentage >= threshold ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-rose-500/20 border-rose-500/30')
+                                } border`}>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-3 rounded-xl ${
+                                                (activeTab === 'pegawai' && currentData.percentage <= threshold) || 
+                                                (activeTab !== 'pegawai' && currentData.percentage >= threshold)
+                                                    ? 'bg-emerald-500/30' : 'bg-rose-500/30'
+                                            }`}>
+                                                {(activeTab === 'pegawai' && currentData.percentage <= threshold) || 
+                                                 (activeTab !== 'pegawai' && currentData.percentage >= threshold)
+                                                    ? <CheckCircle size={24} className="text-emerald-300" />
+                                                    : <AlertTriangle size={24} className="text-rose-300" />
+                                                }
+                                            </div>
+                                            <div>
+                                                <p className="text-xl font-black text-white">
+                                                    {(activeTab === 'pegawai' && currentData.percentage <= threshold) || 
+                                                     (activeTab !== 'pegawai' && currentData.percentage >= threshold)
+                                                        ? 'MEMENUHI KETENTUAN'
+                                                        : 'BELUM MEMENUHI KETENTUAN'
+                                                    }
+                                                </p>
+                                                <p className="text-sm text-indigo-200 mt-1">
+                                                    {activeTab === 'pegawai' 
+                                                        ? `Belanja pegawai ${currentData.percentage.toFixed(2)}% dari total APBD`
+                                                        : `Alokasi ${title} ${currentData.percentage.toFixed(2)}% dari total APBD`
+                                                    }
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs text-indigo-200">Selisih</p>
+                                            <p className={`text-2xl font-black ${Math.abs(currentData.percentage - threshold) < 1 ? 'text-yellow-400' : (activeTab === 'pegawai' ? (currentData.percentage > threshold ? 'text-red-400' : 'text-green-400') : (currentData.percentage < threshold ? 'text-red-400' : 'text-green-400'))}`}>
+                                                {Math.abs(currentData.percentage - threshold).toFixed(2)}%
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Executive Note */}
+                                <div className="mt-4 flex items-center gap-3 text-sm bg-purple-900/30 p-4 rounded-2xl border border-purple-500/30">
+                                    <Lightbulb size={20} className="text-yellow-300 flex-shrink-0" />
+                                    <p className="text-xs leading-relaxed text-indigo-100">
+                                        <span className="font-bold text-white">CATATAN EKSEKUTIF:</span> {
+                                            activeTab === 'pegawai'
+                                                ? currentData.percentage <= threshold
+                                                    ? `Belanja pegawai sebesar ${currentData.percentage.toFixed(2)}% masih di bawah batas maksimal 30%. Ruang fiskal tersedia untuk program prioritas.`
+                                                    : `Belanja pegawai sebesar ${currentData.percentage.toFixed(2)}% melebihi batas maksimal 30%. Perlu efisiensi sebesar ${(currentData.percentage - threshold).toFixed(2)}% (${formatCurrency((currentData.percentage - threshold) / 100 * currentData.totalAPBD)}).`
+                                                : currentData.percentage >= threshold
+                                                    ? `Alokasi ${title} sebesar ${currentData.percentage.toFixed(2)}% telah memenuhi batas minimal ${threshold}%.`
+                                                    : `Alokasi ${title} sebesar ${currentData.percentage.toFixed(2)}% belum memenuhi batas minimal ${threshold}%. Perlu tambahan alokasi sebesar ${(threshold - currentData.percentage).toFixed(2)}% (${formatCurrency((threshold - currentData.percentage) / 100 * currentData.totalAPBD)}).`
+                                        }
+                                    </p>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -784,7 +1207,7 @@ const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear, userCanUs
                 );
         }
     };
-    
+
     return (
         <div className="space-y-6 max-w-full">
             <SectionTitle>ANALISA MANDATORY SPENDING</SectionTitle>
@@ -830,6 +1253,15 @@ const MandatorySpendingView = ({ data, theme, namaPemda, selectedYear, userCanUs
             <div className="relative">
                 {renderAnalysisContent()}
             </div>
+            
+            {/* Modal Rekomendasi */}
+            {showRekomendasi && (
+                <RekomendasiCard
+                    data={analysisData[rekomendasiType]}
+                    type={rekomendasiType}
+                    onClose={() => setShowRekomendasi(false)}
+                />
+            )}
         </div>
     );
 };
