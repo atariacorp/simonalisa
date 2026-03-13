@@ -65,6 +65,7 @@ import PenandaanMandatoryView from './views/PenandaanMandatoryView';
 import ReferensiPenandaanView from './views/ReferensiPenandaanView';
 import ProsesPenandaanView from './views/ProsesPenandaanView';
 import ActivityLogView from './views/ActivityLogView';
+import ManageViewerAccessView from './views/ManageViewerAccessView';
 
 // Import dari services
 import { uploadData, deleteMonthlyData, fetchData } from './services/firebaseService';
@@ -698,6 +699,7 @@ const App = () => {
       case 'penandaan-tematik': return <PenandaanTematikView theme={theme} userRole={userRole} selectedYear={selectedYear} onUpload={handleReferensiUpload} />;
       case 'referensi-penandaan': return <ReferensiPenandaanView userRole={userRole} selectedYear={selectedYear} />;
       case 'pengaturan': return <PengaturanView selectedYear={selectedYear} onYearChange={handleYearChange} theme={theme} userRole={userRole} saveSettings={saveSettings} namaPemda={namaPemda} />;
+      case 'manage-viewer-access': return <ManageViewerAccessView theme={theme} selectedYear={selectedYear} userRole={userRole} />;
       case 'anggaran': return <DataUploadView title="Unggah Data Anggaran" data={anggaran} onUpload={handleUpload} instruction={ANGGARAN_INSTRUCTION} columnMapping={ANGGARAN_MAPPING} previewHeaders={ANGGARAN_PREVIEW_HEADERS} groupedColumns={ANGGARAN_GROUPED_COLUMNS} theme={theme} selectedYear={selectedYear} userRole={userRole} getAnalysisPrompt={getAnggaranAnalysisPrompt} namaPemda={namaPemda} />;
       case 'pendapatan': return <DataUploadView title="Unggah Data Target Pendapatan" data={pendapatan} onUpload={handleUpload} instruction={PENDAPATAN_INSTRUCTION} columnMapping={PENDAPATAN_MAPPING} previewHeaders={PENDAPATAN_PREVIEW_HEADERS} groupedColumns={PENDAPATAN_GROUPED_COLUMNS} theme={theme} selectedYear={selectedYear} userRole={userRole} getAnalysisPrompt={getPendapatanAnalysisPrompt} namaPemda={namaPemda} />;
       case 'penerimaanPembiayaan': return <DataUploadView title="Unggah Data Penerimaan Pembiayaan" data={penerimaanPembiayaan} onUpload={handleUpload} instruction={PEMBIAYAAN_INSTRUCTION} columnMapping={PEMBIAYAAN_MAPPING} previewHeaders={PEMBIAYAAN_PREVIEW_HEADERS} groupedColumns={PEMBIAYAAN_GROUPED_COLUMNS} theme={theme} selectedYear={selectedYear} userRole={userRole} getAnalysisPrompt={(period, data, customQuery) => getPembiayaanAnalysisPrompt('Penerimaan Pembiayaan', period, data, customQuery)} namaPemda={namaPemda} />;
@@ -734,76 +736,71 @@ const App = () => {
 
       {/* SIDEBAR GLASSMORPHISM */}
       <nav className={`
-  fixed lg:relative z-50 h-full
-  transition-all duration-300 ease-in-out
-  ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
-  lg:translate-x-0
-  ${isSidebarMinimized ? 'lg:w-16' : 'lg:w-64'}
-  w-72
-  backdrop-blur-xl bg-gradient-to-b from-white/80 to-white/70 dark:from-gray-800/80 dark:to-gray-900/80 
-  border-r border-white/30 dark:border-gray-700/30 shadow-2xl flex-shrink-0 flex flex-col justify-between
-  overflow-hidden
+        fixed lg:relative z-50 h-full
+        transition-all duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
+        lg:translate-x-0
+        ${isSidebarMinimized ? 'lg:w-16' : 'lg:w-64'}
+        w-72
+        backdrop-blur-xl bg-gradient-to-b from-white/80 to-white/70 dark:from-gray-800/80 dark:to-gray-900/80 
+        border-r border-white/30 dark:border-gray-700/30 shadow-2xl flex-shrink-0 flex flex-col justify-between
+        overflow-hidden
       `}>
         {/* Decorative Background Elements */}
         <div className="absolute top-0 -left-20 w-64 h-64 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse-slow"></div>
         <div className="absolute bottom-0 -right-20 w-64 h-64 bg-gradient-to-tr from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
         
         <div className="relative z-10 h-full flex flex-col">
-          {/* Header with Logo */}
-<div className={`p-6 ${!isSidebarMinimized ? 'border-b border-white/30 dark:border-gray-700/30' : ''}`}>
-  <div className={`flex items-center gap-3 ${isSidebarMinimized ? 'justify-center' : ''}`}>
-    {/* Logo Container with Glassmorphism */}
-    <div className="relative group">
-      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl blur-md opacity-60 group-hover:opacity-80 transition-opacity"></div>
-      <div className="relative p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-white/50 dark:border-gray-600/50 transform group-hover:scale-105 transition-transform">
-        <img 
-          src={brandingConfig.logo.path} // Ini akan mengambil "/logo.png"
-          alt={brandingConfig.logo.alt}
-          width={isSidebarMinimized ? brandingConfig.logo.sidebarMinimizedWidth : brandingConfig.logo.sidebarWidth}
-          height={isSidebarMinimized ? brandingConfig.logo.sidebarMinimizedWidth : brandingConfig.logo.sidebarWidth}
-          className="rounded-xl"
-          onError={(e) => {
-            e.target.src = `https://ui-avatars.com/api/?name=SIM&background=4f46e5&color=fff&rounded=true&bold=true&size=${isSidebarMinimized ? 32 : 40}`;
-          }}
-        />
-      </div>
-      {/* Tooltip untuk minimized mode */}
-      {isSidebarMinimized && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-          {brandingConfig.text.appName}
-        </div>
-      )}
-    </div>
+          {/* Header with Logo - TANPA FRAME */}
+          <div className={`p-4 ${!isSidebarMinimized ? 'border-b border-white/30 dark:border-gray-700/30' : ''}`}>
+            <div className={`flex items-center gap-3 ${isSidebarMinimized ? 'justify-center' : ''}`}>
+              {/* LOGO - Tanpa frame berlebihan */}
+              <div className="relative group flex-shrink-0">
+                <img 
+                  src={brandingConfig.logo.path}
+                  alt={brandingConfig.logo.alt}
+                  width={isSidebarMinimized ? 36 : 45}
+                  height={isSidebarMinimized ? 36 : 45}
+                  className="object-contain transition-transform group-hover:scale-105"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    // Fallback ke inisial jika logo gagal dimuat
+                    const parent = e.target.parentNode;
+                    e.target.style.display = 'none';
+                    const fallbackDiv = document.createElement('div');
+                    fallbackDiv.className = 'w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl';
+                    fallbackDiv.textContent = 'S';
+                    parent.appendChild(fallbackDiv);
+                  }}
+                />
+                
+                {/* Tooltip untuk minimized mode */}
+                {isSidebarMinimized && (
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                    {brandingConfig.text.sidebarTitle || 'SIMONALISA'}
+                  </div>
+                )}
+              </div>
 
-    {!isSidebarMinimized && (
-      <div className="flex-1 animate-fadeIn">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
-          {brandingConfig.text.sidebarTitle}
-        </h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400">Tahun Anggaran {selectedYear}</p>
-        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-1 truncate max-w-[200px]" title={namaPemda}>
-          {namaPemda || brandingConfig.text.subTitle}
-        </p>
-      </div>
-    )}
-    
-    {/* Theme Toggle - Only visible when sidebar expanded */}
-    {!isSidebarMinimized && (
-      <button 
-        onClick={toggleTheme} 
-        className="p-2 rounded-xl bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-white/30 dark:border-gray-600/30 text-gray-600 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all hover:scale-105"
-        title="Ganti Tema"
-      >
-        {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-      </button>
-    )}
-  </div>
-</div>
+              {!isSidebarMinimized && (
+                <div className="flex-1 min-w-0 animate-fadeIn">
+                  <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent truncate">
+                    {brandingConfig.text.sidebarTitle || 'SIMONALISA'}
+                  </h1>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Tahun Anggaran {selectedYear}</p>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-1 truncate" title={namaPemda}>
+                    {namaPemda || brandingConfig.text.subTitle || 'Pemerintah Kota Medan'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* User Info */}
           <div className={`p-4 ${!isSidebarMinimized ? 'mx-4 mt-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-white/30 dark:border-gray-700/30' : ''}`}>
             <div className={`flex items-center ${isSidebarMinimized ? 'justify-center' : 'gap-3'}`}>
-              <div className="relative group">
+              {/* Avatar User */}
+              <div className="relative group flex-shrink-0">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-0.5 transform group-hover:scale-105 transition-transform">
                   <div className="w-full h-full rounded-xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm flex items-center justify-center">
                     <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
@@ -811,21 +808,16 @@ const App = () => {
                     </span>
                   </div>
                 </div>
+                {/* Status online indicator */}
                 {!isSidebarMinimized && (
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800 animate-pulse"></div>
-                )}
-                {/* Tooltip untuk minimized mode */}
-                {isSidebarMinimized && (
-                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                    {user?.email || 'User'}
-                  </div>
                 )}
               </div>
 
               {!isSidebarMinimized && (
-                <div className="flex-1 overflow-hidden animate-fadeIn">
+                <div className="flex-1 min-w-0 animate-fadeIn">
                   <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
-                    {user?.email || 'User'}
+                    {user?.email?.split('@')[0] || 'User'}
                   </p>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-sm">
@@ -846,6 +838,19 @@ const App = () => {
               </button>
             )}
           </div>
+
+          {/* Theme Toggle untuk mode minimized */}
+          {isSidebarMinimized && (
+            <div className="px-2 mb-4 flex justify-center">
+              <button 
+                onClick={toggleTheme} 
+                className="p-2 rounded-xl bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-white/30 dark:border-gray-600/30 text-gray-600 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all"
+                title="Ganti Tema"
+              >
+                {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+              </button>
+            </div>
+          )}
 
           {/* Search Bar - Only when expanded */}
           {!isSidebarMinimized && (
@@ -1000,42 +1005,42 @@ const App = () => {
             
             {/* Copyright - Only show when expanded */}
             {!isSidebarMinimized && (
-  <div className="mt-4 text-center animate-fadeIn">
-    <p className="text-[10px] text-gray-400 dark:text-gray-500">
-      {brandingConfig.text.footer}
-    </p>
-    <p className="text-[8px] text-gray-300 dark:text-gray-600 mt-1">
-      v4.0.0
-    </p>
-  </div>
-)}
+              <div className="mt-4 text-center animate-fadeIn">
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                  {brandingConfig.text.footer}
+                </p>
+                <p className="text-[8px] text-gray-300 dark:text-gray-600 mt-1">
+                  v4.0.0
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </nav>
 
-      {/* Main Content - LEBIH RAPAT */}
-<main className={`
-  flex-1 transition-all duration-300
-  ${isSidebarMinimized ? 'lg:ml-18' : 'lg:ml-59'}
-  ml-0
-  p-3 md:p-5 overflow-y-auto
-  bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800
-`}>
-  {/* Mobile Header - Only visible on mobile */}
-  <div className="lg:hidden mb-3 flex items-center justify-between">
-    <div className="flex-1"></div>
-    <div className="flex items-center gap-2">
-      <button
-        onClick={toggleTheme}
-        className="p-1.5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700"
-      >
-        {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
-      </button>
-    </div>
-  </div>
+      {/* Main Content */}
+      <main className={`
+        flex-1 transition-all duration-300
+        ${isSidebarMinimized ? 'lg:ml-18' : 'lg:ml-64'}
+        ml-0
+        p-3 md:p-5 overflow-y-auto
+        bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800
+      `}>
+        {/* Mobile Header - Only visible on mobile */}
+        <div className="lg:hidden mb-3 flex items-center justify-between">
+          <div className="flex-1"></div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="p-1.5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700"
+            >
+              {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+            </button>
+          </div>
+        </div>
 
-  {renderView()}
-</main>
+        {renderView()}
+      </main>
     </div>
   );
 };

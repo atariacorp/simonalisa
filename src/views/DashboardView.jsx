@@ -161,7 +161,7 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, userCanUseAi, al
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const generateAnalysis = async () => {
+const generateAnalysis = async () => {
   if (disabledCondition) return;
   
   setLoading(true);
@@ -170,15 +170,16 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, userCanUseAi, al
   const prompt = getAnalysisPrompt("", allData);
 
   try {
-    // ✅ BENAR: Memanggil API internal kita sendiri
-    // BUKAN memanggil generativelanguage.googleapis.com
-    const response = await fetch('/api/gemini', { 
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
-    });
+    
+const response = await fetch('/api/gemini', { 
+    method: 'POST', // WAJIB POST
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        contents: [{ 
+            parts: [{ text: prompt }] 
+        }]
+    })
+});
 
     const result = await response.json();
 

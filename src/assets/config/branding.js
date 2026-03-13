@@ -8,21 +8,21 @@ export const brandingConfig = {
         width: 96,
         height: 96,
         // Ukuran khusus untuk login (lebih besar)
-        loginWidth: 150,
-        loginHeight: 150,
-        // Ukuran sidebar
-        sidebarWidth: 40,
-        sidebarMinimizedWidth: 32,
+        loginWidth: 200,
+        loginHeight: 200,
+        // Ukuran sidebar - dipisah untuk clarity
+        sidebarExpandedWidth: 45,    // Ukuran saat sidebar terbuka
+        sidebarMinimizedWidth: 36,    // Ukuran saat sidebar dikecilkan
     },
     
-    // Warna tema (ganti sesuai keinginan)
+    // Warna tema
     colors: {
-        primary: "#3B82F6", // blue-500
-        primaryHover: "#2563EB", // blue-600
-        secondary: "#10B981", // green-500
-        accent: "#8B5CF6", // purple-500
-        background: "#F3F4F6", // gray-100
-        darkBackground: "#111827", // gray-900
+        primary: "#3B82F6",
+        primaryHover: "#2563EB",
+        secondary: "#10B981",
+        accent: "#8B5CF6",
+        background: "#F3F4F6",
+        darkBackground: "#111827",
     },
     
     // Teks branding
@@ -32,10 +32,10 @@ export const brandingConfig = {
         loginTitle: "Sistem Informasi Analisa APBD Kota Medan",
         loginSubtitle: "Silakan login untuk melanjutkan",
         sidebarTitle: "SIMONALISA",
-        footer: "© 2026 Pemerintah Kota Medan",
+        footer: "© 2026 Pemerintah Kota Medan. All rights reserved.",
     },
     
-    // Tautan (isi dengan URL yang sesuai)
+    // Tautan
     links: {
         helpDesk: "https://bkad.medan.go.id/help",
         privacy: "https://bkad.medan.go.id/privacy",

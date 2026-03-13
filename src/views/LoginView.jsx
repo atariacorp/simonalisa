@@ -1,3 +1,5 @@
+// src/views/LoginView.jsx
+
 import React, { useState, useEffect } from 'react';
 import { 
     Loader, Mail, Lock, Eye, EyeOff, LogIn, 
@@ -89,7 +91,7 @@ const LoginView = ({ theme }) => {
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center py-2 border-b border-white/10">
                                             <span className="text-sm text-gray-300">Nama Aplikasi</span>
-                                            <span className="text-sm font-bold text-white">SIMONALISA</span>
+                                            <span className="text-sm font-bold text-white">{brandingConfig.text.appName}</span>
                                         </div>
                                         <div className="flex justify-between items-center py-2 border-b border-white/10">
                                             <span className="text-sm text-gray-300">Versi</span>
@@ -154,22 +156,35 @@ const LoginView = ({ theme }) => {
             {/* Login Card */}
             <div className="relative w-full max-w-md p-4">
                 <div className="backdrop-blur-xl bg-white/10 rounded-3xl shadow-2xl border border-white/20 p-8">
-                    {/* Header */}
-                    <div className="text-center mb-8">
-                        <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-0.5">
-                            <div className="w-full h-full rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
-                                <span className="text-3xl font-bold text-white">
-                                    {brandingConfig?.text?.loginTitle?.[0] || 'S'}
-                                </span>
-                            </div>
-                        </div>
-                        <h1 className="text-3xl font-bold text-white mb-2">
-                            {brandingConfig?.text?.loginTitle || 'SIMONALISA'}
-                        </h1>
-                        <p className="text-indigo-100">
-                            {brandingConfig?.text?.loginSubtitle || 'Sistem Monitoring Analisa Anggaran Daerah'}
-                        </p>
-                    </div>
+                    {/* Header dengan LOGO - TANPA FRAME (menggunakan config) */}
+<div className="text-center mb-8">
+    {/* LOGO - Tanpa frame, ukuran dari config */}
+    <div className="flex justify-center mb-4">
+        <img 
+            src={brandingConfig.logo.path}
+            alt={brandingConfig.logo.alt}
+            width={brandingConfig.logo.loginWidth || 180}
+            height={brandingConfig.logo.loginHeight || 180}
+            className="object-contain drop-shadow-2xl"
+            style={{
+                maxWidth: '100%',
+                height: 'auto'
+            }}
+            onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = `https://ui-avatars.com/api/?name=PM&background=4f46e5&color=fff&size=${brandingConfig.logo.loginWidth || 180}&bold=true`;
+            }}
+        />
+    </div>
+    
+    {/* Teks dari brandingConfig */}
+    <h1 className="text-3xl font-bold text-white mb-2">
+        {brandingConfig.text.loginTitle}
+    </h1>
+    <p className="text-indigo-100">
+        {brandingConfig.text.loginSubtitle}
+    </p>
+</div>
 
                     {error && (
                         <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl backdrop-blur">
@@ -247,9 +262,9 @@ const LoginView = ({ theme }) => {
                         </button>
                     </div>
 
-                    {/* Footer */}
+                    {/* Footer - Menggunakan brandingConfig */}
                     <p className="mt-6 text-center text-xs text-white/40">
-                        &copy; 2026 {brandingConfig?.text?.loginTitle || 'SIMONALISA'}. All rights reserved.
+                        {brandingConfig.text.footer}. All rights reserved.
                     </p>
                 </div>
             </div>

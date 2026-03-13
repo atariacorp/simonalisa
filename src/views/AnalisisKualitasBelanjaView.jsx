@@ -438,13 +438,7 @@ Gunakan bahasa profesional, langsung ke inti, tanpa basa-basi.`;
                     </div>
                 </div>
             </div>
-
-            <GeminiAnalysis 
-                getAnalysisPrompt={getAnalysisPrompt} 
-                disabledCondition={qualityStats.totalPagu === 0} 
-                userCanUseAi={userCanUseAi}
-            />
-            
+                  
             <div className="bg-white dark:bg-gray-800 p-4 md:p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700">
                 {/* FILTER SECTION */}
                 <div className="flex flex-col xl:flex-row gap-6 mb-8 items-end">

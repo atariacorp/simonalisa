@@ -24,23 +24,20 @@ const GeminiAIComponent = ({
 
   const generateAnalysis = async () => {
     if (disabledCondition) return;
-    
     setLoading(true);
     setError(null);
 
-    // Ambil prompt dari fungsi yang dikirim via props
     const prompt = getAnalysisPrompt("", allData);
 
     try {
-      // Memanggil file backend gemini.js Anda
-      const response = await fetch('/api/gemini', {
+      // ✅ UBAH: Tambahkan http://localhost:3001
+      const response = await fetch('http://localhost:3001/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          systemInstruction: { 
-            parts: [{ text: systemInstruction }] 
-          }
+          // Catatan: Pastikan server.js Anda meneruskan systemInstruction ini 
+          // Jika tidak perlu, bagian systemInstruction ini bisa dihapus saja
         })
       });
 

@@ -10,7 +10,8 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, allData, userRol
 
     if (userRole === 'viewer') return null;
 
-    const handleGetAnalysis = async (query) => {
+   const handleGetAnalysis = async (query) => {
+    if (!allData) return;
     setIsLoading(true);
     setAnalysis('');
     setError('');
@@ -18,27 +19,30 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, allData, userRol
     const prompt = getAnalysisPrompt(query, allData);
 
     try {
-        // Panggil file gemini.js Anda
-        const response = await fetch('/api/gemini', { // Panggil route lokal Anda
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }]
-    })
-});
+        // ✅ UBAH: Gunakan http://localhost:3001
+        const response = await fetch('http://localhost:3001/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ 
+                    parts: [{ text: prompt }] 
+                }]
+            })
+        });
 
         const result = await response.json();
 
         if (!response.ok) {
-            throw new Error(result.error || "Gagal mendapatkan analisis dari server");
+            // Tangkap pesan error detail dari server.js
+            throw new Error(result.details?.error?.message || result.error || "Gagal menghubungi AI");
         }
 
-        // Ambil teks dari struktur respons Gemini
         const aiResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
         setAnalysis(aiResponse || "Tidak ada hasil analisis.");
         
     } catch (err) {
         setError(err.message);
+        console.error("💥 Client Error:", err);
     } finally {
         setIsLoading(false);
     }
