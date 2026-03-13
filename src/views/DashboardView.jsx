@@ -167,31 +167,44 @@ const generateAnalysis = async () => {
   setLoading(true);
   setError(null);
 
+  // Pastikan prompt tidak kosong
   const prompt = getAnalysisPrompt("", allData);
 
   try {
-    
-const response = await fetch('/api/gemini', { 
-    method: 'POST', // WAJIB POST
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-        contents: [{ 
-            parts: [{ text: prompt }] 
+    // GANTI URL INI jika Anda tidak menggunakan proxy atau Vercel Dev
+    // Contoh: 'http://localhost:3000/api/gemini'
+    const response = await fetch('/api/gemini', { 
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: prompt }]
         }]
-    })
-});
+      })
+    });
+
+    // Cek apakah response berupa JSON
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const textError = await response.text();
+      console.error("Server membalas bukan JSON:", textError);
+      throw new Error("Server Error (500): Cek terminal backend Anda.");
+    }
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.error || "Gagal menghubungi AI");
+      throw new Error(result.details || result.error || "Gagal menghubungi AI");
     }
 
     const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
     setAnalysis(text || "Gagal menghasilkan analisis.");
 
   } catch (err) {
-    setError(err.message || "Gagal menghubungi layanan AI.");
+    console.error("Fetch Error:", err);
+    setError(err.message);
   } finally {
     setLoading(false);
   }

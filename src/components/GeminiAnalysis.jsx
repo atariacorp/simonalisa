@@ -19,8 +19,8 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, allData, userRol
     const prompt = getAnalysisPrompt(query, allData);
 
     try {
-        // ✅ UBAH: Gunakan http://localhost:3001
-        const response = await fetch('http://localhost:3001/api/gemini', {
+        // ✅ UBAH: Gunakan URL Vercel agar bisa diakses secara online
+        const response = await fetch('https://simonalisa.vercel.app/api/gemini', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -33,7 +33,6 @@ const GeminiAnalysis = ({ getAnalysisPrompt, disabledCondition, allData, userRol
         const result = await response.json();
 
         if (!response.ok) {
-            // Tangkap pesan error detail dari server.js
             throw new Error(result.details?.error?.message || result.error || "Gagal menghubungi AI");
         }
 

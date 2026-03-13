@@ -2,7 +2,7 @@
 export default async function handler(req, res) {
   // 1. Handle Preflight CORS (Penting agar Vercel tidak blokir Frontend)
   res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*'); // Bisa diganti domain asli nanti
+  res.setHeader('Access-Control-Allow-Origin', '*'); 
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
@@ -18,30 +18,38 @@ export default async function handler(req, res) {
     });
   }
 
+  // 3. Validasi Body Request (Agar tidak Error 500 jika data kosong)
+  if (!req.body || Object.keys(req.body).length === 0) {
+    return res.status(400).json({ 
+      error: 'Bad Request',
+      message: 'Body request kosong! Pastikan frontend mengirimkan data JSON.' 
+    });
+  }
+
   try {
-    // 3. Ambil API Key (Pastikan nanti diisi di Dashboard Vercel)
+    // 4. Ambil API Key dari Environment Variable
     const API_KEY = process.env.GEMINI_API_KEY;
     
     if (!API_KEY) {
       return res.status(500).json({ 
         error: 'Configuration Error',
-        message: 'API Key belum dipasang di Vercel Environment Variables'
+        message: 'API Key belum dipasang di Environment Variables'
       });
     }
 
-    // 4. Panggil Gemini API (Menggunakan model 'latest' yang sukses tadi)
+    // 5. Panggil Gemini API menggunakan endpoint yang sukses di Thunder Client
     const googleResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body)
+        body: JSON.stringify(req.body) 
       }
     );
 
     const data = await googleResponse.json();
 
-    // 5. Cek Error dari Google
+    // 6. Cek Error dari Google
     if (!googleResponse.ok) {
       return res.status(googleResponse.status).json({
         error: 'Google Gemini API Error',
@@ -49,14 +57,15 @@ export default async function handler(req, res) {
       });
     }
 
-    // 6. Kirim jawaban sukses
+    // 7. Kirim jawaban sukses ke Frontend
     return res.status(200).json(data);
 
   } catch (error) {
-    console.error('Server error:', error);
+    console.error('Server error detail:', error); 
     return res.status(500).json({ 
       error: 'Internal server error',
-      message: error.message 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
     });
   }
 }
