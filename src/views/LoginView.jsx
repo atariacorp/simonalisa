@@ -5,7 +5,7 @@ import {
     Loader, Mail, Lock, Eye, EyeOff, LogIn, 
     Info, X, Code, Calendar, Phone, Mail as MailIcon 
 } from 'lucide-react';
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from '../utils/firebase';
 import { brandingConfig } from '../assets/config/branding';
 
@@ -17,6 +17,10 @@ const LoginView = ({ theme }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showDevInfo, setShowDevInfo] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
+    const [showResetModal, setShowResetModal] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
+    const [resetMessage, setResetMessage] = useState('');
+    const [resetLoading, setResetLoading] = useState(false);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -32,6 +36,36 @@ const LoginView = ({ theme }) => {
         } catch (err) {
             setError("Gagal login. Periksa kembali email dan password Anda.");
             setIsLoading(false);
+        }
+    };
+
+    const handleResetPassword = async (e) => {
+        e.preventDefault();
+        setResetLoading(true);
+        setResetMessage('');
+        
+        try {
+            await sendPasswordResetEmail(auth, resetEmail);
+            setResetMessage('✅ Link reset password telah dikirim ke email Anda. Cek folder inbox atau spam.');
+            setTimeout(() => {
+                setShowResetModal(false);
+                setResetEmail('');
+                setResetMessage('');
+            }, 3000);
+        } catch (error) {
+            console.error('Reset password error:', error);
+            
+            if (error.code === 'auth/user-not-found') {
+                setResetMessage('❌ Email tidak terdaftar dalam sistem.');
+            } else if (error.code === 'auth/invalid-email') {
+                setResetMessage('❌ Format email tidak valid.');
+            } else if (error.code === 'auth/too-many-requests') {
+                setResetMessage('❌ Terlalu banyak permintaan. Coba lagi nanti.');
+            } else {
+                setResetMessage('❌ Gagal mengirim email reset. Coba lagi nanti.');
+            }
+        } finally {
+            setResetLoading(false);
         }
     };
 
@@ -153,38 +187,131 @@ const LoginView = ({ theme }) => {
                 </div>
             )}
 
+            {/* Reset Password Modal */}
+            {showResetModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+                    <div className="relative w-full max-w-md animate-slideUp">
+                        <div className="backdrop-blur-xl bg-white/10 rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+                            
+                            {/* Header Modal */}
+                            <div className="relative h-20 bg-gradient-to-r from-indigo-600 to-purple-600">
+                                <button
+                                    onClick={() => {
+                                        setShowResetModal(false);
+                                        setResetMessage('');
+                                        setResetEmail('');
+                                    }}
+                                    className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 rounded-full backdrop-blur-md transition-colors text-white"
+                                >
+                                    <X size={18} />
+                                </button>
+                                <div className="absolute -bottom-8 left-6">
+                                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-0.5 shadow-xl">
+                                        <div className="w-full h-full rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
+                                            <Mail className="w-8 h-8 text-white" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Content Modal */}
+                            <div className="pt-12 pb-6 px-6">
+                                <h3 className="text-2xl font-bold text-white mb-2">Reset Password</h3>
+                                <p className="text-sm text-indigo-200 mb-6">
+                                    Masukkan email Anda. Kami akan mengirimkan link untuk mereset password.
+                                </p>
+
+                                <form onSubmit={handleResetPassword} className="space-y-5">
+                                    <div>
+                                        <div className="relative">
+                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/60" size={20} />
+                                            <input
+                                                type="email"
+                                                value={resetEmail}
+                                                onChange={(e) => setResetEmail(e.target.value)}
+                                                className="w-full pl-12 pr-4 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50"
+                                                placeholder="Masukkan email Anda"
+                                                required
+                                                disabled={resetLoading}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {resetMessage && (
+                                        <div className={`p-4 rounded-xl backdrop-blur ${
+                                            resetMessage.includes('✅') 
+                                                ? 'bg-emerald-500/20 border border-emerald-500/30' 
+                                                : 'bg-red-500/20 border border-red-500/30'
+                                        }`}>
+                                            <p className={`text-sm text-center ${
+                                                resetMessage.includes('✅') ? 'text-emerald-200' : 'text-red-200'
+                                            }`}>
+                                                {resetMessage}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    <div className="flex gap-3">
+                                        <button
+                                            type="submit"
+                                            disabled={resetLoading}
+                                            className="flex-1 py-4 bg-white hover:bg-white/90 text-indigo-900 font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        >
+                                            {resetLoading ? <Loader className="animate-spin" size={20} /> : null}
+                                            {resetLoading ? 'Mengirim...' : 'Kirim Link Reset'}
+                                        </button>
+                                        
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowResetModal(false);
+                                                setResetMessage('');
+                                                setResetEmail('');
+                                            }}
+                                            className="px-6 py-4 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl transition-all border border-white/20"
+                                        >
+                                            Batal
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Login Card */}
             <div className="relative w-full max-w-md p-4">
                 <div className="backdrop-blur-xl bg-white/10 rounded-3xl shadow-2xl border border-white/20 p-8">
                     {/* Header dengan LOGO - TANPA FRAME (menggunakan config) */}
-<div className="text-center mb-8">
-    {/* LOGO - Tanpa frame, ukuran dari config */}
-    <div className="flex justify-center mb-4">
-        <img 
-            src={brandingConfig.logo.path}
-            alt={brandingConfig.logo.alt}
-            width={brandingConfig.logo.loginWidth || 180}
-            height={brandingConfig.logo.loginHeight || 180}
-            className="object-contain drop-shadow-2xl"
-            style={{
-                maxWidth: '100%',
-                height: 'auto'
-            }}
-            onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = `https://ui-avatars.com/api/?name=PM&background=4f46e5&color=fff&size=${brandingConfig.logo.loginWidth || 180}&bold=true`;
-            }}
-        />
-    </div>
-    
-    {/* Teks dari brandingConfig */}
-    <h1 className="text-3xl font-bold text-white mb-2">
-        {brandingConfig.text.loginTitle}
-    </h1>
-    <p className="text-indigo-100">
-        {brandingConfig.text.loginSubtitle}
-    </p>
-</div>
+                    <div className="text-center mb-8">
+                        {/* LOGO - Tanpa frame, ukuran dari config */}
+                        <div className="flex justify-center mb-4">
+                            <img 
+                                src={brandingConfig.logo.path}
+                                alt={brandingConfig.logo.alt}
+                                width={brandingConfig.logo.loginWidth || 180}
+                                height={brandingConfig.logo.loginHeight || 180}
+                                className="object-contain drop-shadow-2xl"
+                                style={{
+                                    maxWidth: '100%',
+                                    height: 'auto'
+                                }}
+                                onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = `https://ui-avatars.com/api/?name=PM&background=4f46e5&color=fff&size=${brandingConfig.logo.loginWidth || 180}&bold=true`;
+                                }}
+                            />
+                        </div>
+                        
+                        {/* Teks dari brandingConfig */}
+                        <h1 className="text-3xl font-bold text-white mb-2">
+                            {brandingConfig.text.loginTitle}
+                        </h1>
+                        <p className="text-indigo-100">
+                            {brandingConfig.text.loginSubtitle}
+                        </p>
+                    </div>
 
                     {error && (
                         <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl backdrop-blur">
@@ -238,7 +365,13 @@ const LoginView = ({ theme }) => {
                                 />
                                 <span>Ingat saya</span>
                             </label>
-                            <a href="#" className="text-white/80 hover:text-white">Lupa password?</a>
+                            <button
+                                type="button"
+                                onClick={() => setShowResetModal(true)}
+                                className="text-white/80 hover:text-white focus:outline-none"
+                            >
+                                Lupa password?
+                            </button>
                         </div>
 
                         <button
