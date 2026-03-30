@@ -22,7 +22,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         return (
             <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl p-6 rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] border border-white/50 dark:border-gray-700/50 min-w-[320px] z-50 animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex items-center gap-3 mb-4 border-b border-gray-100 dark:border-gray-800 pb-3">
-                    <div className="w-2 h-10 bg-gradient-to-b from-pink-500 to-orange-500 rounded-full"></div>
+                    <div className="w-2 h-10 bg-gradient-to-b from-[#540d42] to-[#7a145e] rounded-full"></div>
                     <p className="font-black text-base text-gray-800 dark:text-white uppercase tracking-tight max-w-[250px] break-words">
                         {label}
                     </p>
@@ -404,13 +404,13 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
         <div className="space-y-8 animate-in fade-in duration-700 pb-10">
             <SectionTitle>STATISTIK PENDAPATAN PER SKPD</SectionTitle>
             
-            {/* === EXECUTIVE DASHBOARD - INFORMASI UNTUK PIMPINAN (WARNA PINK/ORANGE) === */}
+            {/* === EXECUTIVE DASHBOARD - INFORMASI UNTUK PIMPINAN (WARNA #540d42) === */}
             {showExecutiveInfo && executiveSummary && (
-                <div className="relative overflow-hidden bg-gradient-to-br from-pink-600 via-orange-600 to-rose-600 rounded-3xl p-10 text-white shadow-2xl border border-white/10 group mb-8">
+                <div className="relative overflow-hidden bg-gradient-to-br from-[#540d42] via-[#6a1152] to-[#7a145e] rounded-3xl p-10 text-white shadow-2xl border border-white/10 group mb-8">
                     {/* Decorative Elements */}
                     <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-40 -mt-40 transition-transform duration-1000 group-hover:scale-110"></div>
-                    <div className="absolute bottom-0 left-0 w-80 h-80 bg-pink-400/10 rounded-full blur-[80px] -ml-32 -mb-32"></div>
-                    <div className="absolute top-20 left-40 w-40 h-40 bg-orange-400/10 rounded-full blur-[60px]"></div>
+                    <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#540d42]/20 rounded-full blur-[80px] -ml-32 -mb-32"></div>
+                    <div className="absolute top-20 left-40 w-40 h-40 bg-[#6a1152]/20 rounded-full blur-[60px]"></div>
                     
                     {/* Animated Particles */}
                     <div className="absolute inset-0 overflow-hidden">
@@ -470,34 +470,34 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                             <div className="bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all">
                                 <div className="flex items-center gap-3 mb-2">
                                     <Coins size={22} className="text-yellow-400" />
-                                    <p className="text-xs font-bold uppercase text-pink-200 tracking-wider">Total Target</p>
+                                    <p className="text-xs font-bold uppercase text-[#e6b0d9] tracking-wider">Total Target</p>
                                 </div>
                                 <p className="text-2xl md:text-3xl font-black text-white">{formatCurrency(executiveSummary.totalTarget)}</p>
-                                <p className="text-xs text-pink-200/70 mt-1">Keseluruhan target</p>
+                                <p className="text-xs text-[#e6b0d9]/70 mt-1">Keseluruhan target</p>
                             </div>
                             <div className="bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all">
                                 <div className="flex items-center gap-3 mb-2">
                                     <TrendingUp size={22} className="text-emerald-400" />
-                                    <p className="text-xs font-bold uppercase text-pink-200 tracking-wider">Total Realisasi</p>
+                                    <p className="text-xs font-bold uppercase text-[#e6b0d9] tracking-wider">Total Realisasi</p>
                                 </div>
                                 <p className="text-2xl md:text-3xl font-black text-emerald-300">{formatCurrency(executiveSummary.totalRealisasi)}</p>
-                                <p className="text-xs text-pink-200/70 mt-1">{executiveSummary.rataRataPersentase.toFixed(1)}% dari target</p>
+                                <p className="text-xs text-[#e6b0d9]/70 mt-1">{executiveSummary.rataRataPersentase.toFixed(1)}% dari target</p>
                             </div>
                             <div className="bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all">
                                 <div className="flex items-center gap-3 mb-2">
                                     <Gauge size={22} className="text-purple-400" />
-                                    <p className="text-xs font-bold uppercase text-pink-200 tracking-wider">Rata-rata Capaian</p>
+                                    <p className="text-xs font-bold uppercase text-[#e6b0d9] tracking-wider">Rata-rata Capaian</p>
                                 </div>
                                 <p className="text-2xl md:text-3xl font-black text-purple-300">{executiveSummary.rataRataPersentase.toFixed(1)}%</p>
-                                <p className="text-xs text-pink-200/70 mt-1">Seluruh sumber</p>
+                                <p className="text-xs text-[#e6b0d9]/70 mt-1">Seluruh sumber</p>
                             </div>
                             <div className="bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all">
                                 <div className="flex items-center gap-3 mb-2">
                                     <Layers size={22} className="text-blue-400" />
-                                    <p className="text-xs font-bold uppercase text-pink-200 tracking-wider">Jumlah Sumber</p>
+                                    <p className="text-xs font-bold uppercase text-[#e6b0d9] tracking-wider">Jumlah Sumber</p>
                                 </div>
                                 <p className="text-2xl md:text-3xl font-black text-blue-300">{executiveSummary.totalItems}</p>
-                                <p className="text-xs text-pink-200/70 mt-1">Item pendapatan</p>
+                                <p className="text-xs text-[#e6b0d9]/70 mt-1">Item pendapatan</p>
                             </div>
                         </div>
 
@@ -518,11 +518,11 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 </div>
                                 <div className="space-y-3">
                                     <div className="flex justify-between text-base">
-                                        <span className="text-pink-200">Target:</span>
+                                        <span className="text-[#e6b0d9]">Target:</span>
                                         <span className="font-bold text-white text-lg">{formatCurrency(executiveSummary.totalTarget)}</span>
                                     </div>
                                     <div className="flex justify-between text-base">
-                                        <span className="text-pink-200">Realisasi:</span>
+                                        <span className="text-[#e6b0d9]">Realisasi:</span>
                                         <span className="font-bold text-emerald-300 text-lg">{formatCurrency(executiveSummary.totalRealisasi)}</span>
                                     </div>
                                     <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden mt-3">
@@ -531,7 +531,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                             style={{ width: `${Math.min(executiveSummary.rataRataPersentase, 100)}%` }}
                                         ></div>
                                     </div>
-                                    <p className="text-xs text-pink-200/70 text-right">
+                                    <p className="text-xs text-[#e6b0d9]/70 text-right">
                                         Sisa target: {formatCurrency(executiveSummary.totalGap)}
                                     </p>
                                 </div>
@@ -572,7 +572,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                         <div className="h-full bg-gradient-to-r from-orange-500 to-red-500" style={{ width: `${(executiveSummary.lowPerformerCount / executiveSummary.totalItems) * 100}%` }}></div>
                                         <div className="h-full bg-gradient-to-r from-rose-500 to-pink-500 rounded-r-full" style={{ width: `${(executiveSummary.criticalPerformerCount / executiveSummary.totalItems) * 100}%` }}></div>
                                     </div>
-                                    <p className="text-xs text-pink-200 mt-2">
+                                    <p className="text-xs text-[#e6b0d9] mt-2">
                                         <span className="font-bold">{executiveSummary.criticalPerformerCount}</span> sumber pendapatan dalam kondisi kritis (&lt;50%)
                                     </p>
                                 </div>
@@ -591,13 +591,13 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                         </p>
                                     </div>
                                 </div>
-                                <p className="text-sm text-pink-200 mb-3">Top 3 kontribusi terhadap total realisasi</p>
+                                <p className="text-sm text-[#e6b0d9] mb-3">Top 3 kontribusi terhadap total realisasi</p>
                                 <div className="space-y-2">
                                     {executiveSummary.topContributors.slice(0, 3).map((item, idx) => {
                                         const percentage = (item.totalRealisasi / executiveSummary.totalRealisasi * 100).toFixed(1);
                                         return (
                                             <div key={idx} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
-                                                <span className="text-sm text-pink-100 truncate max-w-[200px]" title={item.sumberPendapatan}>
+                                                <span className="text-sm text-[#e6b0d9] truncate max-w-[200px]" title={item.sumberPendapatan}>
                                                     <span className="inline-block w-5 h-5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-black text-center mr-2">
                                                         {idx+1}
                                                     </span>
@@ -624,7 +624,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 <div className="space-y-3">
                                     {executiveSummary.topPerformers.slice(0, 3).map((item, idx) => (
                                         <div key={idx} className="flex justify-between items-center p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
-                                            <span className="text-sm font-medium text-pink-100 truncate max-w-[250px]">
+                                            <span className="text-sm font-medium text-[#e6b0d9] truncate max-w-[250px]">
                                                 {idx+1}. {item.sumberPendapatan}
                                             </span>
                                             <span className="text-base font-bold text-emerald-400">
@@ -646,7 +646,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 <div className="space-y-3">
                                     {executiveSummary.lowPerformersList.slice(0, 3).map((item, idx) => (
                                         <div key={idx} className="flex justify-between items-center p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
-                                            <span className="text-sm font-medium text-pink-100 truncate max-w-[250px]">
+                                            <span className="text-sm font-medium text-[#e6b0d9] truncate max-w-[250px]">
                                                 {idx+1}. {item.sumberPendapatan}
                                             </span>
                                             <span className="text-base font-bold text-rose-400">
@@ -667,24 +667,24 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-xl uppercase tracking-wider text-white">PROYEKSI AKHIR TAHUN</h3>
-                                        <p className="text-sm text-pink-200 mt-1">{projectionData.riskDescription}</p>
+                                        <p className="text-sm text-[#e6b0d9] mt-1">{projectionData.riskDescription}</p>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div className="bg-black/20 rounded-lg p-4">
-                                        <p className="text-xs text-pink-200 mb-1">Target Tahunan</p>
+                                        <p className="text-xs text-[#e6b0d9] mb-1">Target Tahunan</p>
                                         <p className="text-xl font-black text-white">{formatCurrency(projectionData.totalTarget)}</p>
                                     </div>
                                     <div className="bg-black/20 rounded-lg p-4">
-                                        <p className="text-xs text-pink-200 mb-1">Realisasi s/d {projectionMonth}</p>
+                                        <p className="text-xs text-[#e6b0d9] mb-1">Realisasi s/d {projectionMonth}</p>
                                         <p className="text-xl font-black text-teal-300">{formatCurrency(projectionData.realisasiHinggaSaatIni)}</p>
                                     </div>
                                     <div className="bg-black/20 rounded-lg p-4">
-                                        <p className="text-xs text-pink-200 mb-1">Proyeksi Akhir</p>
+                                        <p className="text-xs text-[#e6b0d9] mb-1">Proyeksi Akhir</p>
                                         <p className="text-xl font-black text-emerald-300">{formatCurrency(projectionData.proyeksiAkhirTahun)}</p>
                                     </div>
                                     <div className="bg-black/20 rounded-lg p-4">
-                                        <p className="text-xs text-pink-200 mb-1">Estimasi Capaian</p>
+                                        <p className="text-xs text-[#e6b0d9] mb-1">Estimasi Capaian</p>
                                         <div className="flex items-center gap-2">
                                             <p className="text-2xl font-black text-white">{projectionData.persenProyeksi.toFixed(1)}%</p>
                                             <span className={`text-xs px-2 py-1 rounded-full bg-gradient-to-r ${projectionData.riskColor} text-white`}>
@@ -699,7 +699,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                         style={{ width: `${Math.min(projectionData.persenProyeksi, 100)}%` }}
                                     ></div>
                                 </div>
-                                <div className="flex justify-between text-xs text-pink-200 mt-2">
+                                <div className="flex justify-between text-xs text-[#e6b0d9] mt-2">
                                     <span>Sisa {projectionData.monthsRemaining} bulan</span>
                                     <span>Rata-rata pertumbuhan: {projectionData.rataRataPertumbuhan.toFixed(1)}%/bln</span>
                                 </div>
@@ -707,7 +707,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                         )}
 
                         {/* Executive Note - DIPERBESAR */}
-                        <div className="flex items-start gap-5 text-base bg-gradient-to-r from-pink-800/50 to-orange-800/50 p-6 rounded-2xl border border-pink-500/30 backdrop-blur-sm">
+                        <div className="flex items-start gap-5 text-base bg-gradient-to-r from-[#540d42]/80 to-[#6a1152]/80 p-6 rounded-2xl border border-[#540d42]/30 backdrop-blur-sm">
                             <div className="p-4 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl shadow-lg shrink-0">
                                 <Lightbulb size={32} className="text-white" />
                             </div>
@@ -716,7 +716,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                     <Sparkles size={20} className="text-yellow-300" />
                                     CATATAN EKSEKUTIF
                                 </p>
-                                <p className="text-base leading-relaxed text-pink-100">
+                                <p className="text-base leading-relaxed text-[#e6b0d9]">
                                     <span className="font-bold text-white">PRIORITAS UTAMA:</span> Fokus pada <span className="font-black text-yellow-300 text-lg">{executiveSummary.criticalPerformerCount}</span> sumber pendapatan dengan kinerja kritis (&lt;50%). 
                                     Optimalkan <span className="font-bold text-white">{executiveSummary.lowPerformersList[0]?.sumberPendapatan || 'pendapatan utama'}</span> yang masih di bawah target dengan gap 
                                     <span className="font-black text-amber-300 text-lg ml-1">{formatCurrency(executiveSummary.totalGap)}</span>. 
@@ -725,7 +725,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                         {projectionData?.riskCategory}
                                     </span>.
                                 </p>
-                                <p className="text-sm text-pink-200/80 mt-2 italic">
+                                <p className="text-sm text-[#e6b0d9]/80 mt-2 italic">
                                     * Rekomendasi strategis tersedia pada fitur Analisis AI di bawah
                                 </p>
                             </div>
@@ -737,7 +737,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
             {!showExecutiveInfo && (
                 <button 
                     onClick={() => setShowExecutiveInfo(true)}
-                    className="mb-6 px-8 py-4 bg-gradient-to-r from-pink-600 to-orange-600 text-white rounded-xl font-bold text-base flex items-center gap-3 shadow-xl hover:shadow-2xl transition-all group hover:scale-105"
+                    className="mb-6 px-8 py-4 bg-gradient-to-r from-[#540d42] to-[#6a1152] text-white rounded-xl font-bold text-base flex items-center gap-3 shadow-xl hover:shadow-2xl transition-all group hover:scale-105"
                 >
                     <Eye size={22} className="group-hover:scale-110 transition-transform" /> 
                     TAMPILKAN EXECUTIVE DASHBOARD
@@ -763,8 +763,8 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                 {showAnalysis && stats.tableData.length > 0 && (
                     <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
                         <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#540d42] opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#540d42]"></span>
                         </span>
                         <span>SKPD: {selectedSkpd === 'Semua SKPD' ? 'Semua SKPD' : selectedSkpd} | Total Sumber: {stats.tableData.length} | Serapan: {executiveSummary?.rataRataPersentase.toFixed(1)}% | Proyeksi: {projectionData?.persenProyeksi.toFixed(1)}%</span>
                     </div>
@@ -874,7 +874,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                 <div className="p-8 bg-gradient-to-r from-white/50 to-white/30 dark:from-gray-800/50 dark:to-gray-900/50 border-b border-gray-200/50 dark:border-gray-700/50">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-lg font-black text-gray-800 dark:text-white flex items-center gap-2">
-                            <div className="w-1.5 h-6 bg-gradient-to-b from-pink-500 to-orange-500 rounded-full"></div>
+                            <div className="w-1.5 h-6 bg-gradient-to-b from-[#540d42] to-[#6a1152] rounded-full"></div>
                             PANEL ANALISIS PENDAPATAN
                         </h3>
                         <div className="flex items-center gap-2">
@@ -899,11 +899,11 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">SKPD/OPD</label>
                             <div className="relative group">
-                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-500 group-hover:scale-110 transition-transform" size={18} />
+                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#540d42] group-hover:scale-110 transition-transform" size={18} />
                                 <select
                                     value={selectedSkpd}
                                     onChange={(e) => setSelectedSkpd(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all appearance-none cursor-pointer"
+                                    className="w-full pl-10 pr-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#540d42]/50 transition-all appearance-none cursor-pointer"
                                 >
                                     <option value="Semua SKPD">🏢 Semua SKPD</option>
                                     {skpdList.map(skpd => <option key={skpd} value={skpd}>{skpd}</option>)}
@@ -914,27 +914,27 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pencarian</label>
                             <div className="relative group">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-pink-500 transition-colors" size={18} />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#540d42] transition-colors" size={18} />
                                 <input 
                                     type="text" 
                                     placeholder="Ketik kata kunci..." 
                                     value={searchTerm} 
                                     onChange={(e) => setSearchTerm(e.target.value)} 
-                                    className="w-full pl-10 pr-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all" 
+                                    className="w-full pl-10 pr-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#540d42]/50 transition-all" 
                                 />
                             </div>
                         </div>
 
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Dari Bulan</label>
-                            <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all">
+                            <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#540d42]/50 transition-all">
                                 {months.map(month => <option key={`start-${month}`} value={month}>{month}</option>)}
                             </select>
                         </div>
 
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sampai Bulan</label>
-                            <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all">
+                            <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#540d42]/50 transition-all">
                                 {months.map(month => <option key={`end-${month}`} value={month}>{month}</option>)}
                             </select>
                         </div>
@@ -945,7 +945,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 <select
                                     value={sortBy}
                                     onChange={(e) => handleSort(e.target.value)}
-                                    className="flex-1 px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all"
+                                    className="flex-1 px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#540d42]/50 transition-all"
                                 >
                                     <option value="target">Target</option>
                                     <option value="realisasi">Realisasi</option>
@@ -964,9 +964,9 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
 
                 {/* Chart Section - Enhanced */}
                 {stats.chartData.length > 0 && (
-                    <div className="p-8 bg-gradient-to-br from-pink-50/30 via-white/30 to-transparent dark:from-pink-900/10 dark:via-gray-900/30">
+                    <div className="p-8 bg-gradient-to-br from-[#540d42]/10 via-white/30 to-transparent dark:from-[#540d42]/20 dark:via-gray-900/30">
                         <div className="flex items-center gap-2 mb-6">
-                            <div className="p-2 bg-gradient-to-br from-pink-500 to-orange-500 rounded-xl shadow-lg">
+                            <div className="p-2 bg-gradient-to-br from-[#540d42] to-[#6a1152] rounded-xl shadow-lg">
                                 <TrendingUp className="w-5 h-5 text-white" />
                             </div>
                             <h3 className="text-lg font-black text-gray-800 dark:text-white">Komposisi Pendapatan (Top 15)</h3>
@@ -1121,7 +1121,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                         </thead>
                                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                             {paginatedData.map((item, index) => (
-                                                <tr key={index} className="hover:bg-pink-500/5 transition-colors group">
+                                                <tr key={index} className="hover:bg-[#540d42]/5 transition-colors group">
                                                     <td className="px-6 py-4 text-sm text-gray-800 dark:text-gray-200 max-w-md break-words">
                                                         {item.sumberPendapatan}
                                                     </td>
@@ -1237,7 +1237,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                     <div className="px-8 py-5 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-800/50 border-t border-gray-200/50 dark:border-gray-700/50">
                         <div className="flex flex-wrap gap-6 text-xs">
                             <span className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-gradient-to-r from-pink-500 to-orange-500 rounded-full shadow-lg"></div>
+                                <div className="w-2 h-2 bg-gradient-to-r from-[#540d42] to-[#6a1152] rounded-full shadow-lg"></div>
                                 <span className="font-medium text-gray-600 dark:text-gray-400">Total {stats.tableData.length} sumber pendapatan</span>
                             </span>
                             <span className="flex items-center gap-2">

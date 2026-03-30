@@ -58,7 +58,7 @@ const StatCard = ({ icon, title, target, realisasi, percentage, colorClass, rkud
       
       <h3 className="text-gray-500 dark:text-gray-400 text-sm font-semibold mb-1 uppercase tracking-wider">{title}</h3>
       <div className="mb-4">
-        <p className="text-2xl md:text-3xl font-black text-gray-800 dark:text-white mb-1">
+        <p className="text-2xl md:text-2xl font-black text-gray-800 dark:text-white mb-1">
           {formatCurrency(realisasi)}
         </p>
         <p className="text-xs text-gray-400 font-medium">
@@ -219,7 +219,7 @@ const generateAnalysis = async () => {
           </div>
           <div>
             <h3 className="font-bold text-xl text-gray-800 dark:text-gray-100 flex items-center gap-2">
-              AI Insight: Analisis Eksekutif
+              AI : Analisis Eksekutif
               <Sparkles className="w-5 h-5 text-yellow-500 fill-yellow-500" />
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">Ringkasan cerdas performa APBD berdasarkan data terkini</p>

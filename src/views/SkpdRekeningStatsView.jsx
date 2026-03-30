@@ -381,13 +381,13 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
         <div className="space-y-8 animate-in fade-in duration-700 pb-10">
             <SectionTitle>Statistik Rekening per SKPD</SectionTitle>
             
-            {/* === EXECUTIVE DASHBOARD - INFORMASI UNTUK PIMPINAN (WARNA PURPLE/VIOLET) === */}
+            {/* === EXECUTIVE DASHBOARD - INFORMASI UNTUK PIMPINAN (WARNA #56238f) === */}
             {showExecutiveInfo && executiveSummary && (
-                <div className="relative overflow-hidden bg-gradient-to-br from-purple-600 via-violet-600 to-indigo-600 rounded-3xl p-10 text-white shadow-2xl border border-white/10 group mb-8">
+                <div className="relative overflow-hidden bg-gradient-to-br from-[#56238f] via-[#6a2fa8] to-[#7e3bc1] rounded-3xl p-10 text-white shadow-2xl border border-white/10 group mb-8">
                     {/* Decorative Elements */}
                     <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-40 -mt-40 transition-transform duration-1000 group-hover:scale-110"></div>
-                    <div className="absolute bottom-0 left-0 w-80 h-80 bg-violet-400/10 rounded-full blur-[80px] -ml-32 -mb-32"></div>
-                    <div className="absolute top-20 left-40 w-40 h-40 bg-purple-400/10 rounded-full blur-[60px]"></div>
+                    <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#56238f]/20 rounded-full blur-[80px] -ml-32 -mb-32"></div>
+                    <div className="absolute top-20 left-40 w-40 h-40 bg-[#6a2fa8]/20 rounded-full blur-[60px]"></div>
                     
                     {/* Animated Particles */}
                     <div className="absolute inset-0 overflow-hidden">
@@ -415,7 +415,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                     <div className="relative z-10">
                         {/* Header */}
                         <div className="flex items-center gap-5 mb-6 border-b border-white/20 pb-6">
-                            <div className="p-5 bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-400 rounded-2xl shadow-lg shadow-amber-500/30">
+                            <div className="p-5 bg-gradient-to-br from-yellow-400 via-amber-400 to-orange-400 rounded-2xl shadow-lg shadow-amber-500/30">
                                 <Diamond size={40} className="text-white" />
                             </div>
                             <div className="flex-1">
@@ -635,7 +635,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                         </div>
 
                         {/* Executive Note - DIPERBESAR */}
-                        <div className="flex items-start gap-5 text-base bg-gradient-to-r from-purple-800/50 to-violet-800/50 p-6 rounded-2xl border border-purple-500/30 backdrop-blur-sm">
+                        <div className="flex items-start gap-5 text-base bg-gradient-to-r from-[#56238f]/80 to-[#6a2fa8]/80 p-6 rounded-2xl border border-[#56238f]/30 backdrop-blur-sm">
                             <div className="p-4 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl shadow-lg shrink-0">
                                 <Lightbulb size={32} className="text-white" />
                             </div>
@@ -663,7 +663,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
             {!showExecutiveInfo && (
                 <button 
                     onClick={() => setShowExecutiveInfo(true)}
-                    className="mb-6 px-8 py-4 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl font-bold text-base flex items-center gap-3 shadow-xl hover:shadow-2xl transition-all group hover:scale-105"
+                    className="mb-6 px-8 py-4 bg-gradient-to-r from-[#56238f] to-[#6a2fa8] text-white rounded-xl font-bold text-base flex items-center gap-3 shadow-xl hover:shadow-2xl transition-all group hover:scale-105"
                 >
                     <Eye size={22} className="group-hover:scale-110 transition-transform" /> 
                     TAMPILKAN EXECUTIVE DASHBOARD
@@ -689,8 +689,8 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                 {showAnalysis && rekeningStats.length > 0 && (
                     <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
                         <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#56238f] opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#56238f]"></span>
                         </span>
                         <span>Total Rekening: {rekeningStats.length} | Penyerapan: {executiveSummary?.rataPenyerapan.toFixed(1)}% | Risiko Kritis: {executiveSummary?.criticalRisk}</span>
                     </div>
@@ -722,7 +722,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                 <div className="p-8 bg-gradient-to-r from-white/50 to-white/30 dark:from-gray-800/50 dark:to-gray-900/50 border-b border-gray-200/50 dark:border-gray-700/50">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-lg font-black text-gray-800 dark:text-white flex items-center gap-2">
-                            <div className="w-1.5 h-6 bg-gradient-to-b from-purple-500 to-violet-500 rounded-full"></div>
+                            <div className="w-1.5 h-6 bg-gradient-to-b from-[#56238f] to-[#6a2fa8] rounded-full"></div>
                             PANEL ANALISIS REKENING
                         </h3>
                     </div>
@@ -731,12 +731,12 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                         {/* SKPD Filter */}
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                                <Building2 size={14} className="text-purple-500" /> SKPD
+                                <Building2 size={14} className="text-[#56238f]" /> SKPD
                             </label>
                             <select 
                                 value={selectedSkpd} 
                                 onChange={(e) => setSelectedSkpd(e.target.value)} 
-                                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-sm font-medium"
+                                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#56238f]/50 transition-all text-sm font-medium"
                             >
                                 <option value="Semua SKPD">🏢 Semua SKPD</option>
                                 {skpdList.map(skpd => <option key={skpd} value={skpd}>{skpd}</option>)}
@@ -754,7 +754,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                     placeholder="Cari Nama/Kode Rekening..." 
                                     value={searchTerm} 
                                     onChange={(e) => setSearchTerm(e.target.value)} 
-                                    className="w-full pl-10 pr-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all" 
+                                    className="w-full pl-10 pr-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#56238f]/50 transition-all" 
                                 />
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18}/>
                             </div>
@@ -766,10 +766,10 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 <Calendar size={14} className="text-purple-500" /> Periode
                             </label>
                             <div className="grid grid-cols-2 gap-2">
-                                <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="w-full px-3 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-sm">
+                                <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="w-full px-3 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#56238f]/50 transition-all text-sm">
                                     {months.map(month => <option key={`start-${month}`} value={month}>{month.substring(0,3)}</option>)}
                                 </select>
-                                <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="w-full px-3 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-sm">
+                                <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="w-full px-3 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#56238f]/50 transition-all text-sm">
                                     {months.map(month => <option key={`end-${month}`} value={month}>{month.substring(0,3)}</option>)}
                                 </select>
                             </div>
@@ -783,7 +783,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                             <select 
                                 value={sortOrder} 
                                 onChange={(e) => setSortOrder(e.target.value)} 
-                                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-sm"
+                                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#56238f]/50 transition-all text-sm"
                             >
                                 <option value="realisasi-desc">Realisasi Tertinggi</option>
                                 <option value="realisasi-asc">Realisasi Terendah</option>
@@ -831,7 +831,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                                     </span>
                                                 )}
                                             </div>
-                                            <h4 className="font-black text-gray-900 dark:text-white text-base leading-tight group-hover:text-purple-600 transition-colors">
+                                            <h4 className="font-black text-gray-900 dark:text-white text-base leading-tight group-hover:text-[#56238f] transition-colors">
                                                 {item.rekening}
                                             </h4>
                                         </div>
@@ -958,7 +958,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                     <div className="px-8 py-5 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-800/50 border-t border-gray-200/50 dark:border-gray-700/50">
                         <div className="flex flex-wrap gap-6 text-xs">
                             <span className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-violet-500 rounded-full shadow-lg"></div>
+                                <div className="w-2 h-2 bg-gradient-to-r from-[#56238f] to-[#6a2fa8] rounded-full shadow-lg"></div>
                                 <span className="font-medium text-gray-600 dark:text-gray-400">
                                     Total {sortedAndFilteredData.length} rekening
                                 </span>

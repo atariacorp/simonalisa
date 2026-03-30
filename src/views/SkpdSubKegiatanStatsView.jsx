@@ -404,13 +404,13 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
         <div className="space-y-8 animate-in fade-in duration-700 pb-10">
             <SectionTitle>Statistik Sub Kegiatan & Rekening per SKPD</SectionTitle>
             
-            {/* === EXECUTIVE DASHBOARD - INFORMASI UNTUK PIMPINAN (WARNA AMBER/ORANGE) === */}
+            {/* === EXECUTIVE DASHBOARD - INFORMASI UNTUK PIMPINAN (WARNA ABU-ABU GELAP) === */}
             {showExecutiveInfo && executiveSummary && (
-                <div className="relative overflow-hidden bg-gradient-to-br from-amber-600 via-orange-600 to-red-600 rounded-3xl p-10 text-white shadow-2xl border border-white/10 group mb-8">
+                <div className="relative overflow-hidden bg-gradient-to-br from-[#464649] via-[#5a5a5e] to-[#6e6e72] rounded-3xl p-10 text-white shadow-2xl border border-white/10 group mb-8">
                     {/* Decorative Elements */}
                     <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-40 -mt-40 transition-transform duration-1000 group-hover:scale-110"></div>
-                    <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-400/10 rounded-full blur-[80px] -ml-32 -mb-32"></div>
-                    <div className="absolute top-20 left-40 w-40 h-40 bg-orange-400/10 rounded-full blur-[60px]"></div>
+                    <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#464649]/20 rounded-full blur-[80px] -ml-32 -mb-32"></div>
+                    <div className="absolute top-20 left-40 w-40 h-40 bg-[#5a5a5e]/20 rounded-full blur-[60px]"></div>
                     
                     {/* Animated Particles */}
                     <div className="absolute inset-0 overflow-hidden">
@@ -432,23 +432,23 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                     
                     {/* Crown Icon for Leadership */}
                     <div className="absolute top-8 right-12 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Trophy size={140} className="text-yellow-300" />
+                        <Trophy size={140} className="text-gray-300" />
                     </div>
                     
                     <div className="relative z-10">
                         {/* Header */}
                         <div className="flex items-center gap-5 mb-6 border-b border-white/20 pb-6">
-                            <div className="p-5 bg-gradient-to-br from-yellow-400 via-amber-400 to-orange-400 rounded-2xl shadow-lg shadow-amber-500/30">
+                            <div className="p-5 bg-gradient-to-br from-[#464649] via-[#5a5a5e] to-[#6e6e72] rounded-2xl shadow-lg shadow-[#464649]/30">
                                 <Diamond size={40} className="text-white" />
                             </div>
                             <div className="flex-1">
                                 <div className="inline-flex items-center gap-3 px-5 py-2 bg-white/20 backdrop-blur-2xl rounded-full text-sm font-black tracking-[0.3em] uppercase border border-white/30 mb-3">
-                                    <Sparkles size={16} className="text-yellow-300 animate-pulse" /> 
+                                    <Sparkles size={16} className="text-gray-300 animate-pulse" /> 
                                     EXECUTIVE STRATEGIC DASHBOARD
                                 </div>
                                 <h2 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight">
                                     RINGKASAN EKSEKUTIF <br/>
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-300 to-orange-300 text-5xl md:text-6xl">
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-300 to-yellow-400 text-5xl md:text-6xl drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">
                                         SUB KEGIATAN SKPD
                                     </span>
                                 </h2>
@@ -469,35 +469,35 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                             <div className="bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all">
                                 <div className="flex items-center gap-3 mb-2">
-                                    <Coins size={22} className="text-yellow-400" />
-                                    <p className="text-xs font-bold uppercase text-amber-200 tracking-wider">Total Anggaran</p>
+                                    <Coins size={22} className="text-gray-300" />
+                                    <p className="text-xs font-bold uppercase text-gray-300 tracking-wider">Total Anggaran</p>
                                 </div>
                                 <p className="text-2xl md:text-3xl font-black text-white">{formatCurrency(executiveSummary.totalAnggaran)}</p>
-                                <p className="text-xs text-amber-200/70 mt-1">Keseluruhan pagu</p>
+                                <p className="text-xs text-gray-300/70 mt-1">Keseluruhan pagu</p>
                             </div>
                             <div className="bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all">
                                 <div className="flex items-center gap-3 mb-2">
                                     <TrendingUp size={22} className="text-emerald-400" />
-                                    <p className="text-xs font-bold uppercase text-amber-200 tracking-wider">Total Realisasi</p>
+                                    <p className="text-xs font-bold uppercase text-gray-300 tracking-wider">Total Realisasi</p>
                                 </div>
                                 <p className="text-2xl md:text-3xl font-black text-emerald-300">{formatCurrency(executiveSummary.totalRealisasi)}</p>
-                                <p className="text-xs text-amber-200/70 mt-1">{executiveSummary.rataPenyerapan.toFixed(1)}% dari anggaran</p>
+                                <p className="text-xs text-gray-300/70 mt-1">{executiveSummary.rataPenyerapan.toFixed(1)}% dari anggaran</p>
                             </div>
                             <div className="bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all">
                                 <div className="flex items-center gap-3 mb-2">
                                     <Gauge size={22} className="text-purple-400" />
-                                    <p className="text-xs font-bold uppercase text-amber-200 tracking-wider">Rata-rata Penyerapan</p>
+                                    <p className="text-xs font-bold uppercase text-gray-300 tracking-wider">Rata-rata Penyerapan</p>
                                 </div>
                                 <p className="text-2xl md:text-3xl font-black text-purple-300">{executiveSummary.rataPenyerapan.toFixed(1)}%</p>
-                                <p className="text-xs text-amber-200/70 mt-1">Seluruh kegiatan</p>
+                                <p className="text-xs text-gray-300/70 mt-1">Seluruh kegiatan</p>
                             </div>
                             <div className="bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all">
                                 <div className="flex items-center gap-3 mb-2">
                                     <Layers size={22} className="text-blue-400" />
-                                    <p className="text-xs font-bold uppercase text-amber-200 tracking-wider">Jumlah Kegiatan</p>
+                                    <p className="text-xs font-bold uppercase text-gray-300 tracking-wider">Jumlah Kegiatan</p>
                                 </div>
                                 <p className="text-2xl md:text-3xl font-black text-blue-300">{executiveSummary.totalItems}</p>
-                                <p className="text-xs text-amber-200/70 mt-1">Sub kegiatan</p>
+                                <p className="text-xs text-gray-300/70 mt-1">Sub kegiatan</p>
                             </div>
                         </div>
 
@@ -517,28 +517,28 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                                            <span className="text-sm text-amber-100">Rendah (≥85%)</span>
+                                            <span className="text-sm text-gray-200">Rendah (≥85%)</span>
                                         </div>
                                         <span className="font-bold text-white text-base">{executiveSummary.lowRisk}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                            <span className="text-sm text-amber-100">Sedang (50-84%)</span>
+                                            <span className="text-sm text-gray-200">Sedang (50-84%)</span>
                                         </div>
                                         <span className="font-bold text-white text-base">{executiveSummary.mediumRisk}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                                            <span className="text-sm text-amber-100">Tinggi (30-49%)</span>
+                                            <span className="text-sm text-gray-200">Tinggi (30-49%)</span>
                                         </div>
                                         <span className="font-bold text-white text-base">{executiveSummary.highRisk}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                            <span className="text-sm text-amber-100">Kritis (30%)</span>
+                                            <span className="text-sm text-gray-200">Kritis (30%)</span>
                                         </div>
                                         <span className="font-bold text-white text-base">{executiveSummary.criticalRisk}</span>
                                     </div>
@@ -565,10 +565,10 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                     {executiveSummary.highPerformerSubKegiatan.slice(0, 3).map((item, idx) => (
                                         <div key={idx} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
                                             <div className="flex items-center gap-2">
-                                                <span className="w-5 h-5 rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-xs font-black text-center flex items-center justify-center">
+                                                <span className="w-5 h-5 rounded-full bg-gradient-to-r from-[#464649] to-[#5a5a5e] text-white text-xs font-black text-center flex items-center justify-center">
                                                     {idx+1}
                                                 </span>
-                                                <span className="text-sm text-amber-100 truncate max-w-[150px]" title={item.nama}>
+                                                <span className="text-sm text-gray-200 truncate max-w-[150px]" title={item.nama}>
                                                     {item.nama.substring(0, 25)}...
                                                 </span>
                                             </div>
@@ -591,10 +591,10 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 <div className="space-y-2">
                                     {executiveSummary.topSumberDana.map((item, idx) => (
                                         <div key={idx} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
-                                            <span className="text-sm text-amber-100 truncate max-w-[180px]">
+                                            <span className="text-sm text-gray-200 truncate max-w-[180px]">
                                                 {idx+1}. {item.nama.substring(0, 20)}...
                                             </span>
-                                            <span className="font-bold text-amber-300 text-base">{item.count} kegiatan</span>
+                                            <span className="font-bold text-gray-300 text-base">{item.count} kegiatan</span>
                                         </div>
                                     ))}
                                 </div>
@@ -604,10 +604,10 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                         {/* Top Sub Kegiatan Table - DIPERBESAR */}
                         <div className="bg-white/10 backdrop-blur-xl rounded-xl p-6 border border-white/20 mb-8">
                             <h3 className="text-xl font-black text-white mb-4 flex items-center gap-3">
-                                <ListTree size={22} className="text-yellow-400" /> 
+                                <ListTree size={22} className="text-gray-300" /> 
                                 TOP 5 SUB KEGIATAN DENGAN ANGGARAN TERBESAR
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm font-bold text-amber-200 mb-3 px-3">
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm font-bold text-gray-300 mb-3 px-3">
                                 <div className="col-span-2">NAMA SUB KEGIATAN</div>
                                 <div className="text-right">ANGGARAN</div>
                                 <div className="text-right">REALISASI</div>
@@ -617,17 +617,17 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 {executiveSummary.topSubKegiatan.map((item, idx) => (
                                     <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-all border border-white/10">
                                         <div className="col-span-2 text-white font-medium truncate" title={item.nama}>
-                                            <span className="inline-block w-6 h-6 rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-sm font-black text-center mr-2">
+                                            <span className="inline-block w-6 h-6 rounded-full bg-gradient-to-r from-[#464649] to-[#5a5a5e] text-white text-sm font-black text-center mr-2">
                                                 {idx+1}
                                             </span>
                                             {item.nama.length > 50 ? item.nama.substring(0,50)+'...' : item.nama}
                                         </div>
-                                        <div className="text-right text-lg font-bold text-amber-200">{formatCurrency(item.anggaran)}</div>
+                                        <div className="text-right text-lg font-bold text-gray-300">{formatCurrency(item.anggaran)}</div>
                                         <div className="text-right text-lg font-bold text-emerald-300">{formatCurrency(item.realisasi)}</div>
                                         <div className="text-right">
                                             <span className={`text-base font-black px-4 py-2 rounded-lg inline-block ${
                                                 item.penyerapan >= 85 ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50' :
-                                                item.penyerapan >= 50 ? 'bg-amber-500/30 text-amber-300 border border-amber-500/50' :
+                                                item.penyerapan >= 50 ? 'bg-[#464649]/50 text-gray-300 border border-[#464649]/50' :
                                                 item.penyerapan >= 30 ? 'bg-orange-500/30 text-orange-300 border border-orange-500/50' :
                                                 'bg-rose-500/30 text-rose-300 border border-rose-500/50'
                                             }`}>
@@ -640,24 +640,24 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                         </div>
 
                         {/* Executive Note - DIPERBESAR */}
-                        <div className="flex items-start gap-5 text-base bg-gradient-to-r from-amber-800/50 to-orange-800/50 p-6 rounded-2xl border border-amber-500/30 backdrop-blur-sm">
-                            <div className="p-4 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl shadow-lg shrink-0">
+                        <div className="flex items-start gap-5 text-base bg-gradient-to-r from-[#464649]/80 to-[#5a5a5e]/80 p-6 rounded-2xl border border-[#464649]/30 backdrop-blur-sm">
+                            <div className="p-4 bg-gradient-to-br from-[#464649] to-[#5a5a5e] rounded-xl shadow-lg shrink-0">
                                 <Lightbulb size={32} className="text-white" />
                             </div>
                             <div className="space-y-2">
                                 <p className="text-xl font-black text-white flex items-center gap-2">
-                                    <Sparkles size={20} className="text-yellow-300" />
+                                    <Sparkles size={20} className="text-gray-300" />
                                     CATATAN EKSEKUTIF
                                 </p>
-                                <p className="text-base leading-relaxed text-amber-100">
-                                    <span className="font-bold text-white">PRIORITAS UTAMA:</span> Terdapat <span className="font-black text-yellow-300 text-lg">{executiveSummary.criticalRisk}</span> sub kegiatan dengan risiko kritis (penyerapan &lt;30%) dan 
+                                <p className="text-base leading-relaxed text-gray-200">
+                                    <span className="font-bold text-white">PRIORITAS UTAMA:</span> Terdapat <span className="font-black text-gray-300 text-lg">{executiveSummary.criticalRisk}</span> sub kegiatan dengan risiko kritis (penyerapan &lt;30%) dan 
                                     <span className="font-black text-orange-300 text-lg ml-1">{executiveSummary.highRisk}</span> dengan risiko tinggi (30-49%). 
                                     Fokus pada sub kegiatan <span className="font-bold text-white">{executiveSummary.criticalRiskSubKegiatan[0]?.nama || 'bermasalah'}</span> yang menyisakan sisa 
-                                    <span className="font-black text-amber-300 text-lg ml-1">{formatCurrency(executiveSummary.criticalRiskSubKegiatan[0]?.sisa || 0)}</span>. 
+                                    <span className="font-black text-gray-300 text-lg ml-1">{formatCurrency(executiveSummary.criticalRiskSubKegiatan[0]?.sisa || 0)}</span>. 
                                     Sub kegiatan unggulan <span className="font-bold text-white">{executiveSummary.highPerformerSubKegiatan[0]?.nama || 'unggulan'}</span> mencapai penyerapan 
                                     <span className="font-black text-emerald-300 text-lg ml-1">{executiveSummary.highPerformerSubKegiatan[0]?.penyerapan.toFixed(1) || 0}%</span>.
                                 </p>
-                                <p className="text-sm text-amber-200/80 mt-2 italic">
+                                <p className="text-sm text-gray-300/80 mt-2 italic">
                                     * Rekomendasi strategis tersedia pada fitur Analisis AI di bawah
                                 </p>
                             </div>
@@ -669,7 +669,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
             {!showExecutiveInfo && (
                 <button 
                     onClick={() => setShowExecutiveInfo(true)}
-                    className="mb-6 px-8 py-4 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl font-bold text-base flex items-center gap-3 shadow-xl hover:shadow-2xl transition-all group hover:scale-105"
+                    className="mb-6 px-8 py-4 bg-gradient-to-r from-[#464649] to-[#5a5a5e] text-white rounded-xl font-bold text-base flex items-center gap-3 shadow-xl hover:shadow-2xl transition-all group hover:scale-105"
                 >
                     <Eye size={22} className="group-hover:scale-110 transition-transform" /> 
                     TAMPILKAN EXECUTIVE DASHBOARD
@@ -695,8 +695,8 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                 {showAnalysis && selectedSkpd && subKegiatanStats.length > 0 && (
                     <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
                         <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#464649] opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#464649]"></span>
                         </span>
                         <span>Sub Kegiatan: {subKegiatanStats.length} | Penyerapan: {executiveSummary?.rataPenyerapan.toFixed(1)}% | Risiko Kritis: {executiveSummary?.criticalRisk}</span>
                     </div>
@@ -728,7 +728,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                 <div className="p-8 bg-gradient-to-r from-white/50 to-white/30 dark:from-gray-800/50 dark:to-gray-900/50 border-b border-gray-200/50 dark:border-gray-700/50">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-lg font-black text-gray-800 dark:text-white flex items-center gap-2">
-                            <div className="w-1.5 h-6 bg-gradient-to-b from-amber-500 to-orange-500 rounded-full"></div>
+                            <div className="w-1.5 h-6 bg-gradient-to-b from-[#464649] to-[#5a5a5e] rounded-full"></div>
                             PANEL ANALISIS SUB KEGIATAN
                         </h3>
                         <div className="flex items-center gap-2">
@@ -748,12 +748,12 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                         {/* SKPD Filter */}
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                                <Building2 size={14} className="text-amber-500" /> SKPD
+                                <Building2 size={14} className="text-[#464649]" /> SKPD
                             </label>
                             <select
                                 value={selectedSkpd}
                                 onChange={(e) => setSelectedSkpd(e.target.value)}
-                                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all text-sm font-medium"
+                                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#464649]/50 transition-all text-sm font-medium"
                             >
                                 <option value="">-- Pilih SKPD --</option>
                                 {skpdList.map(skpd => <option key={skpd} value={skpd}>{skpd}</option>)}
@@ -769,7 +769,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 value={selectedSubUnit}
                                 onChange={(e) => setSelectedSubUnit(e.target.value)}
                                 disabled={!selectedSkpd || subUnitList.length === 0}
-                                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all text-sm font-medium disabled:opacity-50"
+                                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#464649]/50 transition-all text-sm font-medium disabled:opacity-50"
                             >
                                 <option value="Semua Sub Unit">📋 Semua Sub Unit</option>
                                 {subUnitList.map(unit => <option key={unit} value={unit}>{unit}</option>)}
@@ -782,10 +782,10 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 <Calendar size={14} className="text-blue-500" /> Periode
                             </label>
                             <div className="grid grid-cols-2 gap-2">
-                                <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="w-full px-3 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all text-sm">
+                                <select value={startMonth} onChange={e => setStartMonth(e.target.value)} className="w-full px-3 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#464649]/50 transition-all text-sm">
                                     {months.map(month => <option key={`start-${month}`} value={month}>{month.substring(0,3)}</option>)}
                                 </select>
-                                <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="w-full px-3 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all text-sm">
+                                <select value={endMonth} onChange={e => setEndMonth(e.target.value)} className="w-full px-3 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#464649]/50 transition-all text-sm">
                                     {months.map(month => <option key={`end-${month}`} value={month}>{month.substring(0,3)}</option>)}
                                 </select>
                             </div>
@@ -799,7 +799,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                             <button 
                                 onClick={handleDownloadExcel} 
                                 disabled={!selectedSkpd || subKegiatanStats.length === 0} 
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#464649] to-[#5a5a5e] text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Download size={18} /> Download Excel
                                 <span className="ml-1 px-2 py-0.5 bg-white/20 rounded-lg text-xs">
@@ -820,10 +820,10 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                     return (
                                         <div key={subKegiatanKey} className="border border-gray-200/50 dark:border-gray-700/50 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm rounded-xl overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 duration-300">
                                             {/* Header */}
-                                            <div onClick={() => toggleRow(subKegiatanKey)} className="flex flex-col lg:flex-row lg:items-center p-5 cursor-pointer bg-gradient-to-r from-transparent to-white/20 dark:to-gray-800/20 hover:bg-amber-50/50 dark:hover:bg-amber-900/20 transition-colors">
+                                            <div onClick={() => toggleRow(subKegiatanKey)} className="flex flex-col lg:flex-row lg:items-center p-5 cursor-pointer bg-gradient-to-r from-transparent to-white/20 dark:to-gray-800/20 hover:bg-[#464649]/10 dark:hover:bg-[#464649]/20 transition-colors">
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className="text-xs px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg font-mono">
+                                                        <span className="text-xs px-2 py-1 bg-[#464649]/20 dark:bg-[#464649]/30 text-[#464649] dark:text-gray-300 rounded-lg font-mono">
                                                             {item.kodeSubKegiatan}
                                                         </span>
                                                         {item.sumberDanaList.length > 0 && (
@@ -832,7 +832,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <h4 className="font-black text-gray-900 dark:text-white text-base leading-tight group-hover:text-amber-600 transition-colors">
+                                                    <h4 className="font-black text-gray-900 dark:text-white text-base leading-tight group-hover:text-[#464649] transition-colors">
                                                         {item.subKegiatan}
                                                     </h4>
                                                 </div>
@@ -847,7 +847,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                                             <div 
                                                                 className={`h-full rounded-full ${
                                                                     item.persentase >= 85 ? 'bg-gradient-to-r from-emerald-500 to-green-500' :
-                                                                    item.persentase >= 50 ? 'bg-gradient-to-r from-yellow-500 to-amber-500' :
+                                                                    item.persentase >= 50 ? 'bg-gradient-to-r from-[#464649] to-[#5a5a5e]' :
                                                                     item.persentase >= 30 ? 'bg-gradient-to-r from-orange-500 to-red-500' :
                                                                     'bg-gradient-to-r from-red-500 to-rose-500'
                                                                 }`}
@@ -879,7 +879,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                                         {/* Sumber Dana */}
                                                         <div>
                                                             <h5 className="font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
-                                                                <Database size={16} className="text-amber-500" /> Sumber Dana
+                                                                <Database size={16} className="text-[#464649]" /> Sumber Dana
                                                             </h5>
                                                             <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-lg p-4 border border-gray-200/50 dark:border-gray-700/50">
                                                                 <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
@@ -907,7 +907,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                                                     </thead>
                                                                     <tbody className="divide-y divide-gray-200/50 dark:divide-gray-700/50">
                                                                         {item.rekenings.slice(0, 5).map(rek => (
-                                                                            <tr key={rek.rekening} className="hover:bg-amber-50/50 dark:hover:bg-amber-900/20">
+                                                                            <tr key={rek.rekening} className="hover:bg-[#464649]/10 dark:hover:bg-[#464649]/20">
                                                                                 <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 max-w-xs break-words">
                                                                                     {rek.rekening}
                                                                                 </td>
@@ -920,7 +920,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                                                                 <td className="px-4 py-2 text-right text-sm">
                                                                                     <span className={`px-2 py-1 rounded text-xs font-bold ${
                                                                                         rek.persentase >= 85 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                                                                        rek.persentase >= 50 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                                                        rek.persentase >= 50 ? 'bg-[#464649]/20 text-[#464649] dark:bg-[#464649]/30 dark:text-gray-300' :
                                                                                         rek.persentase >= 30 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
                                                                                         'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                                                                     }`}>
@@ -975,8 +975,8 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                     </div>
                 ) : (
                     <div className="p-16 text-center">
-                        <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-full flex items-center justify-center">
-                            <Building2 className="w-12 h-12 text-amber-500 dark:text-amber-400" />
+                        <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-[#464649]/20 to-[#5a5a5e]/20 dark:from-[#464649]/30 dark:to-[#5a5a5e]/30 rounded-full flex items-center justify-center">
+                            <Building2 className="w-12 h-12 text-[#464649] dark:text-[#5a5a5e]" />
                         </div>
                         <p className="text-xl font-bold text-gray-600 dark:text-gray-400 mb-2">
                             Pilih SKPD untuk Memulai
@@ -992,7 +992,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                     <div className="px-8 py-5 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-800/50 border-t border-gray-200/50 dark:border-gray-700/50">
                         <div className="flex flex-wrap gap-6 text-xs">
                             <span className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full shadow-lg"></div>
+                                <div className="w-2 h-2 bg-gradient-to-r from-[#464649] to-[#5a5a5e] rounded-full shadow-lg"></div>
                                 <span className="font-medium text-gray-600 dark:text-gray-400">
                                     Total {subKegiatanStats.length} sub kegiatan
                                 </span>
@@ -1004,7 +1004,7 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 </span>
                             </span>
                             <span className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full shadow-lg"></div>
+                                <div className="w-2 h-2 bg-gradient-to-r from-[#464649] to-[#5a5a5e] rounded-full shadow-lg"></div>
                                 <span className="font-medium text-gray-600 dark:text-gray-400">
                                     {subKegiatanStats.reduce((sum, item) => sum + item.rekenings.length, 0)} rekening
                                 </span>

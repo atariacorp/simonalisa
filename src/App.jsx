@@ -734,7 +734,7 @@ const App = () => {
         />
       )}
 
-      {/* SIDEBAR GLASSMORPHISM */}
+      {/* SIDEBAR GLASSMORPHISM - DENGAN WARNA #d9d9d9 */}
       <nav className={`
         fixed lg:relative z-50 h-full
         transition-all duration-300 ease-in-out
@@ -742,142 +742,148 @@ const App = () => {
         lg:translate-x-0
         ${isSidebarMinimized ? 'lg:w-16' : 'lg:w-64'}
         w-72
-        backdrop-blur-xl bg-gradient-to-b from-white/80 to-white/70 dark:from-gray-800/80 dark:to-gray-900/80 
+        backdrop-blur-xl bg-gradient-to-b from-[#f0f0f0]/90 to-[#e0e0e4]/90 dark:from-gray-800/80 dark:to-gray-900/80 
         border-r border-white/30 dark:border-gray-700/30 shadow-2xl flex-shrink-0 flex flex-col justify-between
         overflow-hidden
       `}>
-        {/* Decorative Background Elements */}
-        <div className="absolute top-0 -left-20 w-64 h-64 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse-slow"></div>
-        <div className="absolute bottom-0 -right-20 w-64 h-64 bg-gradient-to-tr from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
+        {/* Decorative Background Elements - disesuaikan dengan warna #d9d9d9 */}
+        <div className="absolute top-0 -left-20 w-64 h-64 bg-gradient-to-br from-indigo-400/10 to-purple-400/10 rounded-full blur-3xl animate-pulse-slow"></div>
+        <div className="absolute bottom-0 -right-20 w-64 h-64 bg-gradient-to-tr from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
         
         <div className="relative z-10 h-full flex flex-col">
-          {/* Header with Logo - TANPA FRAME */}
-          <div className={`p-4 ${!isSidebarMinimized ? 'border-b border-white/30 dark:border-gray-700/30' : ''}`}>
-            <div className={`flex items-center gap-3 ${isSidebarMinimized ? 'justify-center' : ''}`}>
-              {/* LOGO - Tanpa frame berlebihan */}
-              <div className="relative group flex-shrink-0">
-                <img 
-                  src={brandingConfig.logo.path}
-                  alt={brandingConfig.logo.alt}
-                  width={isSidebarMinimized ? 36 : 45}
-                  height={isSidebarMinimized ? 36 : 45}
-                  className="object-contain transition-transform group-hover:scale-105"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    // Fallback ke inisial jika logo gagal dimuat
-                    const parent = e.target.parentNode;
-                    e.target.style.display = 'none';
-                    const fallbackDiv = document.createElement('div');
-                    fallbackDiv.className = 'w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl';
-                    fallbackDiv.textContent = 'S';
-                    parent.appendChild(fallbackDiv);
-                  }}
-                />
-                
-                {/* Tooltip untuk minimized mode */}
-                {isSidebarMinimized && (
-                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                    {brandingConfig.text.sidebarTitle || 'SIMONALISA'}
-                  </div>
-                )}
-              </div>
+          {/* Header with Logo - LOGO DI ATAS */}
+<div className={`p-4 ${!isSidebarMinimized ? 'border-b border-white/50 dark:border-gray-700/30' : ''}`}>
+  <div className={`flex flex-col items-center ${isSidebarMinimized ? 'justify-center' : ''}`}>
+    {/* LOGO - Di atas */}
+    <div className="relative group flex-shrink-0 mb-3">
+      <img 
+        src={brandingConfig.logo.path}
+        alt={brandingConfig.logo.alt}
+        width={isSidebarMinimized ? 70 : 100}
+        height={isSidebarMinimized ? 70 : 100}
+        className="object-contain transition-transform group-hover:scale-105"
+        onError={(e) => {
+          e.target.onerror = null;
+          const parent = e.target.parentNode;
+          e.target.style.display = 'none';
+          const fallbackDiv = document.createElement('div');
+          fallbackDiv.className = 'w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl';
+          fallbackDiv.textContent = 'S';
+          parent.appendChild(fallbackDiv);
+        }}
+      />
+      
+      {/* Tooltip untuk minimized mode */}
+      {isSidebarMinimized && (
+        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+          {brandingConfig.text.sidebarTitle || 'SIMONALISA'}
+        </div>
+      )}
+    </div>
 
-              {!isSidebarMinimized && (
-                <div className="flex-1 min-w-0 animate-fadeIn">
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent truncate">
-                    {brandingConfig.text.sidebarTitle || 'SIMONALISA'}
-                  </h1>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Tahun Anggaran {selectedYear}</p>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-1 truncate" title={namaPemda}>
-                    {namaPemda || brandingConfig.text.subTitle || 'Pemerintah Kota Medan'}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+    {!isSidebarMinimized && (
+      <div className="w-full text-center animate-fadeIn">
+        {/* Nama Aplikasi */}
+        <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent truncate">
+          {brandingConfig.text.sidebarTitle || 'SIMONALISA'}
+        </h1>
+        
+        {/* Tahun Anggaran */}
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Tahun Anggaran {selectedYear}
+        </p>
+        
+        {/* Nama Pemda */}
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-1 truncate" title={namaPemda}>
+          {namaPemda || brandingConfig.text.subTitle || 'Pemerintah Kota Medan'}
+        </p>
+      </div>
+    )}
+  </div>
+</div>
 
-          {/* User Info */}
-          <div className={`p-4 ${!isSidebarMinimized ? 'mx-4 mt-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-white/30 dark:border-gray-700/30' : ''}`}>
-            <div className={`flex items-center ${isSidebarMinimized ? 'justify-center' : 'gap-3'}`}>
-              {/* Avatar User */}
-              <div className="relative group flex-shrink-0">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-0.5 transform group-hover:scale-105 transition-transform">
-                  <div className="w-full h-full rounded-xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm flex items-center justify-center">
-                    <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-                      {user?.email?.[0]?.toUpperCase() || 'U'}
-                    </span>
-                  </div>
-                </div>
-                {/* Status online indicator */}
-                {!isSidebarMinimized && (
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800 animate-pulse"></div>
-                )}
-              </div>
+{/* User Info - dengan margin bottom lebih besar */}
+<div className={`p-4 mb-8 ${!isSidebarMinimized ? 'mx-4 mt-4 bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-white/50 dark:border-gray-700/30' : ''}`}>
+  <div className={`flex items-center ${isSidebarMinimized ? 'justify-center' : 'gap-3'}`}>
+    {/* Avatar User */}
+    <div className="relative group flex-shrink-0">
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-0.5 transform group-hover:scale-105 transition-transform">
+        <div className="w-full h-full rounded-xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm flex items-center justify-center">
+          <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+            {user?.email?.[0]?.toUpperCase() || 'U'}
+          </span>
+        </div>
+      </div>
+      {/* Status online indicator */}
+      {!isSidebarMinimized && (
+        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800 animate-pulse"></div>
+      )}
+    </div>
 
-              {!isSidebarMinimized && (
-                <div className="flex-1 min-w-0 animate-fadeIn">
-                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
-                    {user?.email?.split('@')[0] || 'User'}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-sm">
-                      {userRole === 'admin' ? 'Administrator' : userRole === 'editor' ? 'Editor' : 'Viewer'}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
+    {!isSidebarMinimized && (
+      <div className="flex-1 min-w-0 animate-fadeIn">
+        <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
+          {user?.email?.split('@')[0] || 'User'}
+        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-sm">
+            {userRole === 'admin' ? 'Administrator' : userRole === 'editor' ? 'Editor' : 'Viewer'}
+          </span>
+        </div>
+      </div>
+    )}
+  </div>
 
-            {!isSidebarMinimized && (
-              <button 
-                onClick={handleLogout} 
-                className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold rounded-xl shadow-lg shadow-rose-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-sm group"
-              >
-                <LogOut size={16} className="group-hover:rotate-12 transition-transform" />
-                Keluar
-              </button>
-            )}
-          </div>
+  {!isSidebarMinimized && (
+    <button 
+      onClick={handleLogout} 
+      className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold rounded-xl shadow-lg shadow-rose-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-sm group"
+    >
+      <LogOut size={16} className="group-hover:rotate-12 transition-transform" />
+      Keluar
+    </button>
+  )}
+</div>
 
-          {/* Theme Toggle untuk mode minimized */}
-          {isSidebarMinimized && (
-            <div className="px-2 mb-4 flex justify-center">
-              <button 
-                onClick={toggleTheme} 
-                className="p-2 rounded-xl bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-white/30 dark:border-gray-600/30 text-gray-600 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all"
-                title="Ganti Tema"
-              >
-                {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-              </button>
-            </div>
-          )}
+{/* Theme Toggle untuk mode minimized */}
+{isSidebarMinimized && (
+  <div className="px-2 mb-4 flex justify-center">
+    <button 
+      onClick={toggleTheme} 
+      className="p-2 rounded-xl bg-white/60 dark:bg-gray-700/50 backdrop-blur-sm border border-white/50 dark:border-gray-600/30 text-gray-600 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all"
+      title="Ganti Tema"
+    >
+      {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+    </button>
+  </div>
+)}
 
-          {/* Search Bar - Only when expanded */}
-          {!isSidebarMinimized && (
-            <div className="px-4 mb-4 animate-fadeIn">
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Cari menu..."
-                  value={searchMenuTerm}
-                  onChange={(e) => setSearchMenuTerm(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-white/30 dark:border-gray-600/30 rounded-xl text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
-                />
-                {searchMenuTerm && (
-                  <button
-                    onClick={() => setSearchMenuTerm('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+{/* Search Bar - Only when expanded */}
+{!isSidebarMinimized && (
+  <div className="px-4 mb-4 animate-fadeIn mt-2">
+    <div className="relative">
+      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+      <input
+        type="text"
+        placeholder="Cari menu..."
+        value={searchMenuTerm}
+        onChange={(e) => setSearchMenuTerm(e.target.value)}
+        className="w-full pl-9 pr-4 py-2 bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-white/50 dark:border-gray-600/30 rounded-xl text-sm text-gray-700 dark:text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+      />
+      {searchMenuTerm && (
+        <button
+          onClick={() => setSearchMenuTerm('')}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+        >
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  </div>
+)}
 
           {/* Menu Items with Scroll */}
-          <ul className="flex-1 overflow-y-auto px-3 space-y-1 scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent">
+          <ul className="flex-1 overflow-y-auto px-3 space-y-1 scrollbar-thin scrollbar-thumb-white/40 scrollbar-track-transparent">
             {filteredMenuItems.filter(item => {
                 if (userRole === 'guest') return item.id === 'dashboard-group';
                 if (!item.requiredRole) return true;
@@ -920,7 +926,7 @@ const App = () => {
                           {!isSidebarMinimized && (
                             <ChevronDown 
                               size={16} 
-                              className={`transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${isGroupActive ? 'text-indigo-600' : 'text-gray-400'}`}
+                              className={`transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${isGroupActive ? 'text-indigo-600' : 'text-gray-500'}`}
                             />
                           )}
                         </button>
@@ -940,7 +946,7 @@ const App = () => {
                                   className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm transition-all ${
                                     activeView === subItem.id 
                                       ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/30' 
-                                      : 'text-gray-500 dark:text-gray-400 hover:bg-white/40 dark:hover:bg-gray-800/40 hover:backdrop-blur-sm'
+                                      : 'text-gray-600 dark:text-gray-400 hover:bg-white/40 dark:hover:bg-gray-800/40 hover:backdrop-blur-sm'
                                   }`}
                                   title={menuDescriptions[subItem.id] || subItem.label}
                                 >
@@ -989,10 +995,10 @@ const App = () => {
           </ul>
 
           {/* Sidebar Footer */}
-          <div className="relative z-10 p-4 border-t border-white/30 dark:border-gray-700/30">
+          <div className="relative z-10 p-4 border-t border-white/50 dark:border-gray-700/30">
             <button 
               onClick={() => setIsSidebarMinimized(!isSidebarMinimized)} 
-              className="w-full flex items-center justify-center p-3 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm hover:bg-white/70 dark:hover:bg-gray-700/70 text-gray-600 dark:text-gray-300 rounded-xl border border-white/30 dark:border-gray-600/30 transition-all group"
+              className="w-full flex items-center justify-center p-3 bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm hover:bg-white/70 dark:hover:bg-gray-700/70 text-gray-600 dark:text-gray-300 rounded-xl border border-white/50 dark:border-gray-600/30 transition-all group"
               title={isSidebarMinimized ? "Perluas Sidebar" : "Persempit Sidebar"}
             >
               {isSidebarMinimized ? (
@@ -1006,10 +1012,10 @@ const App = () => {
             {/* Copyright - Only show when expanded */}
             {!isSidebarMinimized && (
               <div className="mt-4 text-center animate-fadeIn">
-                <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                <p className="text-[10px] text-gray-500 dark:text-gray-500">
                   {brandingConfig.text.footer}
                 </p>
-                <p className="text-[8px] text-gray-300 dark:text-gray-600 mt-1">
+                <p className="text-[8px] text-gray-400 dark:text-gray-600 mt-1">
                   v4.0.0
                 </p>
               </div>
