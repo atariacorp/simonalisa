@@ -12,7 +12,7 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { logActivity } from '../utils/logActivity';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RePieChart, Pie, Cell } from 'recharts';
 
-// --- UPDATED DataUploadView Component with Glassmorphism ---
+// --- DataUploadView Component with Glassmorphism ---
 const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, previewHeaders, groupedColumns, dataFilter, theme, onUpload, onDeleteMonth, isDeleting, selectedYear, userRole, getAnalysisPrompt, namaPemda }) => {
   const fileInputRef = React.useRef(null);
   const [error, setError] = React.useState('');
@@ -24,7 +24,7 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
   const [currentPage, setCurrentPage] = React.useState(1);
   const [showFilters, setShowFilters] = React.useState(true);
   const [showStats, setShowStats] = React.useState(true);
-  const [chartView, setChartView] = React.useState('bar'); // 'bar' atau 'pie'
+  const [chartView, setChartView] = React.useState('bar');
   const ITEMS_PER_PAGE = 10;
   
   const [visibleHeaders, setVisibleHeaders] = React.useState(previewHeaders || []);
@@ -61,7 +61,7 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
     
     const invertedMapping = {};
     (previewHeaders || []).forEach(header => {
-      const key = header.replace(/[^A-Za-z0-9]/g, ''); // 'NAMA SKPD' -> 'NAMASKPD'
+      const key = header.replace(/[^A-Za-z0-9]/g, '');
       invertedMapping[key] = header;
     });
 
@@ -144,6 +144,7 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
     return null;
   }, [data, selectedMonth, isMonthly, title, groupedColumns]);
 
+  // ==================== PERBAIKAN UTAMA DI SINI ====================
   const handleSmartParsing = (json) => {
     if (!json || json.length === 0) {
         setError("File tidak mengandung data atau format tidak dikenali.");
@@ -164,11 +165,14 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
     
     const isRealisasiBelanja = title.includes('Realisasi Belanja');
     let sp2dHeaderName = null;
+    
+    // Untuk Realisasi Belanja, cek kolom Nomor SP2D tetapi TIDAK dijadikan wajib
     if (isRealisasiBelanja) {
         sp2dHeaderName = findHeader(columnMapping['NomorSP2D']);
+        // Hanya warning, bukan error jika tidak ditemukan
         if (!sp2dHeaderName) {
-            setError("Kolom 'Nomor SP2D' tidak ditemukan di file Excel Anda. Kolom ini wajib ada untuk Realisasi Belanja.");
-            return null;
+            console.warn("Kolom 'Nomor SP2D' tidak ditemukan di file Excel Anda. Data akan tetap diproses.");
+            // setError dihapus, biarkan tetap lanjut
         }
     }
 
@@ -176,7 +180,6 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
     if (dataFilter) {
         const filterColumnHeader = findHeader([dataFilter.column]);
         if (filterColumnHeader) {
-            
             if (typeof dataFilter.value === 'number') {
                  filteredJson = json.filter(row => String(row[filterColumnHeader]).startsWith(String(dataFilter.value)));
             } else {
@@ -237,14 +240,20 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
         
         const valueHeader = previewHeaders[previewHeaders.length - 1];
         const valueKey = valueHeader.replace(/[^A-Za-z0-9]/g, '');
-        let nilaiRealisasi = parseFloat(String(rowData[valueKey]).replace(/[^0-9.-]+/g,"")) || 0;
-
-        if (isRealisasiBelanja) {
-            const sp2dValue = rowData.NomorSP2D;
-            if (sp2dValue === null || sp2dValue === undefined || String(sp2dValue).trim() === '') {
-                nilaiRealisasi = 0; 
-            }
+        
+        // ========== PERUBAHAN: Nilai 0 tetap diproses ==========
+        let nilaiRealisasi = 0;
+        const rawValue = rowData[valueKey];
+        
+        if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
+            // Konversi ke number, jika gagal tetap 0
+            const parsed = parseFloat(String(rawValue).replace(/[^0-9.-]+/g, ""));
+            nilaiRealisasi = isNaN(parsed) ? 0 : parsed;
         }
+        
+        // ========== PERUBAHAN: Hapus validasi yang membuang data dengan nilai 0 ==========
+        // Data dengan nilai 0 TETAP diproses (untuk estimasi, apropriasi, dll)
+        // Tidak ada pengecekan sp2d yang membuang data
         
         rowData.nilai = nilaiRealisasi;
 
@@ -256,14 +265,23 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
 
     }).filter(Boolean); 
 
+    // ========== PERUBAHAN: Ubah pesan error jika tidak ada data ==========
     if (parsedData.length === 0 && filteredJson.length > 0) {
-        setError("Data ditemukan, namun tidak ada baris yang valid setelah diproses. Periksa kembali apakah semua kolom wajib (termasuk Nomor SP2D untuk Realisasi Belanja) telah terisi di file Anda.");
+        setError("Data ditemukan, namun tidak ada baris yang valid setelah diproses. Periksa kembali apakah kolom wajib telah terisi di file Anda. Data dengan nilai 0 tetap akan diproses.");
         return null;
+    }
+    
+    // Log jumlah data yang berhasil diproses
+    console.log(`Berhasil memproses ${parsedData.length} baris data`);
+    if (parsedData.length > 0) {
+        console.log('Sample data pertama:', parsedData[0]);
+        console.log('Jumlah data dengan nilai 0:', parsedData.filter(d => d.nilai === 0).length);
+        console.log('Jumlah data dengan nilai > 0:', parsedData.filter(d => d.nilai > 0).length);
     }
     
     return parsedData;
   };
-
+  // ==================== AKHIR PERBAIKAN ====================
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -278,11 +296,11 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
     
     const parseAndUpload = (jsonData) => {
         const parsedData = handleSmartParsing(jsonData);
-        if (parsedData) {
+        if (parsedData && parsedData.length > 0) {
             onUpload(parsedData, isMonthly ? selectedMonth : null, setUploadProgress)
                 .then(() => {
-                    setUploadProgress('Unggah selesai!');
-                    logActivity('Unggah Data', { dataType: title, fileName: file.name, status: 'Berhasil' });
+                    setUploadProgress(`Berhasil mengunggah ${parsedData.length} baris data!`);
+                    logActivity('Unggah Data', { dataType: title, fileName: file.name, status: 'Berhasil', rowCount: parsedData.length });
                     setTimeout(() => setUploadProgress(''), 3000);
                 })
                 .catch((err) => {
@@ -291,6 +309,9 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
                     setUploadProgress('');
                 })
                 .finally(() => setIsUploading(false));
+        } else if (parsedData && parsedData.length === 0) {
+            // Sudah ada error dari handleSmartParsing
+            setIsUploading(false);
         } else {
             logActivity('Unggah Data', { dataType: title, fileName: file.name, status: 'Gagal', error: 'Gagal memproses file' });
             setIsUploading(false);
@@ -482,7 +503,7 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
                                     return (
                                         <div 
                                             key={month} 
-                                            className={`flex items-center p-3 rounded-xl backdrop-blur-sm border ${
+                                            className={`flex items-center p-3 rounded-xl backdrop-blur-sm border cursor-pointer ${
                                                 hasData 
                                                     ? 'bg-emerald-50/70 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' 
                                                     : 'bg-amber-50/70 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
@@ -674,6 +695,11 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
                         <FileText className="w-5 h-5 text-indigo-500" />
                         Pratinjau Data {isMonthly ? `- ${selectedMonth}` : ''}
+                        {dataToPreview.length > 0 && (
+                            <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                                ({dataToPreview.length} baris)
+                            </span>
+                        )}
                     </h3>
                     
                     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -797,7 +823,7 @@ const DataUploadView = ({ title, data, instruction, isMonthly, columnMapping, pr
                                         return (
                                             <td key={header} className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                                                 <span className={colIndex === 0 ? 'font-medium text-gray-900 dark:text-gray-200' : ''}>
-                                                    {isGrouped && !showValue ? '' : cellValue}
+                                                    {isGrouped && !showValue ? '' : (cellValue !== undefined ? cellValue : '-')}
                                                 </span>
                                             </td>
                                         );
