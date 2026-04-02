@@ -504,126 +504,58 @@ const App = () => {
   };
 
   const handleUpload = async (parsedData, month, setProgress) => {
-      if (userRole !== 'admin') {
-          throw new Error("Anda tidak memiliki izin untuk mengunggah data.");
-      }
-      
-      const CHUNK_SIZE = 400;
-      const collectionName = activeView;
-      const collectionRef = collection(db, "publicData", String(selectedYear), collectionName);
+  if (userRole !== 'admin') {
+    throw new Error("Anda tidak memiliki izin untuk mengunggah data.");
+  }
+  
+  // Panggil uploadData dari service (yang sudah kita perbaiki dengan chunking)
+  await uploadData(activeView, selectedYear, parsedData, month || 'annual', setProgress);
 
-      setProgress('Menghapus data lama...');
-      const oldDocsQuery = query(collectionRef, where("month", "==", month || 'annual'));
-      const oldDocsSnapshot = await getDocs(oldDocsQuery);
-      const deleteBatch = writeBatch(db);
-      oldDocsSnapshot.forEach(doc => deleteBatch.delete(doc.ref));
-      await deleteBatch.commit();
+  await logActivity('Unggah Data', { 
+    dataType: activeView, 
+    month: month, 
+    year: selectedYear,
+    totalRows: parsedData.length 
+  });
+};
 
-      const chunks = [];
-      for (let i = 0; i < parsedData.length; i += CHUNK_SIZE) {
-          chunks.push(parsedData.slice(i, i + CHUNK_SIZE));
-      }
+  // KODE BARU (Ganti fungsi lama Anda dengan ini)
+const handleDeleteMonthlyData = async (collectionName, month, setProgress) => {
+  if (userRole !== 'admin') {
+    setProgress('Error: Anda tidak memiliki izin untuk menghapus data.');
+    setTimeout(() => setProgress(''), 5000);
+    return;
+  }
 
-      setProgress(`Membagi data menjadi ${chunks.length} bagian...`);
+  // Konfirmasi tetap di sisi UI
+  if (!window.confirm(`APAKAH ANDA YAKIN? Tindakan ini akan menghapus semua data ${collectionName.replace(/([A-Z])/g, ' $1')} untuk bulan ${month} pada tahun ${selectedYear}.`)) {
+    return;
+  }
 
-      for (let i = 0; i < chunks.length; i++) {
-          setProgress(`Mengunggah bagian ${i + 1} dari ${chunks.length}...`);
-          const chunk = chunks[i];
-          const docPayload = {
-              month: month || 'annual',
-              data: chunk,
-          };
-          await addDoc(collectionRef, docPayload);
-      }
+  setIsDeleting(true);
 
-      if (collectionName === 'realisasi' || collectionName === 'realisasiPendapatan') {
-        const metadataRef = doc(db, "publicData", String(selectedYear), "metadata", "lastUpdate");
-        await setDoc(metadataRef, {
-            timestamp: new Date(),
-            updatedBy: auth.currentUser.email
-        });
-      }
-
-      await logActivity('Unggah Data', { 
-        dataType: collectionName, 
-        month: month, 
-        year: selectedYear,
-        totalRows: parsedData.length 
-      });
-  };
-
-  const handleDeleteMonthlyData = async (collectionName, month, setProgress) => {
-    if (userRole !== 'admin') {
-      setProgress('Error: Anda tidak memiliki izin untuk menghapus data.');
-      setTimeout(() => setProgress(''), 5000);
-      return;
-    }
-    if (!window.confirm(`APAKAH ANDA YAKIN? Tindakan ini akan menghapus semua data ${collectionName.replace(/([A-Z])/g, ' $1')} untuk bulan ${month} pada tahun ${selectedYear}. Tindakan ini tidak dapat diurungkan.`)) {
-      return;
-    }
-
-    setIsDeleting(true);
-    setProgress('Mempersiapkan penghapusan data...');
-
-    try {
-      const BATCH_SIZE = 400;
-      const collectionRef = collection(db, "publicData", String(selectedYear), collectionName);
-      const oldDocsQuery = query(collectionRef, where("month", "==", month));
-      const oldDocsSnapshot = await getDocs(oldDocsQuery);
-      
-      if (oldDocsSnapshot.empty) {
-        setProgress('Tidak ada data untuk dihapus pada bulan ini.');
-        setTimeout(() => setProgress(''), 3000);
-        setIsDeleting(false);
-        return;
-      }
-
-      const deleteBatches = [];
-      let currentBatch = writeBatch(db);
-      let currentBatchSize = 0;
-
-      oldDocsSnapshot.forEach((doc) => {
-        currentBatch.delete(doc.ref);
-        currentBatchSize++;
-        if (currentBatchSize >= BATCH_SIZE) {
-          deleteBatches.push(currentBatch);
-          currentBatch = writeBatch(db);
-          currentBatchSize = 0;
-        }
-      });
-
-      if (currentBatchSize > 0) {
-        deleteBatches.push(currentBatch);
-      }
-
-      for (let i = 0; i < deleteBatches.length; i++) {
-        setProgress(`Menghapus data bulan ${month} (batch ${i + 1} dari ${deleteBatches.length})...`);
-        await deleteBatches[i].commit();
-      }
-      
-      setProgress(`Data untuk bulan ${month} berhasil dihapus.`);
+  try {
+    // PANGGIL SERVICE YANG SUDAH DIPERBAIKI (Inilah kuncinya)
+    const result = await deleteMonthlyData(collectionName, selectedYear, month, setProgress);
+    
+    if (result.success) {
       await logActivity('Hapus Data Bulanan', { 
         dataType: collectionName, 
         month: month, 
         year: selectedYear,
-        status: 'Berhasil' 
+        status: 'Berhasil',
+        count: result.deletedCount
       });
-
-    } catch (err) {
-      console.error("Error deleting monthly data:", err);
-      setProgress(`Gagal menghapus data: ${err.message}`);
-      await logActivity('Hapus Data Bulanan', { 
-        dataType: collectionName, 
-        month: month, 
-        year: selectedYear,
-        status: 'Gagal', 
-        error: err.message 
-      });
-    } finally {
-      setIsDeleting(false);
-      setTimeout(() => setProgress(''), 5000);
     }
-  };
+  } catch (err) {
+    console.error("Error di App.jsx saat menghapus:", err);
+    setProgress(`Gagal: ${err.message}`);
+  } finally {
+    setIsDeleting(false);
+    // Hapus pesan progress setelah 3 detik
+    setTimeout(() => setProgress(''), 3000);
+  }
+};
 
   const handleReferensiUpload = async (parsedData, dataType, setProgress) => {
     if (userRole !== 'admin') {
