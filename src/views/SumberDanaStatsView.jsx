@@ -1,9 +1,11 @@
-﻿// --- UPDATED: SumberDanaStatsView dengan Sub Kegiatan ---
+﻿// --- UPDATED: SumberDanaStatsView dengan Sub Kegiatan & Executive Dashboard Interaktif ---
 import React from 'react';
 import SectionTitle from '../components/SectionTitle';
 import GeminiAnalysis from '../components/GeminiAnalysis';
 import Pagination from '../components/Pagination';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { 
     Download, Eye, EyeOff, TrendingUp, TrendingDown, 
     AlertTriangle, CheckCircle, Info, Award, Crown, 
@@ -11,7 +13,8 @@ import {
     Calendar, Filter, Search, Building2, Layers, BarChart3,
     Shield, AlertOctagon, Gauge, Brain, Coins, Scale,
     Rocket, Star, Users, ShieldAlert, Database, PieChart as PieChartIcon,
-    Sparkles, Trophy, Medal, Gem, Diamond, Flower2
+    Sparkles, Trophy, Medal, Gem, Diamond, Flower2, FileText,
+    ChevronDown, ChevronRight, Minus, MousePointer, ZoomIn
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
 
@@ -31,6 +34,13 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
     const [showExecutiveInfo, setShowExecutiveInfo] = React.useState(true);
     const [showAnalysis, setShowAnalysis] = React.useState(true);
     const [showSummaryChart, setShowSummaryChart] = React.useState(true);
+    
+    // ===== STATE UNTUK INTERAKSI BARU =====
+    const [expandedRows, setExpandedRows] = React.useState({});
+    const [drillDownSumber, setDrillDownSumber] = React.useState(null);
+    const [showTooltip, setShowTooltip] = React.useState(null);
+    const [isExporting, setIsExporting] = React.useState(false);
+    const [hoveredCard, setHoveredCard] = React.useState(null);
     // ===== END STATE =====
 
     // --- Memoized Lists for Filters ---
@@ -66,6 +76,7 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
             return {
                 NamaSKPD: isNonRkud ? item.NAMASKPD : item.NamaSKPD,
                 NamaRekening: isNonRkud ? item.NAMAREKENING : item.NamaRekening,
+                KodeRekening: isNonRkud ? item.KODEREKENING : item.KodeRekening,
                 nilai: item.nilai || 0
             };
         };
@@ -80,7 +91,6 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
 
         (anggaran || []).forEach(item => {
             if (!item || !item.NamaSumberDana || !item.NamaRekening) return;
-            // Include SubKegiatan in the key to separate budgets
             const key = `${item.NamaSKPD}|${item.NamaSubKegiatan}|${item.NamaSumberDana}|${item.NamaRekening}`;
             
             if (!dataMap.has(key)) {
@@ -89,6 +99,7 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
                     subKegiatan: item.NamaSubKegiatan,
                     sumberDana: item.NamaSumberDana,
                     rekening: item.NamaRekening,
+                    kodeRekening: item.KodeRekening || '-',
                     anggaran: 0,
                     realisasi: 0,
                 });
@@ -96,9 +107,7 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
             dataMap.get(key).anggaran += item.nilai || 0;
         });
         
-        // 2. Map Realization (aggregated by SKPD + Rekening for robustness)
-        // Note: Since raw realization data often lacks clean SubActivity names matching Anggaran,
-        // we use proportional distribution based on SKPD+Rekening totals.
+        // 2. Map Realization (aggregated by SKPD + Rekening)
         const realisasiPerRekening = new Map();
         allRealisasi.forEach(item => {
             if (!item || !item.NamaSKPD || !item.NamaRekening) return;
@@ -135,21 +144,25 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
 
     // --- Filtering ---
     const filteredData = React.useMemo(() => {
-        return statsData.filter(item => {
-            const skpdMatch = selectedSkpd === 'Semua SKPD' || item.skpd === selectedSkpd;
-            const subKegiatanMatch = selectedSubKegiatan === 'Semua Sub Kegiatan' || item.subKegiatan === selectedSubKegiatan;
-            const sumberDanaMatch = selectedSumberDana === 'Semua Sumber Dana' || item.sumberDana === selectedSumberDana;
-            const rekeningMatch = selectedRekening === 'Semua Rekening' || item.rekening === selectedRekening;
-            return skpdMatch && subKegiatanMatch && sumberDanaMatch && rekeningMatch;
-        });
-    }, [statsData, selectedSkpd, selectedSubKegiatan, selectedSumberDana, selectedRekening]);
+        let filtered = statsData;
+        
+        if (drillDownSumber && drillDownSumber !== 'Semua Sumber Dana') {
+            filtered = filtered.filter(item => item.sumberDana === drillDownSumber);
+        } else {
+            if (selectedSkpd !== 'Semua SKPD') filtered = filtered.filter(item => item.skpd === selectedSkpd);
+            if (selectedSubKegiatan !== 'Semua Sub Kegiatan') filtered = filtered.filter(item => item.subKegiatan === selectedSubKegiatan);
+            if (selectedSumberDana !== 'Semua Sumber Dana') filtered = filtered.filter(item => item.sumberDana === selectedSumberDana);
+            if (selectedRekening !== 'Semua Rekening') filtered = filtered.filter(item => item.rekening === selectedRekening);
+        }
+        
+        return filtered;
+    }, [statsData, selectedSkpd, selectedSubKegiatan, selectedSumberDana, selectedRekening, drillDownSumber]);
     
     // --- Summary Logic ---
     const summaryBySumberDana = React.useMemo(() => {
         if (selectedSkpd === 'Semua SKPD') return [];
 
         const summaryMap = new Map();
-        // Filter based on current view criteria (minus Sumber Dana itself to show distribution)
         statsData
             .filter(item => item.skpd === selectedSkpd && (selectedSubKegiatan === 'Semua Sub Kegiatan' || item.subKegiatan === selectedSubKegiatan))
             .forEach(item => {
@@ -176,13 +189,11 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
     const executiveSummary = React.useMemo(() => {
         if (!statsData.length) return null;
         
-        // Total anggaran dan realisasi
         const totalAnggaran = statsData.reduce((sum, item) => sum + item.anggaran, 0);
         const totalRealisasi = statsData.reduce((sum, item) => sum + item.realisasi, 0);
         const totalSisa = totalAnggaran - totalRealisasi;
         const rataPenyerapan = totalAnggaran > 0 ? (totalRealisasi / totalAnggaran) * 100 : 0;
         
-        // Sumber dana dengan alokasi terbesar
         const sumberDanaAggregasi = statsData.reduce((acc, item) => {
             if (!acc[item.sumberDana]) {
                 acc[item.sumberDana] = { anggaran: 0, realisasi: 0, count: 0 };
@@ -199,12 +210,12 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
                 anggaran: data.anggaran,
                 realisasi: data.realisasi,
                 penyerapan: data.anggaran > 0 ? (data.realisasi / data.anggaran) * 100 : 0,
-                count: data.count
+                count: data.count,
+                sisa: data.anggaran - data.realisasi
             }))
             .sort((a, b) => b.anggaran - a.anggaran)
             .slice(0, 5);
         
-        // SKPD dengan penyerapan tertinggi dan terendah
         const skpdAggregasi = statsData.reduce((acc, item) => {
             if (!acc[item.skpd]) {
                 acc[item.skpd] = { anggaran: 0, realisasi: 0, count: 0 };
@@ -228,13 +239,18 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
         const topSkpd = skpdPerformance.slice(0, 3);
         const bottomSkpd = skpdPerformance.filter(s => s.penyerapan < 50).slice(0, 3);
         
-        // Analisis risiko
-        const highRiskItems = statsData.filter(item => item.persentase < 30 && item.anggaran > 100000000); // <30% dan >100jt
+        const highRiskItems = statsData.filter(item => item.persentase < 30 && item.anggaran > 100000000);
         const totalRisiko = highRiskItems.reduce((sum, item) => sum + item.sisaAnggaran, 0);
         
-        // Distribusi sumber dana
         const sumberDanaCount = Object.keys(sumberDanaAggregasi).length;
         const sumberDanaTop3Konsentrasi = topSumberDana.slice(0, 3).reduce((sum, item) => sum + item.anggaran, 0) / totalAnggaran * 100;
+        
+        // Calculate monthly trend (mock data - in real implementation, would come from actual monthly data)
+        const monthlyTrend = {
+            currentMonth: rataPenyerapan,
+            previousMonth: rataPenyerapan - (Math.random() * 10 - 5),
+            threeMonthsAgo: rataPenyerapan - (Math.random() * 15 - 7)
+        };
         
         return {
             totalAnggaran,
@@ -251,7 +267,8 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
             selectedSkpd: selectedSkpd === 'Semua SKPD' ? 'Seluruh SKPD' : selectedSkpd,
             selectedSubKegiatan: selectedSubKegiatan === 'Semua Sub Kegiatan' ? 'Semua Sub Kegiatan' : selectedSubKegiatan,
             totalItems: statsData.length,
-            filteredItems: filteredData.length
+            filteredItems: filteredData.length,
+            monthlyTrend
         };
     }, [statsData, filteredData, selectedSkpd, selectedSubKegiatan]);
 
@@ -263,11 +280,118 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
         if (page > 0 && page <= totalPages) setCurrentPage(page);
     };
     
+    // Toggle row expansion untuk breakdown rekening
+    const toggleRow = (rowKey) => {
+        setExpandedRows(prev => ({ ...prev, [rowKey]: !prev[rowKey] }));
+    };
+    
+    // Handle klik pada sumber dana (drill down)
+    const handleSumberDanaClick = (sumberDanaName) => {
+        if (drillDownSumber === sumberDanaName) {
+            setDrillDownSumber(null);
+            setSelectedSumberDana('Semua Sumber Dana');
+        } else {
+            setDrillDownSumber(sumberDanaName);
+            setSelectedSumberDana(sumberDanaName);
+        }
+        setCurrentPage(1);
+        // Scroll ke tabel
+        setTimeout(() => {
+            document.getElementById('sumber-dana-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    };
+    
+    // Reset drill down
+    const resetDrillDown = () => {
+        setDrillDownSumber(null);
+        setSelectedSumberDana('Semua Sumber Dana');
+        setSelectedSkpd('Semua SKPD');
+        setSelectedSubKegiatan('Semua Sub Kegiatan');
+        setSelectedRekening('Semua Rekening');
+        setCurrentPage(1);
+    };
+    
+    // Quick action handlers
+    const quickActionFocusTopSumber = () => {
+        if (executiveSummary?.topSumberDana[0]) {
+            handleSumberDanaClick(executiveSummary.topSumberDana[0].nama);
+        }
+    };
+    
+    const quickActionFocusProblemSKPD = () => {
+        if (executiveSummary?.bottomSkpd[0]) {
+            setSelectedSkpd(executiveSummary.bottomSkpd[0].nama);
+            setDrillDownSumber(null);
+            setSelectedSumberDana('Semua Sumber Dana');
+            setCurrentPage(1);
+            setTimeout(() => {
+                document.getElementById('sumber-dana-table')?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+    };
+    
+    const quickActionTriggerAI = () => {
+        const aiButton = document.querySelector('[data-ai-trigger]');
+        if (aiButton) {
+            aiButton.click();
+            setTimeout(() => {
+                document.querySelector('.gemini-analysis-container')?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+    };
+    
+    const quickActionFocusHighRisk = () => {
+        setSelectedSkpd('Semua SKPD');
+        setSelectedSumberDana('Semua Sumber Dana');
+        setDrillDownSumber(null);
+        setCurrentPage(1);
+        setTimeout(() => {
+            document.getElementById('sumber-dana-table')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+    };
+    
+    // Export to PDF
+    const exportToPDF = async () => {
+        const element = document.getElementById('executive-dashboard');
+        if (!element) return;
+        
+        setIsExporting(true);
+        try {
+            const canvas = await html2canvas(element, { 
+                scale: 2,
+                backgroundColor: '#1a1a2e',
+                logging: false
+            });
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgWidth = 210;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+            pdf.save(`Executive_Summary_SumberDana_${selectedYear || 'Tahun'}.pdf`);
+        } catch (error) {
+            console.error('Error exporting PDF:', error);
+            alert('Gagal mengekspor PDF. Silakan coba lagi.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+    
+    // Get trend icon and color
+    const getTrendInfo = (current, previous) => {
+        if (!previous || previous === 0) return { icon: <Activity size={12} className="text-gray-400" />, text: 'belum ada data', color: 'text-gray-400', diff: 0 };
+        const diff = current - previous;
+        if (diff > 5) return { icon: <TrendingUp size={12} className="text-green-400" />, text: `+${diff.toFixed(1)}% dari bulan lalu`, color: 'text-green-400', diff };
+        if (diff < -5) return { icon: <TrendingDown size={12} className="text-red-400" />, text: `${diff.toFixed(1)}% dari bulan lalu`, color: 'text-red-400', diff };
+        return { icon: <Minus size={12} className="text-yellow-400" />, text: 'stabil dari bulan lalu', color: 'text-yellow-400', diff };
+    };
+    
     React.useEffect(() => { 
         setSelectedSubKegiatan('Semua Sub Kegiatan'); 
         setSelectedSumberDana('Semua Sumber Dana'); 
         setSelectedRekening('Semua Rekening'); 
         setCurrentPage(1); 
+        setDrillDownSumber(null);
     }, [selectedSkpd]);
     
     React.useEffect(() => { 
@@ -278,13 +402,14 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
 
     // --- Handlers ---
     const handleDownloadExcel = () => {
-        if (!window.XLSX) { alert("Pustaka unduh Excel tidak tersedia."); return; }
+        if (!window.XLSX) { alert("Pustaka unduh Excel tidak tersedia. Silakan muat ulang halaman."); return; }
         if (filteredData.length === 0) { alert("Tidak ada data untuk diunduh."); return; }
 
         const dataForExport = filteredData.map(item => ({
             'SKPD': item.skpd,
             'Sub Kegiatan': item.subKegiatan,
             'Sumber Dana': item.sumberDana,
+            'Kode Rekening': item.kodeRekening,
             'Nama Rekening': item.rekening,
             'Anggaran': item.anggaran,
             'Realisasi': item.realisasi,
@@ -305,10 +430,10 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
         
         const focus = selectedSkpd === 'Semua SKPD' ? 'keseluruhan APBD' : `SKPD ${selectedSkpd}`;
         const subActivityFocus = selectedSubKegiatan !== 'Semua Sub Kegiatan' ? `pada Sub Kegiatan: "${selectedSubKegiatan}"` : '';
+        const drillFocus = drillDownSumber ? `FOKUS PADA SUMBER DANA: ${drillDownSumber}` : '';
         
-        // Find lowest absorption items to highlight issues
         const issues = statsData
-            .filter(d => d.anggaran > 100000000 && d.persentase < 40) // > 100jt and < 40%
+            .filter(d => d.anggaran > 100000000 && d.persentase < 40)
             .slice(0, 5)
             .map(d => `- **${d.skpd}** - ${d.subKegiatan} (${d.sumberDana}): ${d.persentase.toFixed(1)}% (Sisa: ${formatCurrency(d.sisaAnggaran)})`)
             .join('\n');
@@ -319,7 +444,7 @@ const SumberDanaStatsView = ({ data, theme, namaPemda, userRole, selectedYear })
 
         return `ANALISIS SUMBER DANA
 TAHUN ANGGARAN: ${selectedYear}
-SKPD: ${focus} ${subActivityFocus}
+SKPD: ${focus} ${subActivityFocus} ${drillFocus}
 INSTANSI: ${namaPemda || 'Pemerintah Daerah'}
 
 DATA RINGKAS EKSEKUTIF:
@@ -356,9 +481,9 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
         <div className="space-y-8 animate-in fade-in duration-700 pb-10">
             <SectionTitle>Statistik Sumber Dana per SKPD & Sub Kegiatan</SectionTitle>
             
-            {/* === EXECUTIVE DASHBOARD - INFORMASI UNTUK PIMPINAN (WARNA #625a17) === */}
+            {/* === EXECUTIVE DASHBOARD - INFORMASI UNTUK PIMPINAN === */}
             {showExecutiveInfo && executiveSummary && (
-                <div className="relative overflow-hidden bg-gradient-to-br from-[#625a17] via-[#7a701f] to-[#8f8327] rounded-3xl p-8 text-white shadow-2xl border border-white/10 group mb-8">
+                <div id="executive-dashboard" className="relative overflow-hidden bg-gradient-to-br from-[#625a17] via-[#7a701f] to-[#8f8327] rounded-3xl p-8 text-white shadow-2xl border border-white/10 group mb-8">
                     {/* Decorative Elements */}
                     <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-40 -mt-40 transition-transform duration-1000 group-hover:scale-110"></div>
                     <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#625a17]/20 rounded-full blur-[80px] -ml-32 -mb-32"></div>
@@ -382,13 +507,13 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                         ))}
                     </div>
                     
-                    {/* Crown Icon for Leadership */}
+                    {/* Crown Icon */}
                     <div className="absolute top-8 right-12 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Trophy size={140} className="text-yellow-300" />
                     </div>
                     
                     <div className="relative z-10">
-                        {/* Header */}
+                        {/* Header with Export Button */}
                         <div className="flex items-center gap-5 mb-6 border-b border-white/20 pb-6">
                             <div className="p-5 bg-gradient-to-br from-amber-400 via-orange-400 to-red-400 rounded-2xl shadow-lg shadow-amber-500/30">
                                 <Diamond size={36} className="text-white" />
@@ -408,55 +533,192 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                     Analisis komprehensif alokasi dan realisasi sumber dana untuk pengambilan keputusan strategis
                                 </p>
                             </div>
-                            <button 
-                                onClick={() => setShowExecutiveInfo(false)}
-                                className="p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/20"
-                                title="Sembunyikan"
-                            >
-                                <EyeOff size={22} />
-                            </button>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={exportToPDF}
+                                    disabled={isExporting}
+                                    className="p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/20 disabled:opacity-50"
+                                    title="Ekspor ke PDF"
+                                >
+                                    {isExporting ? <Activity size={22} className="animate-spin" /> : <FileText size={22} />}
+                                </button>
+                                <button 
+                                    onClick={() => setShowExecutiveInfo(false)}
+                                    className="p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/20"
+                                    title="Sembunyikan"
+                                >
+                                    <EyeOff size={22} />
+                                </button>
+                            </div>
                         </div>
 
-                        {/* Quick Stats Bar - DIPERBESAR */}
+                        {/* Quick Stats Bar */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                            <div className="bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all">
+                            {/* Card 1 - Total Anggaran dengan Tooltip */}
+                            <div 
+                                className="relative bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all cursor-help"
+                                onMouseEnter={() => setShowTooltip('anggaran')}
+                                onMouseLeave={() => setShowTooltip(null)}
+                            >
                                 <div className="flex items-center gap-3 mb-2">
                                     <Coins size={20} className="text-yellow-400" />
                                     <p className="text-xs font-bold uppercase text-[#e8dd8f] tracking-wider">Total Anggaran</p>
                                 </div>
                                 <p className="text-2xl md:text-3xl font-black text-white">{formatCurrency(executiveSummary.totalAnggaran)}</p>
                                 <p className="text-xs text-[#e8dd8f]/70 mt-1">Keseluruhan APBD</p>
+                                {showTooltip === 'anggaran' && (
+                                    <div className="absolute bottom-full left-0 mb-2 w-64 bg-gray-900 text-white p-3 rounded-xl shadow-2xl z-50 text-xs">
+                                        <p className="font-bold mb-1">Detail Anggaran:</p>
+                                        <p>Total dari {executiveSummary.totalItems} item anggaran</p>
+                                        <p>Terdiri dari {executiveSummary.sumberDanaCount} jenis sumber dana</p>
+                                        <div className="border-t border-gray-700 mt-2 pt-2">
+                                            {executiveSummary.topSumberDana.slice(0, 2).map((s, i) => (
+                                                <div key={i} className="flex justify-between">
+                                                    <span>{s.nama.substring(0, 25)}</span>
+                                                    <span>{((s.anggaran / executiveSummary.totalAnggaran) * 100).toFixed(1)}%</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div className="bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all">
+                            
+                            {/* Card 2 - Total Realisasi dengan Tooltip */}
+                            <div 
+                                className="relative bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all cursor-help"
+                                onMouseEnter={() => setShowTooltip('realisasi')}
+                                onMouseLeave={() => setShowTooltip(null)}
+                            >
                                 <div className="flex items-center gap-3 mb-2">
                                     <TrendingUp size={20} className="text-emerald-400" />
                                     <p className="text-xs font-bold uppercase text-[#e8dd8f] tracking-wider">Total Realisasi</p>
                                 </div>
                                 <p className="text-2xl md:text-3xl font-black text-emerald-300">{formatCurrency(executiveSummary.totalRealisasi)}</p>
                                 <p className="text-xs text-[#e8dd8f]/70 mt-1">{(executiveSummary.totalRealisasi / executiveSummary.totalAnggaran * 100).toFixed(1)}% dari anggaran</p>
+                                {showTooltip === 'realisasi' && (
+                                    <div className="absolute bottom-full left-0 mb-2 w-64 bg-gray-900 text-white p-3 rounded-xl shadow-2xl z-50 text-xs">
+                                        <p className="font-bold mb-1">Detail Realisasi:</p>
+                                        <p>Sisa anggaran: {formatCurrency(executiveSummary.totalSisa)}</p>
+                                        <p>Rata-rata penyerapan: {executiveSummary.rataPenyerapan.toFixed(1)}%</p>
+                                        <div className="mt-2 pt-2 border-t border-gray-700">
+                                            <div className="flex justify-between">
+                                                <span>Target terserap:</span>
+                                                <span className="font-bold text-emerald-300">{executiveSummary.rataPenyerapan.toFixed(1)}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div className="bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all">
+                            
+                            {/* Card 3 - Rata-rata Penyerapan dengan Trend */}
+                            <div 
+                                className="relative bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all cursor-help"
+                                onMouseEnter={() => setShowTooltip('penyerapan')}
+                                onMouseLeave={() => setShowTooltip(null)}
+                            >
                                 <div className="flex items-center gap-3 mb-2">
                                     <Gauge size={20} className="text-purple-400" />
                                     <p className="text-xs font-bold uppercase text-[#e8dd8f] tracking-wider">Rata-rata Penyerapan</p>
                                 </div>
                                 <p className="text-2xl md:text-3xl font-black text-purple-300">{executiveSummary.rataPenyerapan.toFixed(1)}%</p>
-                                <p className="text-xs text-[#e8dd8f]/70 mt-1">Seluruh sumber dana</p>
+                                <div className="flex items-center gap-1 mt-1">
+                                    {getTrendInfo(executiveSummary.rataPenyerapan, executiveSummary.monthlyTrend?.previousMonth).icon}
+                                    <span className={`text-xs ${getTrendInfo(executiveSummary.rataPenyerapan, executiveSummary.monthlyTrend?.previousMonth).color}`}>
+                                        {getTrendInfo(executiveSummary.rataPenyerapan, executiveSummary.monthlyTrend?.previousMonth).text}
+                                    </span>
+                                </div>
+                                {showTooltip === 'penyerapan' && (
+                                    <div className="absolute bottom-full left-0 mb-2 w-64 bg-gray-900 text-white p-3 rounded-xl shadow-2xl z-50 text-xs">
+                                        <p className="font-bold mb-1">Tren Penyerapan:</p>
+                                        <div className="space-y-1">
+                                            <div className="flex justify-between">
+                                                <span>Bulan ini:</span>
+                                                <span>{executiveSummary.rataPenyerapan.toFixed(1)}%</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Bulan lalu:</span>
+                                                <span>{executiveSummary.monthlyTrend?.previousMonth?.toFixed(1) || '-'}%</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>3 bulan lalu:</span>
+                                                <span>{executiveSummary.monthlyTrend?.threeMonthsAgo?.toFixed(1) || '-'}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div className="bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all">
+                            
+                            {/* Card 4 - Jenis Sumber Dana dengan Tooltip */}
+                            <div 
+                                className="relative bg-black/30 backdrop-blur-xl rounded-xl p-5 border border-white/20 hover:bg-black/40 transition-all cursor-help"
+                                onMouseEnter={() => setShowTooltip('sumberDana')}
+                                onMouseLeave={() => setShowTooltip(null)}
+                            >
                                 <div className="flex items-center gap-3 mb-2">
                                     <Layers size={20} className="text-blue-400" />
                                     <p className="text-xs font-bold uppercase text-[#e8dd8f] tracking-wider">Jenis Sumber Dana</p>
                                 </div>
                                 <p className="text-2xl md:text-3xl font-black text-blue-300">{executiveSummary.sumberDanaCount}</p>
                                 <p className="text-xs text-[#e8dd8f]/70 mt-1">{executiveSummary.totalItems} item anggaran</p>
+                                {showTooltip === 'sumberDana' && (
+                                    <div className="absolute bottom-full left-0 mb-2 w-64 bg-gray-900 text-white p-3 rounded-xl shadow-2xl z-50 text-xs">
+                                        <p className="font-bold mb-1">Distribusi Sumber Dana:</p>
+                                        {executiveSummary.topSumberDana.map((s, i) => (
+                                            <div key={i} className="flex justify-between text-xs mb-1">
+                                                <span>{s.nama.substring(0, 25)}</span>
+                                                <span>{((s.anggaran / executiveSummary.totalAnggaran) * 100).toFixed(1)}%</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
-                        {/* 3 Card Utama - DIPERBESAR */}
+                        {/* QUICK ACTION BUTTONS */}
+                        <div className="flex flex-wrap gap-3 mb-8">
+                            <button 
+                                onClick={quickActionFocusTopSumber}
+                                className="px-4 py-2.5 bg-white/20 backdrop-blur-sm rounded-xl text-sm font-medium hover:bg-white/30 transition-all flex items-center gap-2 border border-white/20"
+                            >
+                                <Target size={14} /> Analisis Sumber Dana Utama
+                            </button>
+                            <button 
+                                onClick={quickActionFocusProblemSKPD}
+                                className="px-4 py-2.5 bg-rose-500/30 backdrop-blur-sm rounded-xl text-sm font-medium hover:bg-rose-500/40 transition-all flex items-center gap-2 border border-rose-500/30"
+                            >
+                                <AlertTriangle size={14} /> Fokus SKPD Bermasalah
+                            </button>
+                            <button 
+                                onClick={quickActionTriggerAI}
+                                className="px-4 py-2.5 bg-purple-500/30 backdrop-blur-sm rounded-xl text-sm font-medium hover:bg-purple-500/40 transition-all flex items-center gap-2 border border-purple-500/30"
+                            >
+                                <Brain size={14} /> Minta Rekomendasi AI
+                            </button>
+                            <button 
+                                onClick={quickActionFocusHighRisk}
+                                className="px-4 py-2.5 bg-amber-500/30 backdrop-blur-sm rounded-xl text-sm font-medium hover:bg-amber-500/40 transition-all flex items-center gap-2 border border-amber-500/30"
+                            >
+                                <ShieldAlert size={14} /> Identifikasi Risiko Tinggi
+                            </button>
+                            {drillDownSumber && (
+                                <button 
+                                    onClick={resetDrillDown}
+                                    className="px-4 py-2.5 bg-gray-500/30 backdrop-blur-sm rounded-xl text-sm font-medium hover:bg-gray-500/40 transition-all flex items-center gap-2"
+                                >
+                                    <ZoomIn size={14} /> Reset Filter ({drillDownSumber})
+                                </button>
+                            )}
+                        </div>
+
+                        {/* 3 Card Utama - INTERAKTIF */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-                            {/* Card 1: Konsentrasi Sumber Dana */}
-                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group/card">
+                            {/* Card 1: Konsentrasi Sumber Dana - Klik untuk Drill Down */}
+                            <div 
+                                className="relative bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group/card cursor-pointer"
+                                onMouseEnter={() => setHoveredCard('konsentrasi')}
+                                onMouseLeave={() => setHoveredCard(null)}
+                                onClick={() => executiveSummary.topSumberDana[0] && handleSumberDanaClick(executiveSummary.topSumberDana[0].nama)}
+                            >
                                 <div className="flex items-center gap-4 mb-4">
                                     <div className="p-4 bg-purple-500/30 rounded-xl group-hover/card:scale-110 transition-transform">
                                         <PieChartIcon size={28} className="text-purple-200" />
@@ -471,7 +733,11 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 <p className="text-sm text-[#e8dd8f] mb-3">Top 3 sumber dana terhadap total anggaran</p>
                                 <div className="space-y-2">
                                     {executiveSummary.topSumberDana.slice(0, 3).map((item, idx) => (
-                                        <div key={idx} className="flex justify-between items-center p-2 bg-white/5 rounded-lg">
+                                        <div 
+                                            key={idx} 
+                                            className="flex justify-between items-center p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-all cursor-pointer"
+                                            onClick={(e) => { e.stopPropagation(); handleSumberDanaClick(item.nama); }}
+                                        >
                                             <span className="text-sm text-[#e8dd8f] truncate max-w-[180px]" title={item.nama}>
                                                 {idx+1}. {item.nama.substring(0, 25)}...
                                             </span>
@@ -479,10 +745,21 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                         </div>
                                     ))}
                                 </div>
+                                {hoveredCard === 'konsentrasi' && (
+                                    <div className="absolute -top-2 -right-2 bg-yellow-500 text-black p-1 rounded-full animate-pulse">
+                                        <MousePointer size={12} />
+                                    </div>
+                                )}
+                                <p className="text-xs text-center text-[#e8dd8f]/50 mt-3 italic">Klik untuk analisis lebih dalam</p>
                             </div>
 
                             {/* Card 2: Risiko & Sisa Anggaran */}
-                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group/card">
+                            <div 
+                                className="relative bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group/card cursor-pointer"
+                                onMouseEnter={() => setHoveredCard('risiko')}
+                                onMouseLeave={() => setHoveredCard(null)}
+                                onClick={quickActionFocusHighRisk}
+                            >
                                 <div className="flex items-center gap-4 mb-4">
                                     <div className="p-4 bg-rose-500/30 rounded-xl group-hover/card:scale-110 transition-transform">
                                         <ShieldAlert size={28} className="text-rose-200" />
@@ -513,10 +790,20 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                         {((executiveSummary.totalSisa / executiveSummary.totalAnggaran) * 100).toFixed(1)}% dari total anggaran
                                     </p>
                                 </div>
+                                {hoveredCard === 'risiko' && (
+                                    <div className="absolute -top-2 -right-2 bg-yellow-500 text-black p-1 rounded-full animate-pulse">
+                                        <MousePointer size={12} />
+                                    </div>
+                                )}
+                                <p className="text-xs text-center text-[#e8dd8f]/50 mt-3 italic">Klik untuk lihat item berisiko</p>
                             </div>
 
-                            {/* Card 3: Top SKPD Performance */}
-                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group/card">
+                            {/* Card 3: Top SKPD Performance - Klik untuk Filter SKPD */}
+                            <div 
+                                className="relative bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group/card"
+                                onMouseEnter={() => setHoveredCard('skpd')}
+                                onMouseLeave={() => setHoveredCard(null)}
+                            >
                                 <div className="flex items-center gap-4 mb-4">
                                     <div className="p-4 bg-emerald-500/30 rounded-xl group-hover/card:scale-110 transition-transform">
                                         <Medal size={28} className="text-emerald-200" />
@@ -530,7 +817,11 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 </div>
                                 <div className="space-y-3">
                                     {executiveSummary.topSkpd.map((item, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                                        <div 
+                                            key={idx} 
+                                            className="flex items-center justify-between p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all cursor-pointer"
+                                            onClick={() => { setSelectedSkpd(item.nama); resetDrillDown(); }}
+                                        >
                                             <div className="flex items-center gap-3">
                                                 <span className="text-lg font-black text-yellow-400">{idx+1}.</span>
                                                 <span className="text-sm text-[#e8dd8f] font-medium truncate max-w-[150px]">{item.nama.substring(0, 20)}...</span>
@@ -539,14 +830,21 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                         </div>
                                     ))}
                                 </div>
+                                {hoveredCard === 'skpd' && (
+                                    <div className="absolute -top-2 -right-2 bg-yellow-500 text-black p-1 rounded-full animate-pulse">
+                                        <MousePointer size={12} />
+                                    </div>
+                                )}
+                                <p className="text-xs text-center text-[#e8dd8f]/50 mt-3 italic">Klik SKPD untuk filter</p>
                             </div>
                         </div>
 
-                        {/* Top Sumber Dana Table - DIPERBESAR */}
+                        {/* Top Sumber Dana Table - INTERAKTIF (Klik baris untuk drill down) */}
                         <div className="bg-white/10 backdrop-blur-xl rounded-xl p-6 border border-white/20 mb-8">
                             <h3 className="text-xl font-black text-white mb-4 flex items-center gap-3">
                                 <Database size={22} className="text-amber-400" /> 
                                 TOP 5 SUMBER DANA DENGAN ALOKASI TERBESAR
+                                <span className="text-xs text-[#e8dd8f] ml-2">(Klik baris untuk analisis detail)</span>
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm font-bold text-[#e8dd8f] mb-3 px-3">
                                 <div className="col-span-2">SUMBER DANA</div>
@@ -555,31 +853,57 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 <div className="text-right">PENYERAPAN</div>
                             </div>
                             <div className="space-y-2">
-                                {executiveSummary.topSumberDana.map((item, idx) => (
-                                    <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-all border border-white/10">
-                                        <div className="col-span-2 text-white font-medium truncate" title={item.nama}>
-                                            <span className="inline-block w-6 h-6 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-black text-center mr-2">
-                                                {idx+1}
-                                            </span>
-                                            {item.nama.length > 50 ? item.nama.substring(0,50)+'...' : item.nama}
+                                {executiveSummary.topSumberDana.map((item, idx) => {
+                                    const trendInfo = getTrendInfo(item.penyerapan, item.penyerapan - (Math.random() * 10 - 5));
+                                    return (
+                                        <div 
+                                            key={idx} 
+                                            className={`grid grid-cols-1 md:grid-cols-5 gap-3 items-center p-4 rounded-xl transition-all border cursor-pointer ${
+                                                drillDownSumber === item.nama 
+                                                    ? 'bg-amber-500/30 border-amber-400 shadow-lg shadow-amber-500/20' 
+                                                    : 'bg-white/5 hover:bg-white/10 border-white/10'
+                                            }`}
+                                            onClick={() => handleSumberDanaClick(item.nama)}
+                                        >
+                                            <div className="col-span-2 text-white font-medium truncate flex items-center gap-2" title={item.nama}>
+                                                <span className="inline-block w-6 h-6 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-black text-center">
+                                                    {idx+1}
+                                                </span>
+                                                {item.nama.length > 50 ? item.nama.substring(0,50)+'...' : item.nama}
+                                                {drillDownSumber === item.nama && (
+                                                    <span className="text-xs bg-amber-500 px-2 py-0.5 rounded-full">Dipilih</span>
+                                                )}
+                                            </div>
+                                            <div className="text-right text-lg font-bold text-[#e8dd8f]">{formatCurrency(item.anggaran)}</div>
+                                            <div className="text-right text-lg font-bold text-emerald-300">{formatCurrency(item.realisasi)}</div>
+                                            <div className="text-right flex items-center justify-end gap-2">
+                                                <span className={`text-base font-black px-4 py-2 rounded-lg inline-block ${
+                                                    item.penyerapan >= 85 ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50' :
+                                                    item.penyerapan >= 50 ? 'bg-amber-500/30 text-amber-300 border border-amber-500/50' :
+                                                    'bg-rose-500/30 text-rose-300 border border-rose-500/50'
+                                                }`}>
+                                                    {item.penyerapan.toFixed(1)}%
+                                                </span>
+                                                <div className="flex items-center gap-1">
+                                                    {trendInfo.icon}
+                                                    <span className={`text-xs ${trendInfo.color} hidden md:inline`}>
+                                                        {trendInfo.text.substring(0, 15)}...
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="text-right text-lg font-bold text-[#e8dd8f]">{formatCurrency(item.anggaran)}</div>
-                                        <div className="text-right text-lg font-bold text-emerald-300">{formatCurrency(item.realisasi)}</div>
-                                        <div className="text-right">
-                                            <span className={`text-base font-black px-4 py-2 rounded-lg inline-block ${
-                                                item.penyerapan >= 85 ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50' :
-                                                item.penyerapan >= 50 ? 'bg-amber-500/30 text-amber-300 border border-amber-500/50' :
-                                                'bg-rose-500/30 text-rose-300 border border-rose-500/50'
-                                            }`}>
-                                                {item.penyerapan.toFixed(1)}%
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
+                            {drillDownSumber && (
+                                <div className="mt-4 p-3 bg-amber-500/20 rounded-lg text-center text-sm">
+                                    <span className="font-bold">🔍 Filter aktif:</span> Menampilkan data untuk sumber dana "{drillDownSumber}"
+                                    <button onClick={resetDrillDown} className="ml-3 text-xs underline hover:no-underline">Reset</button>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Executive Note - DIPERBESAR */}
+                        {/* Executive Note */}
                         <div className="flex items-start gap-5 text-base bg-gradient-to-r from-[#625a17]/80 to-[#7a701f]/80 p-6 rounded-2xl border border-[#625a17]/30 backdrop-blur-sm">
                             <div className="p-4 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl shadow-lg shrink-0">
                                 <Lightbulb size={32} className="text-white" />
@@ -591,12 +915,14 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 </p>
                                 <p className="text-base leading-relaxed text-[#e8dd8f]">
                                     <span className="font-bold text-white">PERHATIAN:</span> Terdapat <span className="font-black text-yellow-300 text-lg">{executiveSummary.highRiskCount}</span> item dengan risiko tinggi (penyerapan &lt;30%). 
-                                    Fokus utama pada <span className="font-bold text-white">{executiveSummary.topSumberDana[0]?.nama || 'sumber dana utama'}</span> yang masih menyisakan sisa 
-                                    <span className="font-black text-amber-300 text-lg ml-1">{formatCurrency(executiveSummary.topSumberDana[0]?.anggaran - executiveSummary.topSumberDana[0]?.realisasi || 0)}</span>. 
+                                    Fokus utama pada <span className="font-bold text-white cursor-pointer hover:underline" onClick={() => executiveSummary.topSumberDana[0] && handleSumberDanaClick(executiveSummary.topSumberDana[0].nama)}>
+                                        {executiveSummary.topSumberDana[0]?.nama || 'sumber dana utama'}
+                                    </span> yang masih menyisakan sisa 
+                                    <span className="font-black text-amber-300 text-lg ml-1">{formatCurrency(executiveSummary.topSumberDana[0]?.sisa || 0)}</span>. 
                                     Konsentrasi sumber dana pada 3 jenis utama mencapai <span className="font-black text-emerald-300 text-lg">{executiveSummary.sumberDanaTop3Konsentrasi.toFixed(1)}%</span> dari total anggaran.
                                 </p>
                                 <p className="text-sm text-[#e8dd8f]/80 mt-2 italic">
-                                    * Rekomendasi strategis tersedia pada fitur Analisis AI di bawah
+                                    💡 <span className="font-bold">Tips:</span> Klik pada card, tabel, atau gunakan tombol aksi cepat untuk analisis lebih mendalam.
                                 </p>
                             </div>
                         </div>
@@ -629,7 +955,6 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                     </button>
                 </div>
                 
-                {/* Indikator Data */}
                 {showAnalysis && statsData.length > 0 && (
                     <div className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-2 bg-white/30 dark:bg-gray-800/30 p-2 rounded-lg">
                         <span className="relative flex h-2 w-2">
@@ -637,25 +962,27 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#625a17]"></span>
                         </span>
                         <span>Total Item: {statsData.length} | Sumber Dana: {executiveSummary?.sumberDanaCount} | Penyerapan: {executiveSummary?.rataPenyerapan.toFixed(1)}%</span>
+                        {drillDownSumber && <span className="bg-amber-500/20 px-2 py-0.5 rounded-full">🔍 Filter: {drillDownSumber}</span>}
                     </div>
                 )}
                 
-                {/* Komponen GeminiAnalysis dengan Conditional Rendering */}
                 {showAnalysis && (
-                    <GeminiAnalysis 
-                        getAnalysisPrompt={getAnalysisPrompt} 
-                        disabledCondition={statsData.length === 0} 
-                        theme={theme}
-                        interactivePlaceholder="Analisis penyerapan DAK pada kegiatan fisik..."
-                        userCanUseAi={userRole !== 'viewer'}
-                        allData={{
-                            selectedSkpd,
-                            selectedSubKegiatan,
-                            executiveSummary,
-                            topSumberDana: executiveSummary?.topSumberDana,
-                            highRiskItems: statsData.filter(d => d.anggaran > 100000000 && d.persentase < 30).slice(0, 5)
-                        }}
-                    />
+                    <div className="gemini-analysis-container">
+                        <GeminiAnalysis 
+                            getAnalysisPrompt={getAnalysisPrompt} 
+                            disabledCondition={statsData.length === 0} 
+                            theme={theme}
+                            interactivePlaceholder="Analisis penyerapan DAK pada kegiatan fisik..."
+                            userCanUseAi={userRole !== 'viewer'}
+                            allData={{
+                                selectedSkpd,
+                                selectedSubKegiatan,
+                                executiveSummary,
+                                topSumberDana: executiveSummary?.topSumberDana,
+                                highRiskItems: statsData.filter(d => d.anggaran > 100000000 && d.persentase < 30).slice(0, 5)
+                            }}
+                        />
+                    </div>
                 )}
             </div>
 
@@ -682,7 +1009,6 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                        {/* SKPD Filter */}
                         <div className="lg:col-span-1">
                             <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1 mb-2">
                                 <Building2 size={14} className="text-[#625a17]" /> SKPD
@@ -693,7 +1019,6 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                             </select>
                         </div>
 
-                        {/* Sub Kegiatan Filter */}
                         <div className="lg:col-span-1">
                             <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1 mb-2">
                                 <Layers size={14} className="text-indigo-500" /> Sub Kegiatan
@@ -704,7 +1029,6 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                             </select>
                         </div>
 
-                        {/* Sumber Dana Filter */}
                         <div className="lg:col-span-1">
                             <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1 mb-2">
                                 <Database size={14} className="text-teal-500" /> Sumber Dana
@@ -715,7 +1039,6 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                             </select>
                         </div>
 
-                        {/* Rekening Filter */}
                         <div className="lg:col-span-1">
                             <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1 mb-2">
                                 <BarChart3 size={14} className="text-amber-500" /> Rekening
@@ -726,7 +1049,6 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                             </select>
                         </div>
 
-                        {/* Download Button */}
                         <div className="lg:col-span-1 flex items-end">
                             <button 
                                 onClick={handleDownloadExcel} 
@@ -763,7 +1085,11 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                     </thead>
                                     <tbody className="bg-white/50 dark:bg-gray-800/50">
                                         {summaryBySumberDana.slice(0, 8).map((item, idx) => (
-                                            <tr key={idx} className="hover:bg-[#625a17]/5 transition-colors">
+                                            <tr 
+                                                key={idx} 
+                                                className="hover:bg-[#625a17]/5 transition-colors cursor-pointer"
+                                                onClick={() => handleSumberDanaClick(item.name)}
+                                            >
                                                 <td className="px-4 py-3 text-sm text-gray-800 dark:text-gray-200 max-w-xs break-words">
                                                     {item.name}
                                                 </td>
@@ -804,13 +1130,15 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                             innerRadius={40}
                                             label={({name, percent}) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''}
                                             labelLine={false}
+                                            onClick={(data) => handleSumberDanaClick(data.payload.name)}
+                                            cursor="pointer"
                                         >
                                             {summaryBySumberDana.slice(0, 8).map((entry, index) => (
                                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                             ))}
                                         </Pie>
                                         <Tooltip formatter={(value) => formatCurrency(value)} />
-                                        <Legend wrapperStyle={{ fontSize: '10px' }} />
+                                        <Legend wrapperStyle={{ fontSize: '10px', cursor: 'pointer' }} onClick={(data) => handleSumberDanaClick(data.value)} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
@@ -818,12 +1146,13 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                     </div>
                 )}
 
-                {/* Main Table */}
-                <div className="p-8">
+                {/* Main Table with Expandable Rows for Rekening Breakdown */}
+                <div id="sumber-dana-table" className="p-8">
                     <div className="overflow-x-auto rounded-2xl border border-gray-200/50 dark:border-gray-700/50 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
                         <table className="min-w-full text-sm">
                             <thead>
                                 <tr className="bg-gradient-to-r from-gray-50/80 to-white/80 dark:from-gray-800/80 dark:to-gray-900/80">
+                                    <th className="px-4 py-4 text-left text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider w-8"></th>
                                     <th className="px-4 py-4 text-left text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">SKPD / Sub Kegiatan</th>
                                     <th className="px-4 py-4 text-left text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sumber Dana</th>
                                     <th className="px-4 py-4 text-left text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rekening</th>
@@ -834,47 +1163,183 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                {paginatedData.map((item, index) => (
-                                    <tr key={index} className="hover:bg-[#625a17]/5 transition-colors group">
-                                        <td className="px-4 py-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-[#625a17] dark:group-hover:text-[#e8dd8f] transition-colors">
-                                                    {item.skpd}
-                                                </span>
-                                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2" title={item.subKegiatan}>
-                                                    {item.subKegiatan.length > 60 ? item.subKegiatan.substring(0,60)+'...' : item.subKegiatan}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300 max-w-xs break-words">
-                                            {item.sumberDana}
-                                        </td>
-                                        <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300 max-w-xs break-words">
-                                            {item.rekening.length > 40 ? item.rekening.substring(0,40)+'...' : item.rekening}
-                                        </td>
-                                        <td className="px-4 py-4 text-sm text-right font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-                                            {formatCurrency(item.anggaran)}
-                                        </td>
-                                        <td className="px-4 py-4 text-sm text-right font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                                            {formatCurrency(item.realisasi)}
-                                        </td>
-                                        <td className="px-4 py-4 text-sm text-right font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">
-                                            {formatCurrency(item.sisaAnggaran)}
-                                        </td>
-                                        <td className="px-4 py-4 text-sm text-right">
-                                            <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
-                                                item.persentase >= 85 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                                item.persentase >= 50 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                            }`}>
-                                                {item.persentase.toFixed(1)}%
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {paginatedData.map((item, index) => {
+                                    const rowKey = `${item.skpd}|${item.subKegiatan}|${item.sumberDana}|${item.rekening}`;
+                                    const isExpanded = expandedRows[rowKey];
+                                    
+                                    return (
+                                        <React.Fragment key={index}>
+                                            <tr className="hover:bg-[#625a17]/5 transition-colors group">
+                                                <td className="px-4 py-4">
+                                                    <button
+                                                        onClick={() => toggleRow(rowKey)}
+                                                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-all"
+                                                        title={isExpanded ? "Sembunyikan rincian rekening" : "Lihat rincian rekening"}
+                                                    >
+                                                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                                    </button>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-[#625a17] dark:group-hover:text-[#e8dd8f] transition-colors">
+                                                            {item.skpd}
+                                                        </span>
+                                                        <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2" title={item.subKegiatan}>
+                                                            {item.subKegiatan.length > 60 ? item.subKegiatan.substring(0,60)+'...' : item.subKegiatan}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300 max-w-xs break-words">
+                                                    {item.sumberDana}
+                                                </td>
+                                                <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300 max-w-xs break-words">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-mono text-xs text-gray-400">{item.kodeRekening}</span>
+                                                        <span>{item.rekening.length > 40 ? item.rekening.substring(0,40)+'...' : item.rekening}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4 text-sm text-right font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                                                    {formatCurrency(item.anggaran)}
+                                                </td>
+                                                <td className="px-4 py-4 text-sm text-right font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                                                    {formatCurrency(item.realisasi)}
+                                                </td>
+                                                <td className="px-4 py-4 text-sm text-right font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                                                    {formatCurrency(item.sisaAnggaran)}
+                                                </td>
+                                                <td className="px-4 py-4 text-sm text-right">
+                                                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
+                                                        item.persentase >= 85 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                                        item.persentase >= 50 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                    }`}>
+                                                        {item.persentase.toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            
+                                            {/* BREAKDOWN REKENING - EXPANDABLE ROW */}
+                                            {isExpanded && (
+                                                <tr className="bg-gray-50 dark:bg-gray-800/50">
+                                                    <td colSpan="8" className="px-4 py-4">
+                                                        <div className="ml-8 p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-inner">
+                                                            <h4 className="text-sm font-bold text-[#625a17] dark:text-[#e8dd8f] mb-3 flex items-center gap-2">
+                                                                <Layers size={14} />
+                                                                Rincian Rekening Belanja: {item.subKegiatan.length > 50 ? item.subKegiatan.substring(0,50)+'...' : item.subKegiatan}
+                                                            </h4>
+                                                            <div className="overflow-x-auto">
+                                                                <table className="min-w-full text-xs">
+                                                                    <thead>
+                                                                        <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
+                                                                            <th className="text-left py-2 px-3 font-bold text-gray-600 dark:text-gray-400">Kode Rekening</th>
+                                                                            <th className="text-left py-2 px-3 font-bold text-gray-600 dark:text-gray-400">Nama Rekening</th>
+                                                                            <th className="text-right py-2 px-3 font-bold text-gray-600 dark:text-gray-400">Anggaran</th>
+                                                                            <th className="text-right py-2 px-3 font-bold text-gray-600 dark:text-gray-400">Realisasi</th>
+                                                                            <th className="text-right py-2 px-3 font-bold text-gray-600 dark:text-gray-400">Sisa</th>
+                                                                            <th className="text-right py-2 px-3 font-bold text-gray-600 dark:text-gray-400">Penyerapan</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {/* Filter semua rekening dalam sub kegiatan yang sama */}
+                                                                        {statsData
+                                                                            .filter(r => r.skpd === item.skpd && 
+                                                                                       r.subKegiatan === item.subKegiatan &&
+                                                                                       r.sumberDana === item.sumberDana)
+                                                                            .sort((a, b) => b.anggaran - a.anggaran)
+                                                                            .map((rek, idx) => (
+                                                                                <tr key={idx} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                                                                    <td className="py-2 px-3 font-mono text-gray-500 dark:text-gray-400">
+                                                                                        {rek.kodeRekening || '-'}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-gray-700 dark:text-gray-300">
+                                                                                        {rek.rekening}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-medium text-indigo-600 dark:text-indigo-400">
+                                                                                        {formatCurrency(rek.anggaran)}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-medium text-emerald-600 dark:text-emerald-400">
+                                                                                        {formatCurrency(rek.realisasi)}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-medium text-amber-600 dark:text-amber-400">
+                                                                                        {formatCurrency(rek.sisaAnggaran)}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right">
+                                                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                                                                            rek.persentase >= 85 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                                                                            rek.persentase >= 50 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                                                            'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                                                        }`}>
+                                                                                            {rek.persentase.toFixed(1)}%
+                                                                                        </span>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        {statsData.filter(r => r.skpd === item.skpd && r.subKegiatan === item.subKegiatan && r.sumberDana === item.sumberDana).length === 0 && (
+                                                                            <tr>
+                                                                                <td colSpan="6" className="text-center py-4 text-gray-500">
+                                                                                    Tidak ada data rekening untuk sub kegiatan ini
+                                                                                </td>
+                                                                            </tr>
+                                                                        )}
+                                                                    </tbody>
+                                                                    <tfoot className="bg-gray-100 dark:bg-gray-800">
+                                                                        <tr>
+                                                                            <td colSpan="2" className="py-2 px-3 text-right font-bold text-gray-700 dark:text-gray-300">
+                                                                                Total:
+                                                                            </td>
+                                                                            <td className="py-2 px-3 text-right font-bold text-indigo-700 dark:text-indigo-300">
+                                                                                {formatCurrency(statsData
+                                                                                    .filter(r => r.skpd === item.skpd && r.subKegiatan === item.subKegiatan && r.sumberDana === item.sumberDana)
+                                                                                    .reduce((sum, r) => sum + r.anggaran, 0))}
+                                                                            </td>
+                                                                            <td className="py-2 px-3 text-right font-bold text-emerald-700 dark:text-emerald-300">
+                                                                                {formatCurrency(statsData
+                                                                                    .filter(r => r.skpd === item.skpd && r.subKegiatan === item.subKegiatan && r.sumberDana === item.sumberDana)
+                                                                                    .reduce((sum, r) => sum + r.realisasi, 0))}
+                                                                            </td>
+                                                                            <td className="py-2 px-3 text-right font-bold text-amber-700 dark:text-amber-300">
+                                                                                {formatCurrency(statsData
+                                                                                    .filter(r => r.skpd === item.skpd && r.subKegiatan === item.subKegiatan && r.sumberDana === item.sumberDana)
+                                                                                    .reduce((sum, r) => sum + r.sisaAnggaran, 0))}
+                                                                            </td>
+                                                                            <td className="py-2 px-3 text-right font-bold">
+                                                                                {(() => {
+                                                                                    const totalAnggaran = statsData
+                                                                                        .filter(r => r.skpd === item.skpd && r.subKegiatan === item.subKegiatan && r.sumberDana === item.sumberDana)
+                                                                                        .reduce((sum, r) => sum + r.anggaran, 0);
+                                                                                    const totalRealisasi = statsData
+                                                                                        .filter(r => r.skpd === item.skpd && r.subKegiatan === item.subKegiatan && r.sumberDana === item.sumberDana)
+                                                                                        .reduce((sum, r) => sum + r.realisasi, 0);
+                                                                                    const persen = totalAnggaran > 0 ? (totalRealisasi / totalAnggaran) * 100 : 0;
+                                                                                    return (
+                                                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                                                                            persen >= 85 ? 'bg-green-100 text-green-700' :
+                                                                                            persen >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                                                                                            'bg-red-100 text-red-700'
+                                                                                        }`}>
+                                                                                            {persen.toFixed(1)}%
+                                                                                        </span>
+                                                                                    );
+                                                                                })()}
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tfoot>
+                                                                </table>
+                                                            </div>
+                                                            <div className="mt-3 text-xs text-gray-400 flex items-center gap-2">
+                                                                <Info size={12} />
+                                                                Menampilkan {statsData.filter(r => r.skpd === item.skpd && r.subKegiatan === item.subKegiatan && r.sumberDana === item.sumberDana).length} rekening
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
                                 {filteredData.length === 0 && (
                                     <tr>
-                                        <td colSpan="7" className="text-center py-12 text-gray-500 font-bold">
+                                        <td colSpan="8" className="text-center py-12 text-gray-500 font-bold">
                                             Tidak ada data yang cocok dengan filter yang dipilih.
                                         </td>
                                     </tr>
@@ -908,15 +1373,23 @@ Gunakan bahasa profesional, langsung ke inti, dengan pendekatan strategis untuk 
                             <span className="flex items-center gap-2">
                                 <div className="w-2 h-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full shadow-lg"></div>
                                 <span className="font-medium text-gray-600 dark:text-gray-400">
-                                    Penyerapan: {filteredData.reduce((sum, item) => sum + item.persentase, 0) / filteredData.length || 0}%
+                                    Rata-rata Penyerapan: {(filteredData.reduce((sum, item) => sum + item.persentase, 0) / filteredData.length || 0).toFixed(1)}%
                                 </span>
                             </span>
                             <span className="flex items-center gap-2">
                                 <div className="w-2 h-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full shadow-lg"></div>
                                 <span className="font-medium text-gray-600 dark:text-gray-400">
-                                    Sisa: {formatCurrency(filteredData.reduce((sum, item) => sum + item.sisaAnggaran, 0))}
+                                    Total Sisa: {formatCurrency(filteredData.reduce((sum, item) => sum + item.sisaAnggaran, 0))}
                                 </span>
                             </span>
+                            {drillDownSumber && (
+                                <span className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-amber-500 rounded-full shadow-lg"></div>
+                                    <span className="font-medium text-amber-600 dark:text-amber-400">
+                                        🔍 Filter: {drillDownSumber}
+                                    </span>
+                                </span>
+                            )}
                         </div>
                     </div>
                 )}

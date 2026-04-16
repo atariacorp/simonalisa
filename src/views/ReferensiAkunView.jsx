@@ -9,7 +9,8 @@ import {
     TrendingUp, Gauge, Coins, Layers, BarChart3, PieChart,
     Sparkles, Trophy, Medal, Gem, Diamond, Flower2, Sparkle,
     Building2, Users, Shield, AlertOctagon, BookOpen, GitBranch,
-    FolderTree, ListTree, ChevronDown, ChevronUp
+    FolderTree, ListTree, ChevronDown, ChevronUp,
+    Wallet  
 } from 'lucide-react';
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { db } from '../utils/firebase';
